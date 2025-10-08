@@ -1,0 +1,7 @@
+@import "tailwindcss";
+html,
+body,
+#root {
+  background-color: #aab0ab; /* màu nền đen */
+  min-height: 100vh;
+}
