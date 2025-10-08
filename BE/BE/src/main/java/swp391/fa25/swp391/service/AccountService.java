@@ -1,0 +1,93 @@
+package swp391.fa25.swp391.service;
+
+import swp391.fa25.swp391.entity.Account;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+
+import swp391.fa25.swp391.repository.models.AccountRepository;
+import swp391.fa25.swp391.service.IService.IAccountService;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+public class AccountService implements IAccountService {
+
+    private final AccountRepository accountRepository;
+
+    @Override
+    public Account register(Account account) {
+        // Check if username or email already exists
+        if (existsByUsername(account.getUsername())) {
+            throw new RuntimeException("Username is already taken");
+        }
+        if (existsByEmail(account.getEmail())) {
+            throw new RuntimeException("Email is already in use");
+        }
+
+        return accountRepository.save(account);
+    }
+
+    @Override
+    public boolean login(String username, String password) {
+        List<Account> account = accountRepository.findByField("username",username);
+        if (account.isEmpty()) {
+            return false;
+        }
+
+        return account.getFirst().getPassword().equals(password);
+    }
+
+    public Account updateAccount(Account account) {
+
+        return accountRepository.save(account);
+    }
+    @Override
+    public List<Account> findByEmail(String email) {
+
+        return accountRepository.findByField("email",email);
+    }
+    @Override
+    public List<Account> findByUsername(String username) {
+        return accountRepository.findByField("username",username);
+    }
+
+
+    @Override
+    public boolean existsByUsername(String username) {
+        return accountRepository.findByField("username",username)!=null;
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+
+        return accountRepository.findByField("email",email)!=null;
+    }
+    @Override
+    public Optional<Account> findById(Integer id) {
+
+        return accountRepository.findById(id);
+    }
+
+    @Override
+
+
+    public List<Account> findAll() {
+        return accountRepository.findAll();
+    }
+
+
+
+    @Override
+    public boolean deleteAccount(String name) {
+        List<Account> accounts = accountRepository.findByField("username", name);
+        if (!accounts.isEmpty()) {
+            accountRepository.deleteByName(name);
+            return true;
+        }
+        return false;
+
+    }
+}

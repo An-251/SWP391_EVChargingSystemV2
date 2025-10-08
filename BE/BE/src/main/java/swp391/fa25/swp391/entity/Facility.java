@@ -1,0 +1,49 @@
+
+package swp391.fa25.swp391.entity;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Nationalized;
+import java.util.List;
+import java.util.ArrayList;
+
+@Entity
+@Table(name = "FACILITY")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Facility {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "FACILITY_ID")
+    private Integer id;
+
+    @Nationalized
+    @Column(name = "NAME")
+    private String name;
+
+    @Nationalized
+    @Column(name = "CITY", length = 100)
+    private String city;
+
+    @Nationalized
+    @Column(name = "DISTRICT", length = 100)
+    private String district;
+
+    @Nationalized
+    @Column(name = "WARD", length = 100)
+    private String ward;
+
+    @Nationalized
+    @Column(name = "STREET_ADDRESS")
+    private String streetAddress;
+
+    @ManyToOne
+    @JoinColumn(name = "ADMIN_ID")
+    private Admin admin;
+
+    @OneToMany(mappedBy = "facility")
+    private List<ChargingStation> chargingStations = new ArrayList<>();
+}
