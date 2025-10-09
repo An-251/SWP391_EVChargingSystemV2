@@ -10,7 +10,4 @@ public interface IStationEmployeeService {
     StationEmployee findById(Integer id);
     StationEmployee updateStationEmployee(StationEmployee stationEmployee);
     List<StationEmployee> findAll();
-//    List<StationEmployee> findByStationId(Integer stationId);
-//    boolean existsByEmail(String email);
-//    boolean existsByPhone(String phone);
 }
