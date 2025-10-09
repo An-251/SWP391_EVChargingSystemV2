@@ -42,8 +42,25 @@ public class AccountService implements IAccountService {
     }
 
     public Account updateAccount(Account account) {
+        Optional<Account> existingOpt = accountRepository.findById(account.getId());
+        if (existingOpt.isEmpty()) {
+            return null; // hoặc ném NotFoundException
+        }
 
-        return accountRepository.save(account);
+        Account existing = existingOpt.get();
+
+        //  Chỉ cập nhật các field cho phép
+        if (account.getUsername() != null) existing.setUsername(account.getUsername());
+        if (account.getFullName() != null) existing.setFullName(account.getFullName());
+        if (account.getGender() != null) existing.setGender(account.getGender());
+        if (account.getDob() != null) existing.setDob(account.getDob());
+        if (account.getPhone() != null) existing.setPhone(account.getPhone());
+        if (account.getEmail() != null) existing.setEmail(account.getEmail());
+
+
+
+
+        return accountRepository.save(existing);
     }
     @Override
     public List<Account> findByEmail(String email) {
