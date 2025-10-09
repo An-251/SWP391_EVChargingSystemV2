@@ -8,5 +8,5 @@ import swp391.fa25.swp391.entity.Account;
 @AllArgsConstructor
 public class LoginResponse {
     private String token;
-    private Account account;
+    private AccountResponse account;
 }

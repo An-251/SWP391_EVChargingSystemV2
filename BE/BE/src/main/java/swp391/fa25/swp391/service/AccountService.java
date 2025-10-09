@@ -1,5 +1,6 @@
 package swp391.fa25.swp391.service;
 
+import jakarta.transaction.Transactional;
 import swp391.fa25.swp391.entity.Account;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,14 +19,9 @@ public class AccountService implements IAccountService {
     private final AccountRepository accountRepository;
 
     @Override
+    @Transactional
     public Account register(Account account) {
-        // Check if username or email already exists
-        if (existsByUsername(account.getUsername())) {
-            throw new RuntimeException("Username is already taken");
-        }
-        if (existsByEmail(account.getEmail())) {
-            throw new RuntimeException("Email is already in use");
-        }
+
 
         return accountRepository.save(account);
     }
@@ -51,19 +47,20 @@ public class AccountService implements IAccountService {
     }
     @Override
     public List<Account> findByUsername(String username) {
+
         return accountRepository.findByField("username",username);
     }
 
 
     @Override
     public boolean existsByUsername(String username) {
-        return accountRepository.findByField("username",username)!=null;
+        return !accountRepository.findByField("username",username).isEmpty();
     }
 
     @Override
     public boolean existsByEmail(String email) {
 
-        return accountRepository.findByField("email",email)!=null;
+        return !accountRepository.findByField("email",email).isEmpty();
     }
     @Override
     public Optional<Account> findById(Integer id) {

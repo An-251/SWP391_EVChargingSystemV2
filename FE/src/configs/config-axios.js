@@ -2,11 +2,11 @@ import axios from "axios";
 
 // Create API instance
 const api = axios.create({
-  baseURL: "http://localhost:5173//api",
+  baseURL: "http://localhost:8080/api",
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: false,
+  withCredentials: true,
 });
 
 // Interceptor để thêm Authorization token vào mỗi request
