@@ -1,29 +1,20 @@
 import { Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import Home from "./Page/HomePage/Home";
-import LoginPage from "./Page/AuthPage/Login";
-import MusicPlayer from "./Component/MusicPlayer";
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import backgroundMusic from "./assets/backgroundmusic.mp3";
-import Header from "./Page/HomePage/Header";
+
+import StaffSession from "./Page/Staff/StaffSession/Session";
+import LoginPage from "./Page/AuthPage/Login";
+import StaffLayout from "./Layout/Staff/StaffLayout";
+import StaffHome from "./Page/Staff/StaffHome/Home";
 function App() {
   const location = useLocation();
   const audioRef = useRef(null);
-  const [isPlaying, setIsPlaying] = useState(false);
 
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = 0.3;
-      if (isPlaying) audioRef.current.play();
-      else audioRef.current.pause();
-    }
-  }, [isPlaying]);
-
-  const toggleMusic = () => setIsPlaying((prev) => !prev);
   return (
     <>
       <audio ref={audioRef} src={backgroundMusic} loop />
-      <Header isPlaying={isPlaying} toggleMusic={toggleMusic} />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route
@@ -54,6 +45,12 @@ function App() {
               </motion.div>
             }
           />
+
+          {/* Staff Routes */}
+          <Route path="/staff" element={<StaffLayout />}>
+            <Route index path="dashboard" element={<StaffHome />} />
+            <Route path="sessions" element={<StaffSession />} />
+          </Route>
         </Routes>
       </AnimatePresence>
     </>
