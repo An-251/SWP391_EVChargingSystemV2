@@ -1,37 +1,39 @@
 package swp391.fa25.swp391.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.Nationalized;
+import lombok.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
+@Entity
 @Getter
 @Setter
-@Entity
-@Table(name = "WORK_SCHEDULE")
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class WorkSchedule {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "SCHEDULE_ID", nullable = false)
-    private Integer id;
+    private Long id;
 
-    @Column(name = "WORK_DATE", nullable = false)
+    // Ngày làm việc cụ thể
+    @Column(nullable = false)
     private LocalDate workDate;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "EMPLOYEE_ID", nullable = false)
+    // Nhân viên được gán lịch làm việc
+    @ManyToOne
+    @JoinColumn(name = "EMPLOYEE_ID") // hoặc employee_id nếu có class Employee
     private StationEmployee employee;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "STATION_ID", nullable = false)
-    private ChargingStation station;
-
-    @Nationalized
-    @ColumnDefault("'Scheduled'")
-    @Column(name = "STATUS", length = 50)
-    private String status;
-
+    // Một WorkSchedule có thể chứa nhiều WorkShift
+    @ManyToMany
+    @JoinTable(
+            name = "work_schedule_shift",
+            joinColumns = @JoinColumn(name = "schedule_id"),
+            inverseJoinColumns = @JoinColumn(name = "shift_id")
+    )
+    private List<WorkShift> workShifts = new ArrayList<>();
 }
