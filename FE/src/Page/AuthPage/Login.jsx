@@ -1,10 +1,13 @@
+/* eslint-disable no-unused-vars */
 /* eslint-disable react/no-unknown-property */
 "use client";
 
 import { Zap, Mail, Lock, User } from "lucide-react";
-import { Form, Input, Button, Checkbox, Tabs } from "antd";
+import { Form, Input, Tabs } from "antd";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import LoginForm from "../../../../../SWP391_EVChargingSystem/FE/src/Form/AuthForm/LoginForm";
+import SignupForm from "../../../../../SWP391_EVChargingSystem/FE/src/Form/AuthForm/SignupForm";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -17,14 +20,6 @@ export default function LoginPage() {
       setActiveTab("signup");
     }
   }, [location.state, location.pathname, navigate]);
-
-  const onLoginFinish = (values) => {
-    console.log("Login Success:", values);
-  };
-
-  const onSignupFinish = (values) => {
-    console.log("Signup Success:", values);
-  };
 
   return (
     <>
@@ -87,182 +82,12 @@ export default function LoginPage() {
               >
                 {/* Login Tab */}
                 <Tabs.TabPane tab="Login" key="login">
-                  <Form
-                    name="login"
-                    layout="vertical"
-                    initialValues={{ remember: true }}
-                    onFinish={onLoginFinish}
-                    autoComplete="off"
-                    className="modern-form"
-                  >
-                    <Form.Item
-                      label={
-                        <span className="flex items-center gap-2 text-slate-300">
-                          <Mail size={16} />
-                          Email
-                        </span>
-                      }
-                      name="email"
-                      rules={[
-                        { required: true, message: "Please input your email!" },
-                        { type: "email", message: "Invalid email!" },
-                      ]}
-                    >
-                      <Input
-                        placeholder="your@email.com"
-                        size="large"
-                        className="modern-input"
-                      />
-                    </Form.Item>
-
-                    <Form.Item
-                      label={
-                        <span className="flex items-center gap-2 text-slate-300">
-                          <Lock size={16} />
-                          Password
-                        </span>
-                      }
-                      name="password"
-                      rules={[
-                        {
-                          required: true,
-                          message: "Please input your password!",
-                        },
-                      ]}
-                    >
-                      <Input.Password
-                        placeholder="••••••••"
-                        size="large"
-                        className="modern-input"
-                      />
-                    </Form.Item>
-
-                    <Form.Item name="remember" valuePropName="checked">
-                      <Checkbox className="modern-checkbox">
-                        <span className="text-slate-400">Remember me</span>
-                      </Checkbox>
-                    </Form.Item>
-
-                    <Form.Item>
-                      <Button
-                        type="primary"
-                        htmlType="submit"
-                        size="large"
-                        className="modern-button w-full"
-                      >
-                        Login to Dashboard
-                      </Button>
-                    </Form.Item>
-
-                    <div className="text-center">
-                      <a
-                        href="#"
-                        className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
-                      >
-                        Forgot your password?
-                      </a>
-                    </div>
-                  </Form>
+                  <LoginForm />
                 </Tabs.TabPane>
 
                 {/* Sign Up Tab */}
                 <Tabs.TabPane tab="Sign Up" key="signup">
-                  <Form
-                    name="signup"
-                    layout="vertical"
-                    onFinish={onSignupFinish}
-                    autoComplete="off"
-                    className="modern-form"
-                  >
-                    <Form.Item
-                      label={
-                        <span className="flex items-center gap-2 text-slate-300">
-                          <User size={16} />
-                          Full Name
-                        </span>
-                      }
-                      name="name"
-                      rules={[
-                        { required: true, message: "Please input your name!" },
-                      ]}
-                    >
-                      <Input
-                        placeholder="John Doe"
-                        size="large"
-                        className="modern-input"
-                      />
-                    </Form.Item>
-
-                    <Form.Item
-                      label={
-                        <span className="flex items-center gap-2 text-slate-300">
-                          <Mail size={16} />
-                          Email
-                        </span>
-                      }
-                      name="email"
-                      rules={[
-                        { required: true, message: "Please input your email!" },
-                        { type: "email", message: "Invalid email!" },
-                      ]}
-                    >
-                      <Input
-                        placeholder="your@email.com"
-                        size="large"
-                        className="modern-input"
-                      />
-                    </Form.Item>
-
-                    <Form.Item
-                      label={
-                        <span className="flex items-center gap-2 text-slate-300">
-                          <Lock size={16} />
-                          Password
-                        </span>
-                      }
-                      name="password"
-                      rules={[
-                        {
-                          required: true,
-                          message: "Please input your password!",
-                        },
-                      ]}
-                    >
-                      <Input.Password
-                        placeholder="••••••••"
-                        size="large"
-                        className="modern-input"
-                      />
-                    </Form.Item>
-
-                    <Form.Item>
-                      <Button
-                        type="primary"
-                        htmlType="submit"
-                        size="large"
-                        className="modern-button w-full"
-                      >
-                        Create Account
-                      </Button>
-                    </Form.Item>
-
-                    <p className="text-xs text-slate-400 text-center">
-                      By signing up, you agree to our{" "}
-                      <a
-                        href="#"
-                        className="text-emerald-400 hover:text-emerald-300 transition-colors"
-                      >
-                        Terms of Service
-                      </a>{" "}
-                      and{" "}
-                      <a
-                        href="#"
-                        className="text-emerald-400 hover:text-emerald-300 transition-colors"
-                      >
-                        Privacy Policy
-                      </a>
-                    </p>
-                  </Form>
+                  <SignupForm />
                 </Tabs.TabPane>
               </Tabs>
             </div>
@@ -270,7 +95,7 @@ export default function LoginPage() {
         </div>
       </section>
 
-      <style jsx global>{`
+      <style>{`
         /* Modern Tabs Styling */
         .modern-tabs .ant-tabs-nav {
           margin-bottom: 24px;
