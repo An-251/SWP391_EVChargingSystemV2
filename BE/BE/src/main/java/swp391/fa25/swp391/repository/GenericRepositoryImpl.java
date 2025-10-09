@@ -2,6 +2,7 @@ package swp391.fa25.swp391.repository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
 
 
 import java.lang.Class;
@@ -31,6 +32,7 @@ public class GenericRepositoryImpl<T> implements GenericRepository<T> {
     }
 
     @Override
+    @Transactional
     public T save(T entity) {
         entityManager.persist(entity);
 

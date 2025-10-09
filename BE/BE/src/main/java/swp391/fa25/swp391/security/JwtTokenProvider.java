@@ -12,22 +12,30 @@ import java.util.Date;
 public class JwtTokenProvider {
 
     private final JwtConfig jwtConfig;
+    //Lấy secret key để xác minh chữ ký
 
     public String generateToken(Account account) {
+        //Lấy thời gian hiện tại
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtConfig.getExpirationMs());
-
-        return Jwts.builder()
-                .setSubject(account.getUsername())
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
-                .signWith(SignatureAlgorithm.HS512, jwtConfig.getSecret())
-                .compact();
+        //Tính thời gian hết hạn
+        long expirationTimeMs = jwtConfig.getExpirationMs();
+        Date expiryDate = new Date(now.getTime() + expirationTimeMs);
+        //Lấy thông tin cần đưa vào token
+        String subject = account.getUsername();
+        String secretKey = jwtConfig.getSecret();
+        JwtBuilder builder = Jwts.builder()
+                .setSubject(subject)       // Set chủ thể (username)
+                .setIssuedAt(now)          // Ngày phát hành
+                .setExpiration(expiryDate) // Ngày hết hạn
+                .signWith(SignatureAlgorithm.HS512, secretKey); // Ký token bằng thuật toán HS512
+        String token = builder.compact();
+        return token;
     }
 
     public String getUsernameFromToken(String token) {
+        String secretKey = jwtConfig.getSecret();
         Claims claims = Jwts.parser()
-                .setSigningKey(jwtConfig.getSecret())
+                .setSigningKey(secretKey)
                 .parseClaimsJws(token)
                 .getBody();
 
@@ -35,14 +43,15 @@ public class JwtTokenProvider {
     }
 
     public boolean validateToken(String token) {
+        String secretKey = jwtConfig.getSecret();
         try {
-            Jwts.parser().setSigningKey(jwtConfig.getSecret()).parseClaimsJws(token);
+            Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token);
             return true;
         } catch (SignatureException ex) {
-            // Invalid JWT signature
+            // Incorrect JWT signature
             return false;
         } catch (MalformedJwtException ex) {
-            // Invalid JWT token
+            // Invalid format JWT token
             return false;
         } catch (ExpiredJwtException ex) {
             // Expired JWT token
