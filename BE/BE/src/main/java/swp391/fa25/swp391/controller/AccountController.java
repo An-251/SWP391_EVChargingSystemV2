@@ -8,12 +8,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import swp391.fa25.swp391.dto.*;
 import swp391.fa25.swp391.entity.Account;
 import swp391.fa25.swp391.security.JwtTokenProvider;
+import swp391.fa25.swp391.security.PasswordEncoderConfig;
 import swp391.fa25.swp391.service.IService.IAccountService;
 
 import java.time.Instant;
@@ -26,7 +26,7 @@ import java.util.List;
 public class AccountController {
     private final JwtTokenProvider jwtTokenProvider;
     private final IAccountService accountService;
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordEncoderConfig passwordEncoderConfig;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest accountRequest) {
@@ -67,7 +67,7 @@ public class AccountController {
         Account account = new Account();
         account.setUsername(registerRequest.getUsername());
         account.setEmail(registerRequest.getEmail());
-        account.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+        account.setPassword(passwordEncoderConfig.passwordEncoder().encode(registerRequest.getPassword()));
         account.setAccountRole("Driver");
         account.setStatus("ACTIVE");
         account.setCreatedDate(Instant.now());
