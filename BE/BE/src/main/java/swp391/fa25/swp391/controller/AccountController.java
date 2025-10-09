@@ -70,6 +70,8 @@ public class AccountController {
         account.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
         account.setAccountRole("Driver");
         account.setStatus("ACTIVE");
+        account.setCreatedDate(Instant.now());
+        account.setBalance(0.0);
 
         // Save account
         Account savedAccount = accountService.register(account);

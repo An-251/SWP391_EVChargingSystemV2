@@ -4,22 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b035dc1f-a70f-47af-9cd3-7249037f0d5f" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/controller/AccountController.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/controller/AccountController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/entity/Account.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/entity/Account.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/repository/models/AccountRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/repository/models/AccountRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/JwtConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/JwtConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/JwtTokenProvider.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/JwtTokenProvider.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/Swp391Application.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/Swp391Application.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AccountController.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AccountController.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/entity/Account.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/entity/Account.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/repository/GenericRepositoryImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/repository/GenericRepositoryImpl.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/JwtConfig.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/JwtConfig.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/JwtTokenProvider.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/JwtTokenProvider.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/SecurityConfig.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/SecurityConfig.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/AccountService.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/AccountService.class" afterDir="false" />
-    </list>
+    <list default="true" id="b035dc1f-a70f-47af-9cd3-7249037f0d5f" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -132,7 +117,7 @@
       <updated>1759918769175</updated>
       <workItem from="1759918770558" duration="644000" />
       <workItem from="1759996285430" duration="4000" />
-      <workItem from="1760007760811" duration="3182000" />
+      <workItem from="1760007760811" duration="3557000" />
     </task>
     <servers />
   </component>
