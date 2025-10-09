@@ -5,20 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b035dc1f-a70f-47af-9cd3-7249037f0d5f" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/BE/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/Swp391Application.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/Swp391Application.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/controller/AccountController.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/controller/AccountController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/LoginResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/LoginResponse.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/entity/Account.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/entity/Account.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/repository/GenericRepositoryImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/repository/GenericRepositoryImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/repository/models/AccountRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/repository/models/AccountRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/JwtConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/JwtConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/JwtTokenProvider.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/JwtTokenProvider.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/AccountService.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/AccountService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/Swp391Application.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/Swp391Application.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AccountController.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AccountController.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/LoginResponse.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/LoginResponse.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/entity/Account.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/entity/Account.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/repository/GenericRepositoryImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/repository/GenericRepositoryImpl.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/JwtConfig.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/JwtConfig.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/JwtTokenProvider.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/JwtTokenProvider.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/SecurityConfig.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/SecurityConfig.class" afterDir="false" />
@@ -69,8 +65,8 @@
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RequestMappingsPanelOrder0": "0",
     "RequestMappingsPanelOrder1": "1",
-    "RequestMappingsPanelWidth0": "575",
-    "RequestMappingsPanelWidth1": "575",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
@@ -136,7 +132,7 @@
       <updated>1759918769175</updated>
       <workItem from="1759918770558" duration="644000" />
       <workItem from="1759996285430" duration="4000" />
-      <workItem from="1760007760811" duration="2566000" />
+      <workItem from="1760007760811" duration="3182000" />
     </task>
     <servers />
   </component>

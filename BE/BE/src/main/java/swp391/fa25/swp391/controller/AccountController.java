@@ -4,12 +4,14 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import swp391.fa25.swp391.dto.LoginResponse;
+import swp391.fa25.swp391.dto.*;
 import swp391.fa25.swp391.entity.Account;
 import swp391.fa25.swp391.security.JwtTokenProvider;
 import swp391.fa25.swp391.service.IService.IAccountService;
@@ -24,38 +26,65 @@ import java.util.List;
 public class AccountController {
     private final JwtTokenProvider jwtTokenProvider;
     private final IAccountService accountService;
+    private final PasswordEncoder passwordEncoder;
 
-    @PostMapping("/register")
-    public ResponseEntity<LoginResponse> login(@RequestBody Account accountRequest) {
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest accountRequest) {
         boolean isLoginSuccessful = accountService.login(accountRequest.getUsername(), accountRequest.getPassword());
         List<Account> accounts = accountService.findByUsername(accountRequest.getUsername());
 
         if (isLoginSuccessful && !accounts.isEmpty()) {
             Account account = accounts.get(0);
             String token = jwtTokenProvider.generateToken(account);
+            AccountResponse accountResponse = new AccountResponse();
+            accountResponse.setUsername(account.getUsername());
+            accountResponse.setFullName(account.getFullName());
+            accountResponse.setEmail(account.getEmail());
+            accountResponse.setRole(account.getAccountRole());
 
-            return ResponseEntity.ok(new LoginResponse(token, account));
+            return ResponseEntity.ok(new LoginResponse(token, accountResponse));
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<Account> login(@RequestBody Account accountRequest, HttpServletResponse response) {
-        boolean isLoginSuccessful = accountService.login(accountRequest.getUsername(), accountRequest.getPassword());
-        List<Account> accounts = accountService.findByUsername(accountRequest.getUsername());
-
-        if (isLoginSuccessful && !accounts.isEmpty()) {
-            Account account = accounts.get(0);
-
-            // Create cookie
-            Cookie cookie = new Cookie("username", account.getUsername());
-            cookie.setMaxAge(60 * 60 * 24 * 365);
-            cookie.setPath("/");
-            response.addCookie(cookie);
-
-            return ResponseEntity.ok(account);
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody @Valid RegisterRequest registerRequest) {
+        // Check if username already exists
+        if (accountService.existsByUsername(registerRequest.getUsername())) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Error: Username is already taken!"));
         }
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        // Check if email already exists
+        if (accountService.existsByEmail(registerRequest.getEmail())) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(new MessageResponse("Error: Email is already in use!"));
+        }
+
+        // Create new account
+        Account account = new Account();
+        account.setUsername(registerRequest.getUsername());
+        account.setEmail(registerRequest.getEmail());
+        account.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+        account.setAccountRole("Driver");
+        account.setStatus("ACTIVE");
+
+        // Save account
+        Account savedAccount = accountService.register(account);
+
+        // Generate JWT token
+        String jwt = jwtTokenProvider.generateToken(savedAccount);
+
+        return ResponseEntity.ok(new RegisterResponse(
+                "User registered successfully!",
+                savedAccount.getId(),
+                savedAccount.getUsername(),
+                savedAccount.getEmail(),
+                savedAccount.getAccountRole(),
+                jwt
+        ));
     }
 
     @GetMapping("/username/{name}")

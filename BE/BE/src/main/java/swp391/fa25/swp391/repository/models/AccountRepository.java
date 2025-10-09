@@ -9,4 +9,5 @@ public class AccountRepository extends GenericRepositoryImpl<Account> {
     public AccountRepository() {
         super(Account.class);
     }
+
 }
