@@ -1,12 +1,15 @@
 package swp391.fa25.swp391.service;
 
 import jakarta.transaction.Transactional;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import swp391.fa25.swp391.entity.Account;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 
 import swp391.fa25.swp391.repository.models.AccountRepository;
+import swp391.fa25.swp391.security.PasswordEncoderConfig;
 import swp391.fa25.swp391.service.IService.IAccountService;
 
 import java.util.List;
@@ -17,7 +20,8 @@ import java.util.Optional;
 public class AccountService implements IAccountService {
 
     private final AccountRepository accountRepository;
-
+    @Lazy
+    private final PasswordEncoderConfig passwordEncoderConfig;
     @Override
     @Transactional
     public Account register(Account account) {
@@ -28,12 +32,13 @@ public class AccountService implements IAccountService {
 
     @Override
     public boolean login(String username, String password) {
-        List<Account> account = accountRepository.findByField("username",username);
-        if (account.isEmpty()) {
+        List<Account> accounts = accountRepository.findByField("username", username);
+        if (accounts.isEmpty()) {
             return false;
         }
 
-        return account.getFirst().getPassword().equals(password);
+        // Use passwordEncoder.matches instead of equals
+        return passwordEncoderConfig.passwordEncoder().matches(password, accounts.getFirst().getPassword());
     }
 
     public Account updateAccount(Account account) {
