@@ -8,11 +8,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Getter
-@Setter
+@Table(name = "WORK_SHIFT")
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+
 public class WorkShift {
 
     @Id
