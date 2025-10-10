@@ -20,13 +20,11 @@ import java.util.Optional;
 public class AccountService implements IAccountService {
 
     private final AccountRepository accountRepository;
-    @Lazy
+
     private final PasswordEncoderConfig passwordEncoderConfig;
     @Override
     @Transactional
     public Account register(Account account) {
-
-
         return accountRepository.save(account);
     }
 
