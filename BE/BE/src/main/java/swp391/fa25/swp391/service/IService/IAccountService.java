@@ -18,4 +18,6 @@ public interface IAccountService {
 
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
+    boolean deleteAccountById(Integer id);
+
 }

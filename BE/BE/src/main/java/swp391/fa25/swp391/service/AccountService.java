@@ -2,7 +2,6 @@ package swp391.fa25.swp391.service;
 
 import jakarta.transaction.Transactional;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import swp391.fa25.swp391.entity.Account;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -107,4 +106,15 @@ public class AccountService implements IAccountService {
         return false;
 
     }
+
+    @Override
+    public boolean deleteAccountById(Integer id) {
+        Optional<Account> accountOpt = accountRepository.findById(id);
+        if (accountOpt.isPresent()) {
+            accountRepository.delete(accountOpt.get());
+            return true;
+        }
+        return false;
+    }
+
 }
