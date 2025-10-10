@@ -2,7 +2,6 @@ package swp391.fa25.swp391.service;
 
 import jakarta.transaction.Transactional;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import swp391.fa25.swp391.entity.Account;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,13 +19,11 @@ import java.util.Optional;
 public class AccountService implements IAccountService {
 
     private final AccountRepository accountRepository;
-    @Lazy
+
     private final PasswordEncoderConfig passwordEncoderConfig;
     @Override
     @Transactional
     public Account register(Account account) {
-
-
         return accountRepository.save(account);
     }
 
@@ -42,8 +39,25 @@ public class AccountService implements IAccountService {
     }
 
     public Account updateAccount(Account account) {
+        Optional<Account> existingOpt = accountRepository.findById(account.getId());
+        if (existingOpt.isEmpty()) {
+            return null; // hoặc ném NotFoundException
+        }
 
-        return accountRepository.save(account);
+        Account existing = existingOpt.get();
+
+        //  Chỉ cập nhật các field cho phép
+        if (account.getUsername() != null) existing.setUsername(account.getUsername());
+        if (account.getFullName() != null) existing.setFullName(account.getFullName());
+        if (account.getGender() != null) existing.setGender(account.getGender());
+        if (account.getDob() != null) existing.setDob(account.getDob());
+        if (account.getPhone() != null) existing.setPhone(account.getPhone());
+        if (account.getEmail() != null) existing.setEmail(account.getEmail());
+
+
+
+
+        return accountRepository.save(existing);
     }
     @Override
     public List<Account> findByEmail(String email) {
@@ -92,4 +106,15 @@ public class AccountService implements IAccountService {
         return false;
 
     }
+
+    @Override
+    public boolean deleteAccountById(Integer id) {
+        Optional<Account> accountOpt = accountRepository.findById(id);
+        if (accountOpt.isPresent()) {
+            accountRepository.delete(accountOpt.get());
+            return true;
+        }
+        return false;
+    }
+
 }

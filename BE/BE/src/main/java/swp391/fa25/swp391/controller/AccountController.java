@@ -122,26 +122,27 @@ public class AccountController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(HttpServletRequest request, HttpServletResponse response) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
+    public ResponseEntity<String> logout(@RequestHeader(value = "Authorization", required = false) String token) {
+        if (token != null && token.startsWith("Bearer ")) {
+
+            return ResponseEntity.ok("Logged out successfully");
         }
-
-        Cookie cookie = new Cookie("username", null);
-        cookie.setPath("/");
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
-
-        return ResponseEntity.ok("Logged out successfully");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No active session");
     }
 
     @GetMapping("/dashboard")
-    public ResponseEntity<String> dashboard(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null && session.getAttribute("username") != null) {
-            return ResponseEntity.ok("Welcome " + session.getAttribute("username"));
+    public ResponseEntity<?> dashboard(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Missing or invalid Authorization header");
         }
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Please login first");
+        String token = authHeader.substring(7);
+        try {
+            // Validate token and extract username
+            String username = jwtTokenProvider.getUsernameFromToken(token);
+            // Optionally fetch user info, or just greet
+            return ResponseEntity.ok("Welcome " + username);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or expired token");
+        }
     }
 }

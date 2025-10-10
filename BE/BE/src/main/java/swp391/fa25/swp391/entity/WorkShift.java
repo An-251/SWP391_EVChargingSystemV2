@@ -1,30 +1,37 @@
 package swp391.fa25.swp391.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import org.hibernate.annotations.Nationalized;
+import lombok.*;
 
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "WORK_SHIFT")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+
 public class WorkShift {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "WORK_SHIFT_ID", nullable = false)
-    private Integer id;
+    private Long id;
 
-    @Nationalized
-    @Column(name = "SHIFT_NAME", nullable = false, length = 50)
-    private String shiftName;
+    // Tên ca làm việc: Morning, Afternoon, Night,...
+    @Column(nullable = false)
+    private String name;
 
-    @Column(name = "START_TIME", nullable = false)
+    // Giờ bắt đầu ca
+    @Column(nullable = false)
     private LocalTime startTime;
 
-    @Column(name = "END_TIME", nullable = false)
+    // Giờ kết thúc ca
+    @Column(nullable = false)
     private LocalTime endTime;
 
+    // Liên kết nhiều-nhiều với WorkSchedule
+    @ManyToMany(mappedBy = "workShifts")
+    private List<WorkSchedule> workSchedules = new ArrayList<>();
 }
