@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 package swp391.fa25.swp391.controller;
 
 import jakarta.servlet.http.Cookie;
@@ -19,13 +20,17 @@ import swp391.fa25.swp391.service.IService.IAccountService;
 import java.time.Instant;
 import java.util.List;
 
+=======
+>>>>>>> Stashed changes
 @RestController
-@RequestMapping("/api/accounts")
+@RequestMapping("/api/accounts") // Đổi thành /api/auth thì sẽ tường minh hơn
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "http://localhost:3000") // Chỉ định rõ origin của FE thay vì "*"
 public class AccountController {
+
     private final JwtTokenProvider jwtTokenProvider;
     private final IAccountService accountService;
+<<<<<<< Updated upstream
     private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
@@ -43,9 +48,46 @@ public class AccountController {
             accountResponse.setRole(account.getAccountRole());
 
             return ResponseEntity.ok(new LoginResponse(token, accountResponse));
+=======
+    // Inject PasswordEncoder để hash mật khẩu khi đăng ký
+    private final PasswordEncoder passwordEncoder;
+
+    // 1. SỬA LẠI ENDPOINT LOGIN CHO ĐÚNG
+    @PostMapping("/login") // Đổi tên từ /register thành /login
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
+        boolean isLoginSuccessful = accountService.login(loginRequest.getUsername(), loginRequest.getPassword());
+        
+        // Nên có một phương thức trả về Optional<Account> để tránh lỗi Null
+        Account account = accountService.findByUsername(loginRequest.getUsername()).stream().findFirst().orElse(null);
+
+        if (isLoginSuccessful && account != null) {
+            String token = jwtTokenProvider.generateToken(account); // Token phải chứa cả role
+            // Dùng DTO để không lộ thông tin nhạy cảm
+            UserDTO userDTO = new UserDTO(account.getId(), account.getUsername(), account.getEmail(), account.getRole());
+            return ResponseEntity.ok(new LoginResponse(token, userDTO));
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
+
+    // 2. TẠO ENDPOINT REGISTER ĐÚNG NGHĨA
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody Account newAccount) {
+        // Kiểm tra xem username đã tồn tại chưa
+        if (accountService.findByUsername(newAccount.getUsername()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Username đã tồn tại!");
+>>>>>>> Stashed changes
+        }
+        
+        // Hash mật khẩu trước khi lưu vào DB
+        newAccount.setPassword(passwordEncoder.encode(newAccount.getPassword()));
+        
+        // Set role mặc định, ví dụ 'DRIVER'
+        // newAccount.setRole("DRIVER");
+        
+        Account savedAccount = accountService.createAccount(newAccount);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedAccount);
+    }
+<<<<<<< Updated upstream
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody @Valid RegisterRequest registerRequest) {
@@ -143,3 +185,13 @@ public class AccountController {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Please login first");
     }
 }
+=======
+    
+    // 3. XÓA CÁC ENDPOINT DÙNG SESSION VÀ COOKIE KHÔNG AN TOÀN
+    // Xóa endpoint /login cũ
+    // Xóa endpoint /logout dùng session
+    // Xóa endpoint /dashboard dùng session
+    
+    // ... các endpoint khác (GET, PUT, DELETE) sẽ được bảo vệ ở bước 2
+}
+>>>>>>> Stashed changes
