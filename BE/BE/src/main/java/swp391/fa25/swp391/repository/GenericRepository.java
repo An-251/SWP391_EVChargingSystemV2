@@ -15,4 +15,5 @@ public interface GenericRepository<T> {
     boolean existsById(Integer id);
     List<T> findByField(String fieldName, Object value);
     Optional<T> updateFields(Integer id, Map<String, Object> fields);
+
 }

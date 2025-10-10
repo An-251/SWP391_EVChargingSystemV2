@@ -37,14 +37,15 @@ public class SecurityConfig {
         return new JwtAuthenticationFilter(tokenProvider, userDetailsService);
     }
 
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("*"));  // Allow all origins
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));  // Allow all methods
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173")); // Changed from * to specific origin
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setExposedHeaders(Arrays.asList("Authorization"));
-        configuration.setAllowCredentials(false);
+        configuration.setAllowCredentials(true); // Changed to true to allow credentials
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
@@ -66,7 +67,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/accounts/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**","swagger-ui.html").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/user/**").hasRole("USER")
+                        .requestMatchers("/api/driver/**").hasRole("DRIVER")
                         .requestMatchers("/api/manager/**").hasRole("MANAGER")
                         .anyRequest().permitAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
@@ -74,10 +75,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+
 
 
 }

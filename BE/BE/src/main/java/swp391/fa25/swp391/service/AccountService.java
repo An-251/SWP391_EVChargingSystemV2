@@ -1,12 +1,14 @@
 package swp391.fa25.swp391.service;
 
 import jakarta.transaction.Transactional;
+import org.springframework.context.annotation.Lazy;
 import swp391.fa25.swp391.entity.Account;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 
 import swp391.fa25.swp391.repository.models.AccountRepository;
+import swp391.fa25.swp391.security.PasswordEncoderConfig;
 import swp391.fa25.swp391.service.IService.IAccountService;
 
 import java.util.List;
@@ -18,27 +20,44 @@ public class AccountService implements IAccountService {
 
     private final AccountRepository accountRepository;
 
+    private final PasswordEncoderConfig passwordEncoderConfig;
     @Override
     @Transactional
     public Account register(Account account) {
-
-
         return accountRepository.save(account);
     }
 
     @Override
     public boolean login(String username, String password) {
-        List<Account> account = accountRepository.findByField("username",username);
-        if (account.isEmpty()) {
+        List<Account> accounts = accountRepository.findByField("username", username);
+        if (accounts.isEmpty()) {
             return false;
         }
 
-        return account.getFirst().getPassword().equals(password);
+        // Use passwordEncoder.matches instead of equals
+        return passwordEncoderConfig.passwordEncoder().matches(password, accounts.getFirst().getPassword());
     }
 
     public Account updateAccount(Account account) {
+        Optional<Account> existingOpt = accountRepository.findById(account.getId());
+        if (existingOpt.isEmpty()) {
+            return null; // hoặc ném NotFoundException
+        }
 
-        return accountRepository.save(account);
+        Account existing = existingOpt.get();
+
+        //  Chỉ cập nhật các field cho phép
+        if (account.getUsername() != null) existing.setUsername(account.getUsername());
+        if (account.getFullName() != null) existing.setFullName(account.getFullName());
+        if (account.getGender() != null) existing.setGender(account.getGender());
+        if (account.getDob() != null) existing.setDob(account.getDob());
+        if (account.getPhone() != null) existing.setPhone(account.getPhone());
+        if (account.getEmail() != null) existing.setEmail(account.getEmail());
+
+
+
+
+        return accountRepository.save(existing);
     }
     @Override
     public List<Account> findByEmail(String email) {
@@ -87,4 +106,15 @@ public class AccountService implements IAccountService {
         return false;
 
     }
+
+    @Override
+    public boolean deleteAccountById(Integer id) {
+        Optional<Account> accountOpt = accountRepository.findById(id);
+        if (accountOpt.isPresent()) {
+            accountRepository.delete(accountOpt.get());
+            return true;
+        }
+        return false;
+    }
+
 }

@@ -1,5 +1,4 @@
 package swp391.fa25.swp391.entity;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
