@@ -1,16 +1,57 @@
 /* eslint-disable react/prop-types */
-import { Form, Input, Button, Checkbox } from "antd";
+import { Form, Input, Button, Checkbox, message } from "antd";
 import { useForm } from "antd/es/form/Form";
-import { Mail, Lock } from "lucide-react";
+import { User, Lock } from "lucide-react";
 import { loginUser } from "../../redux/auth/authSlice";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 export default function LoginForm() {
   const [loginForm] = useForm(); // ✅ destructure
   const dispatch = useDispatch(); // Sử dụng useDispatch để dispatch action
+  const navigate = useNavigate();
+  
+  // Get auth state từ Redux
+  const { isAuthenticated, loading, error, user } = useSelector((state) => state.auth);
+  
   const onLoginFinish = async (values) => {
+    console.log("🔑 [FORM] Login form values:", values);
+    console.log("🔑 [FORM] Form validation passed, dispatching loginUser...");
     dispatch(loginUser(values)); // Dispatch action login với values từ form
   };
+
+  // Effect để handle navigation sau khi login thành công
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      console.log("✅ Login successful, user role:", user.role);
+      message.success("Đăng nhập thành công!");
+      
+      // Navigation based on user role
+      switch(user.role) {
+        case "Staff":
+        case "StationEmployee":
+          navigate("/staff/dashboard");
+          break;
+        case "Admin":
+          navigate("/admin/dashboard");
+          break;
+        case "Driver":
+          navigate("/driver");
+          break;
+        default:
+          navigate("/staff/dashboard");
+      }
+    }
+  }, [isAuthenticated, user, navigate]);
+
+  // Effect để handle error messages
+  useEffect(() => {
+    if (error) {
+      console.error("❌ Login error:", error);
+      message.error(error);
+    }
+  }, [error]);
 
   return (
     <Form
@@ -27,18 +68,17 @@ export default function LoginForm() {
       <Form.Item
         label={
           <span className="flex items-center gap-2 text-slate-300">
-            <Mail size={16} />
-            Email
+            <User size={16} />
+            Username
           </span>
         }
-        name="email"
+        name="username"
         rules={[
-          { required: true, message: "Please input your email!" },
-          { type: "email", message: "Invalid email!" },
+          { required: true, message: "Please input your username!" },
         ]}
       >
         <Input
-          placeholder="your@email.com"
+          placeholder="Enter your username (e.g. Huy12345)"
           size="large"
           className="modern-input"
         />
@@ -61,7 +101,7 @@ export default function LoginForm() {
         />
       </Form.Item>
 
-      <Form.Item name="remember" valuePropName="checked">
+      <Form.Item name="remember" valuePropName="checked" initialValue={false}>
         <Checkbox className="modern-checkbox">
           <span className="text-slate-400">Remember me</span>
         </Checkbox>
@@ -73,8 +113,10 @@ export default function LoginForm() {
           htmlType="submit"
           size="large"
           className="modern-button w-full"
+          loading={loading}
+          disabled={loading}
         >
-          Login to Dashboard
+          {loading ? "Đang đăng nhập..." : "Login to Dashboard"}
         </Button>
       </Form.Item>
 
