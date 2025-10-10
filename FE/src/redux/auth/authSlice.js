@@ -15,23 +15,88 @@ const initialState = {
 
 export const loginUser = createAsyncThunk("loginUser", async (values, { rejectWithValue }) => {
   try {
-    const response = await api.post("/login", values);
+    console.log("🚀 [LOGIN] Starting login request with values:", values);
+    
+    // Chuyển đổi email thành username và gọi đúng endpoint
+    const loginData = {
+      username: values.username, // BE mong đợi username field, không phải email
+      password: values.password
+    };
+    
+    console.log("📤 [LOGIN] Sending request to /accounts/login with data:", loginData);
+    console.log("📍 [LOGIN] Full URL:", "http://localhost:8080/api/accounts/login");
+    
+    const response = await api.post("/accounts/login", loginData);
 
-    // Giả sử API trả về user info và token
-    const { token, user } = response.data;
+    console.log("✅ [LOGIN] Response received:", response);
+    console.log("📥 [LOGIN] Response data:", response.data);
+
+    // BE trả về {token, account} không phải {token, user}
+    const { token, account } = response.data;
+
+    console.log("🔑 [LOGIN] Token:", token);
+    console.log("👤 [LOGIN] Account:", account);
 
     // Lưu token vào localStorage (hoặc sessionStorage) để duy trì trạng thái đăng nhập
     localStorage.setItem("accessToken", token);
-    localStorage.setItem("currentUser", JSON.stringify(user));
+    localStorage.setItem("currentUser", JSON.stringify(account));
 
-    return { user, token };
+    console.log("💾 [LOGIN] Saved to localStorage successfully");
+
+    return { user: account, token };
   } catch (error) {
+    console.error("❌ [LOGIN] Error occurred:", error);
+    console.error("📄 [LOGIN] Error response:", error.response?.data);
+    console.error("🔢 [LOGIN] Error status:", error.response?.status);
+    console.error("📍 [LOGIN] Error config:", error.config);
+
     // Xử lý lỗi từ API
     let errorMessage = "Đăng nhập thất bại. Vui lòng thử lại.";
 
     if (error.response) {
       if (error.response.status === 401) {
         errorMessage = "Sai tài khoản hoặc mật khẩu. Vui lòng kiểm tra lại!";
+      } else if (error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      }
+    }
+
+    return rejectWithValue(errorMessage);
+  }
+});
+
+export const registerUser = createAsyncThunk("registerUser", async (values, { rejectWithValue }) => {
+  try {
+    console.log("🚀 [REGISTER] Starting register request with values:", values);
+    
+    // Tạo register data theo format BE expect
+    const registerData = {
+      username: values.username,
+      email: values.email,
+      password: values.password
+    };
+    
+    console.log("📤 [REGISTER] Sending request to /accounts/register with data:", registerData);
+    console.log("📍 [REGISTER] Full URL:", "http://localhost:8080/api/accounts/register");
+    
+    const response = await api.post("/accounts/register", registerData);
+
+    console.log("✅ [REGISTER] Response received:", response);
+    console.log("📥 [REGISTER] Response data:", response.data);
+
+    return response.data;
+  } catch (error) {
+    console.error("❌ [REGISTER] Error occurred:", error);
+    console.error("📄 [REGISTER] Error response:", error.response?.data);
+    console.error("🔢 [REGISTER] Error status:", error.response?.status);
+    console.error("📍 [REGISTER] Error config:", error.config);
+
+    // Xử lý lỗi từ API
+    let errorMessage = "Đăng ký thất bại. Vui lòng thử lại.";
+
+    if (error.response) {
+      if (error.response.status === 400) {
+        errorMessage = error.response.data.message || "Username đã tồn tại!";
       } else if (error.response.data && error.response.data.message) {
         errorMessage = error.response.data.message;
       }
@@ -185,6 +250,9 @@ const authSlice = createSlice({
     clearAuthSuccess: (state) => {
       state.success = false;
     },
+    clearAuthError: (state) => {
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -194,10 +262,13 @@ const authSlice = createSlice({
         state.notificationMessage = null;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
+        console.log("✅ [REDUX] loginUser.fulfilled - payload:", action.payload);
         state.loading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
         state.error = null;
+        console.log("✅ [REDUX] Updated state - user:", state.user);
+        console.log("✅ [REDUX] Updated state - isAuthenticated:", state.isAuthenticated);
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
@@ -207,6 +278,27 @@ const authSlice = createSlice({
         state.notificationMessage = action.payload;
         state.notificationType = "error";
       })
+      
+      // Register User Cases
+      .addCase(registerUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        state.success = false;
+      })
+      .addCase(registerUser.fulfilled, (state, action) => {
+        console.log("✅ [REDUX] registerUser.fulfilled - payload:", action.payload);
+        state.loading = false;
+        state.error = null;
+        state.success = true;
+        console.log("✅ [REDUX] Registration successful");
+      })
+      .addCase(registerUser.rejected, (state, action) => {
+        console.log("❌ [REDUX] registerUser.rejected - error:", action.payload);
+        state.loading = false;
+        state.error = action.payload;
+        state.success = false;
+      })
+      
       // Cases for initializeAuth thunk - these are also important!
       .addCase(initializeAuth.pending, (state) => {
         state.isAuthInitialized = false; // Reset to false when re-initializing
