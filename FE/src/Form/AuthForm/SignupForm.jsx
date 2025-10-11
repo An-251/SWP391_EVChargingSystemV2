@@ -1,14 +1,46 @@
 /* eslint-disable react/prop-types */
-import { Form, Input, Button } from "antd";
+import { Form, Input, Button, message } from "antd";
 import { useForm } from "antd/es/form/Form";
 import { User, Mail, Lock } from "lucide-react";
+import { registerUser, clearAuthSuccess, clearAuthError } from "../../redux/auth/authSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { useEffect } from "react";
 
 export default function SignupForm() {
   const [signupForm] = useForm();
+  const dispatch = useDispatch();
+  
+  // Get auth state từ Redux
+  const { loading, error, success } = useSelector((state) => state.auth);
 
   const onFinishSignup = async (values) => {
-    console.log("Signup Success:", values);
+    console.log("🔑 [SIGNUP] Register form values:", values);
+    dispatch(registerUser(values));
   };
+
+  // Effect để handle success message
+  useEffect(() => {
+    if (success) {
+      message.success("Đăng ký thành công! Vui lòng đăng nhập.");
+      signupForm.resetFields();
+    }
+  }, [success, signupForm]);
+
+  // Effect để handle error messages  
+  useEffect(() => {
+    if (error) {
+      console.error("❌ Register error:", error);
+      message.error(error);
+    }
+  }, [error]);
+
+  // Cleanup effect - clear state when component unmounts
+  useEffect(() => {
+    return () => {
+      dispatch(clearAuthSuccess());
+      dispatch(clearAuthError());
+    };
+  }, [dispatch]);
 
   return (
     <Form
@@ -22,13 +54,16 @@ export default function SignupForm() {
         label={
           <span className="flex items-center gap-2 text-slate-300">
             <User size={16} />
-            Full Name
+            Username
           </span>
         }
-        name="name"
-        rules={[{ required: true, message: "Please input your name!" }]}
+        name="username"
+        rules={[
+          { required: true, message: "Please input your username!" },
+          { min: 3, message: "Username must be at least 3 characters!" },
+        ]}
       >
-        <Input placeholder="John Doe" size="large" className="modern-input" />
+        <Input placeholder="Enter username (e.g. Huy12345)" size="large" className="modern-input" />
       </Form.Item>
 
       <Form.Item
@@ -45,7 +80,7 @@ export default function SignupForm() {
         ]}
       >
         <Input
-          placeholder="your@email.com"
+          placeholder="Enter email (e.g. Huy@gmail.com)"
           size="large"
           className="modern-input"
         />
@@ -59,10 +94,41 @@ export default function SignupForm() {
           </span>
         }
         name="password"
-        rules={[{ required: true, message: "Please input your password!" }]}
+        rules={[
+          { required: true, message: "Please input your password!" },
+          { min: 6, message: "Password must be at least 6 characters!" },
+        ]}
       >
         <Input.Password
-          placeholder="••••••••"
+          placeholder="Enter password (min 6 chars)"
+          size="large"
+          className="modern-input"
+        />
+      </Form.Item>
+
+      <Form.Item
+        label={
+          <span className="flex items-center gap-2 text-slate-300">
+            <Lock size={16} />
+            Confirm Password
+          </span>
+        }
+        name="confirmPassword"
+        dependencies={['password']}
+        rules={[
+          { required: true, message: "Please confirm your password!" },
+          ({ getFieldValue }) => ({
+            validator(_, value) {
+              if (!value || getFieldValue('password') === value) {
+                return Promise.resolve();
+              }
+              return Promise.reject(new Error('Passwords do not match!'));
+            },
+          }),
+        ]}
+      >
+        <Input.Password
+          placeholder="Confirm your password"
           size="large"
           className="modern-input"
         />
@@ -74,8 +140,10 @@ export default function SignupForm() {
           htmlType="submit"
           size="large"
           className="modern-button w-full"
+          loading={loading}
+          disabled={loading}
         >
-          Create Account
+          {loading ? "Creating Account..." : "Create Account"}
         </Button>
       </Form.Item>
 

@@ -18,7 +18,6 @@ import swp391.fa25.swp391.dto.response.MessageResponse;
 import swp391.fa25.swp391.dto.response.RegisterResponse;
 import swp391.fa25.swp391.entity.Account;
 import swp391.fa25.swp391.security.JwtTokenProvider;
-import swp391.fa25.swp391.security.PasswordEncoderConfig;
 import swp391.fa25.swp391.service.IService.IAccountService;
 
 import java.util.List;
@@ -32,7 +31,7 @@ public class AccountController {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final IAccountService accountService;
-    private final PasswordEncoderConfig passwordEncoderConfig;
+    private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest accountRequest) {
@@ -40,7 +39,7 @@ public class AccountController {
         List<Account> accounts = accountService.findByUsername(accountRequest.getUsername());
 
         if (isLoginSuccessful && !accounts.isEmpty()) {
-            Account account = accounts.getFirst();
+            Account account = accounts.get(0);
             String token = jwtTokenProvider.generateToken(account);
             AccountResponse accountResponse = new AccountResponse();
             accountResponse.setId(account.getId());
@@ -74,7 +73,7 @@ public class AccountController {
         Account account = new Account();
         account.setUsername(registerRequest.getUsername());
         account.setEmail(registerRequest.getEmail());
-        account.setPassword(passwordEncoderConfig.passwordEncoder().encode(registerRequest.getPassword()));
+        account.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
         account.setAccountRole("Driver");
         account.setStatus("ACTIVE");
 
@@ -106,7 +105,7 @@ public class AccountController {
     public ResponseEntity<Account> getAccountByName(@PathVariable String name) {
         List<Account> accounts = accountService.findByUsername(name);
         if (!accounts.isEmpty()) {
-            return ResponseEntity.ok(accounts.getFirst());
+            return ResponseEntity.ok(accounts.get(0));
         }
         return ResponseEntity.notFound().build();
     }
