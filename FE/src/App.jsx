@@ -6,7 +6,7 @@ import { useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { initializeAuth } from "./redux/auth/authSlice";
 import backgroundMusic from "./assets/backgroundmusic.mp3";
-import Map from "./Component/Map";
+
 import StaffSession from "./Page/Staff/StaffSession/Session";
 import LoginPage from "./Page/AuthPage/Login";
 import StaffLayout from "./Layout/Staff/StaffLayout";
