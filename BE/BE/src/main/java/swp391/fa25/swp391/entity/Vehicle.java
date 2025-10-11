@@ -45,4 +45,7 @@ public class Vehicle {
 
     @OneToMany(mappedBy = "vehicle")
     private List<ChargingSession> chargingSessions = new ArrayList<>();
+    @ManyToOne
+    @JoinColumn(name = "enterprise_id")
+    private Enterprise enterprise;
 }

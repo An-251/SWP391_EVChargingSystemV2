@@ -25,7 +25,5 @@ public class Driver {
     @Column(name = "ID_NUMBER", length = 50)
     private String idNumber;
 
-    @ManyToOne
-    @JoinColumn(name = "ENTERPRISE_ID")
-    private Enterprise enterprise;
+
 }

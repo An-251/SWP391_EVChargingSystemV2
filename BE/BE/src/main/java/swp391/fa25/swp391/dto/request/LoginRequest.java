@@ -1,5 +1,5 @@
 
-package swp391.fa25.swp391.dto;
+package swp391.fa25.swp391.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
