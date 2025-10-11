@@ -13,7 +13,6 @@ import StaffLayout from "./Layout/Staff/StaffLayout";
 import StaffHome from "./Page/Staff/StaffHome/Home";
 import DriverPage from "./Page/DriverPage";
 import AdminPage from "./Page/AdminPage";
-import EnterprisePage from "./Page/EnterprisePage";
 import RoleBasedRoute from "./Components/RoleBasedRoute";
 
 // Error boundary component for Map
@@ -101,24 +100,6 @@ function App() {
                   style={{ minHeight: "100vh" }}
                 >
                   <AdminPage />
-                </motion.div>
-              </RoleBasedRoute>
-            } 
-          />
-
-          {/* Enterprise Routes - Protected */}
-          <Route 
-            path="/enterprise/dashboard" 
-            element={
-              <RoleBasedRoute allowedRoles={["Enterprise"]}>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.5 }}
-                  style={{ minHeight: "100vh" }}
-                >
-                  <EnterprisePage />
                 </motion.div>
               </RoleBasedRoute>
             } 
