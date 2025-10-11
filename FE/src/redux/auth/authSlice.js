@@ -184,6 +184,37 @@ export const resetPassword = createAsyncThunk("auth/resetPassword", async (crede
   }
 });
 
+// Logout thunk để call API logout
+export const logoutUser = createAsyncThunk("auth/logoutUser", async (_, { rejectWithValue }) => {
+  try {
+    console.log("🚀 [LOGOUT] Starting logout request");
+    
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      // Call logout API if available
+      try {
+        await api.post("/accounts/logout");
+        console.log("✅ [LOGOUT] API logout successful");
+      } catch (error) {
+        console.warn("⚠️ [LOGOUT] API logout failed, but continuing with local logout:", error);
+      }
+    }
+    
+    // Clear localStorage regardless of API call result
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("currentUser");
+    console.log("✅ [LOGOUT] Cleared localStorage");
+    
+    return true;
+  } catch (error) {
+    console.error("❌ [LOGOUT] Error occurred:", error);
+    // Even if there's an error, clear localStorage
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("currentUser");
+    return rejectWithValue("Đăng xuất thành công nhưng có lỗi nhỏ xảy ra.");
+  }
+});
+
 // initializeAuth thunk của bạn
 export const initializeAuth = createAsyncThunk("auth/initializeAuth", async (_, { dispatch, rejectWithValue }) => {
   // Added rejectWithValue here
@@ -347,6 +378,29 @@ const authSlice = createSlice({
       .addCase(resetPassword.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || "Đặt lại mật khẩu thất bại";
+      })
+
+      // Add cases for logoutUser
+      .addCase(logoutUser.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.loading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+        state.error = null;
+        state.notificationMessage = null;
+        state.notificationType = null;
+        state.success = false;
+      })
+      .addCase(logoutUser.rejected, (state, action) => {
+        state.loading = false;
+        // Still logout locally even if API fails
+        state.user = null;
+        state.isAuthenticated = false;
+        state.error = null;
+        state.notificationMessage = action.payload;
+        state.notificationType = "warning";
       });
   },
 });
