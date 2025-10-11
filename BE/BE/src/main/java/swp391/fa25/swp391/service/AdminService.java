@@ -22,10 +22,6 @@ public class AdminService implements IAdminService {
     public List<Account> findAllAccounts() {
         return accountRepository.findAll();
     }
-
-
-
-
     @Override
     public void deleteAccount(Integer id) {
         accountRepository.deleteById(id);
