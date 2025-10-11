@@ -19,6 +19,7 @@ import swp391.fa25.swp391.dto.response.RegisterResponse;
 import swp391.fa25.swp391.entity.Account;
 import swp391.fa25.swp391.security.JwtTokenProvider;
 import swp391.fa25.swp391.service.IService.IAccountService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +41,8 @@ public class AccountController {
 
         if (isLoginSuccessful && !accounts.isEmpty()) {
             Account account = accounts.get(0);
+            System.out.println("🔍 [LOGIN] Account found - ID: " + account.getId() + ", Username: " + account.getUsername());
+            
             String token = jwtTokenProvider.generateToken(account);
             AccountResponse accountResponse = new AccountResponse();
             accountResponse.setId(account.getId());
@@ -48,6 +51,7 @@ public class AccountController {
             accountResponse.setEmail(account.getEmail());
             accountResponse.setRole(account.getAccountRole());
 
+            System.out.println("🔍 [LOGIN] Response - ID: " + accountResponse.getId() + ", Username: " + accountResponse.getUsername());
             return ResponseEntity.ok(new LoginResponse(token, accountResponse));
         }
 
@@ -113,8 +117,14 @@ public class AccountController {
     @PutMapping("/{id}")
     public ResponseEntity<AccountResponse> updateAccount(@PathVariable Integer id, @RequestBody UpdateProfileRequest updateRequest) {
         try {
+            System.out.println("🔍 [UPDATE_PROFILE] Request received for ID: " + id);
+            System.out.println("🔍 [UPDATE_PROFILE] Update data: " + updateRequest);
+            
             Optional<Account> existingAccountOpt = accountService.findById(id);
+            System.out.println("🔍 [UPDATE_PROFILE] Account found: " + existingAccountOpt.isPresent());
+            
             if (existingAccountOpt.isEmpty()) {
+                System.out.println("❌ [UPDATE_PROFILE] Account not found for ID: " + id);
                 return ResponseEntity.notFound().build();
             }
 
