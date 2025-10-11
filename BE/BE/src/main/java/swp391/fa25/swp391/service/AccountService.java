@@ -1,7 +1,7 @@
 package swp391.fa25.swp391.service;
 
 import jakarta.transaction.Transactional;
-import org.springframework.context.annotation.Lazy;
+
 import swp391.fa25.swp391.entity.Account;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

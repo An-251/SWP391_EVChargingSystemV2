@@ -7,6 +7,8 @@ import swp391.fa25.swp391.service.IService.IChargingPointService;
 import swp391.fa25.swp391.repository.models.ChargingPointRepository;
 
 import java.util.List;
+import java.util.Optional;
+
 @RequiredArgsConstructor
 @Service
 public class ChargingPointService implements IChargingPointService {
@@ -27,8 +29,8 @@ public class ChargingPointService implements IChargingPointService {
     }
 
     @Override
-    public ChargingPoint findById(Integer id) {
-        return chargingPointRepository.findById(id).get();
+    public Optional<ChargingPoint> findById(Integer id) {
+        return chargingPointRepository.findById(id);
     }
 
 
