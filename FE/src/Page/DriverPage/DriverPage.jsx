@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { 
   Navigation, 
   Battery, 
@@ -11,16 +12,23 @@ import {
   Star,
   ChevronDown,
   Locate,
-  Route
+  Route,
+  LogOut,
+  User
 } from 'lucide-react';
+import { logoutUser } from '../../redux/auth/authSlice';
+import { message } from 'antd';
 import DriverMap from './DriverMap';
 
 const DriverPage = () => {
-  const { user } = useSelector((state) => state.auth);
+  const { user, loading } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [selectedStation, setSelectedStation] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   // Mock data for charging stations
   const [chargingStations] = useState([
@@ -84,6 +92,20 @@ const DriverPage = () => {
     }
   }, []);
 
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showProfileMenu && !event.target.closest('.profile-menu')) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showProfileMenu]);
+
   const filteredStations = chargingStations.filter(station =>
     station.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     station.address.toLowerCase().includes(searchQuery.toLowerCase())
@@ -96,6 +118,17 @@ const DriverPage = () => {
   const handleBookStation = (station) => {
     // Handle booking logic here
     alert(`Đang đặt trạm ${station.name}...`);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutUser()).unwrap();
+      message.success('Đăng xuất thành công!');
+      navigate('/auth/login');
+    } catch (error) {
+      message.warning('Đăng xuất thành công!');
+      navigate('/auth/login');
+    }
   };
 
   return (
@@ -113,10 +146,40 @@ const DriverPage = () => {
                 <p className="text-sm text-gray-500">Xin chào, {user?.username || 'Driver'}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-1 bg-green-100 px-3 py-1 rounded-full">
                 <Battery className="w-4 h-4 text-green-600" />
                 <span className="text-sm font-medium text-green-700">85%</span>
+              </div>
+              
+              {/* Profile Menu */}
+              <div className="relative profile-menu">
+                <button
+                  onClick={() => setShowProfileMenu(!showProfileMenu)}
+                  className="flex items-center space-x-2 p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  <User className="w-5 h-5 text-gray-600" />
+                </button>
+                
+                {showProfileMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    <div className="p-3 border-b border-gray-200">
+                      <p className="text-sm font-medium text-gray-900">{user?.fullName || user?.username}</p>
+                      <p className="text-xs text-gray-500">{user?.email}</p>
+                      <p className="text-xs text-green-600 font-medium">{user?.role}</p>
+                    </div>
+                    <div className="p-1">
+                      <button
+                        onClick={handleLogout}
+                        disabled={loading}
+                        className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>{loading ? 'Đang đăng xuất...' : 'Đăng xuất'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
