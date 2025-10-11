@@ -8,8 +8,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import swp391.fa25.swp391.dto.request.LoginRequest;
 import swp391.fa25.swp391.dto.request.RegisterRequest;
@@ -52,7 +50,7 @@ public class AccountController {
 
             return ResponseEntity.ok(new LoginResponse(token, accountResponse));
         }
-        
+
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
@@ -64,8 +62,7 @@ public class AccountController {
                     .badRequest()
                     .body(new MessageResponse("Error: Username is already taken!"));
         }
-
-        // Check if email already exists
+// Check if email already exists
         if (accountService.existsByEmail(registerRequest.getEmail())) {
             return ResponseEntity
                     .badRequest()
@@ -120,28 +117,11 @@ public class AccountController {
             if (existingAccountOpt.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
-            
-            Account existingAccount = existingAccountOpt.get();
 
-            // Update account fields
-            if (updateRequest.getFullName() != null) {
-                existingAccount.setFullName(updateRequest.getFullName());
-            }
-            if (updateRequest.getEmail() != null) {
-                existingAccount.setEmail(updateRequest.getEmail());
-            }
-            if (updateRequest.getPhone() != null) {
-                existingAccount.setPhone(updateRequest.getPhone());
-            }
-            if (updateRequest.getGender() != null) {
-                existingAccount.setGender(updateRequest.getGender());
-            }
-            if (updateRequest.getDob() != null) {
-                existingAccount.setDob(updateRequest.getDob());
-            }
+            Account existingAccount = getAccount(updateRequest, existingAccountOpt);
 
             Account updatedAccount = accountService.updateAccount(existingAccount);
-            
+
             // Return updated account response
             AccountResponse accountResponse = new AccountResponse();
             accountResponse.setId(updatedAccount.getId());
@@ -154,6 +134,28 @@ public class AccountController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    private static Account getAccount(UpdateProfileRequest updateRequest, Optional<Account> existingAccountOpt) {
+        Account existingAccount = existingAccountOpt.get();
+
+        // Update account fields
+        if (updateRequest.getFullName() != null) {
+            existingAccount.setFullName(updateRequest.getFullName());
+        }
+        if (updateRequest.getEmail() != null) {
+            existingAccount.setEmail(updateRequest.getEmail());
+        }
+        if (updateRequest.getPhone() != null) {
+            existingAccount.setPhone(updateRequest.getPhone());
+        }
+        if (updateRequest.getGender() != null) {
+            existingAccount.setGender(updateRequest.getGender());
+        }
+        if (updateRequest.getDob() != null) {
+            existingAccount.setDob(updateRequest.getDob());
+        }
+        return existingAccount;
     }
 
     @DeleteMapping("/{name}")

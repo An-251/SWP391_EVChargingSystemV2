@@ -6,18 +6,12 @@
   <component name="ChangeListManager">
     <list default="true" id="b035dc1f-a70f-47af-9cd3-7249037f0d5f" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/AccountService.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/AccountService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/AdminService.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/AdminService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/ChargingPointService.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/ChargingPointService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/IService/IChargingPointService.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/IService/IChargingPointService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/IService/IReservationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/IService/IReservationService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/ReservationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/ReservationService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AdminController.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AdminController.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/repository/models/ChargingPointRepository.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/repository/models/ChargingPointRepository.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/repository/models/ChargingSessionRepository.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/repository/models/ChargingSessionRepository.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/IService/IAccountService.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/IService/IAccountService.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/IService/IReservationService.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/IService/IReservationService.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/ReservationService.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/ReservationService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/controller/AccountController.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/controller/AccountController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/response/AccountResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/response/AccountResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/PasswordEncoderConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/PasswordEncoderConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AccountController.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AccountController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/response/AccountResponse.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/response/AccountResponse.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/PasswordEncoderConfig.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/PasswordEncoderConfig.class" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -27,8 +21,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Class" />
         <option value="Interface" />
+        <option value="Class" />
       </list>
     </option>
   </component>
@@ -130,7 +124,7 @@
       <workItem from="1760084273792" duration="13548000" />
       <workItem from="1760150054268" duration="4928000" />
       <workItem from="1760174019795" duration="57000" />
-      <workItem from="1760174189760" duration="1056000" />
+      <workItem from="1760174189760" duration="2795000" />
     </task>
     <servers />
   </component>
