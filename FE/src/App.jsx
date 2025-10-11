@@ -12,6 +12,7 @@ import LoginPage from "./Page/AuthPage/Login";
 import StaffLayout from "./Layout/Staff/StaffLayout";
 import StaffHome from "./Page/Staff/StaffHome/Home";
 import DriverPage from "./Page/DriverPage";
+import DriverProfile from "./Page/DriverPage/DriverProfile";
 import AdminPage from "./Page/AdminPage";
 import RoleBasedRoute from "./Components/RoleBasedRoute";
 
@@ -82,6 +83,24 @@ function App() {
                   style={{ minHeight: "100vh" }}
                 >
                   <DriverPage />
+                </motion.div>
+              </RoleBasedRoute>
+            } 
+          />
+
+          {/* Driver Profile Route - Protected */}
+          <Route 
+            path="/driver/profile" 
+            element={
+              <RoleBasedRoute allowedRoles={["Driver"]}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.5 }}
+                  style={{ minHeight: "100vh" }}
+                >
+                  <DriverProfile />
                 </motion.div>
               </RoleBasedRoute>
             } 

@@ -184,6 +184,53 @@ export const resetPassword = createAsyncThunk("auth/resetPassword", async (crede
   }
 });
 
+// Update Driver Profile thunk
+export const updateDriverProfile = createAsyncThunk("auth/updateDriverProfile", async (profileData, { rejectWithValue, getState }) => {
+  try {
+    console.log("🚀 [UPDATE_PROFILE] Starting update profile request with data:", profileData);
+    
+    const { auth } = getState();
+    const userId = auth.user?.id;
+    
+    if (!userId) {
+      return rejectWithValue("Không tìm thấy thông tin user ID");
+    }
+    
+    console.log("📤 [UPDATE_PROFILE] Sending request to update profile for user ID:", userId);
+    
+    const response = await api.put(`/accounts/${userId}`, profileData);
+    
+    console.log("✅ [UPDATE_PROFILE] Response received:", response);
+    console.log("📥 [UPDATE_PROFILE] Response data:", response.data);
+    
+    // Update localStorage with new user data
+    const updatedUser = { ...auth.user, ...profileData };
+    localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+    
+    console.log("💾 [UPDATE_PROFILE] Updated localStorage successfully");
+    
+    return updatedUser;
+  } catch (error) {
+    console.error("❌ [UPDATE_PROFILE] Error occurred:", error);
+    console.error("📄 [UPDATE_PROFILE] Error response:", error.response?.data);
+    console.error("🔢 [UPDATE_PROFILE] Error status:", error.response?.status);
+    
+    let errorMessage = "Cập nhật thông tin thất bại. Vui lòng thử lại.";
+    
+    if (error.response) {
+      if (error.response.status === 400) {
+        errorMessage = error.response.data.message || "Dữ liệu không hợp lệ!";
+      } else if (error.response.status === 404) {
+        errorMessage = "Không tìm thấy tài khoản!";
+      } else if (error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      }
+    }
+    
+    return rejectWithValue(errorMessage);
+  }
+});
+
 // Logout thunk để call API logout
 export const logoutUser = createAsyncThunk("auth/logoutUser", async (_, { rejectWithValue }) => {
   try {
@@ -401,6 +448,23 @@ const authSlice = createSlice({
         state.error = null;
         state.notificationMessage = action.payload;
         state.notificationType = "warning";
+      })
+
+      // Add cases for updateDriverProfile
+      .addCase(updateDriverProfile.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateDriverProfile.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+        state.error = null;
+        state.success = true;
+      })
+      .addCase(updateDriverProfile.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.success = false;
       });
   },
 });
