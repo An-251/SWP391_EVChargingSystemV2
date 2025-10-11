@@ -1,4 +1,4 @@
-package swp391.fa25.swp391.dto;
+package swp391.fa25.swp391.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
