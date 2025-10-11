@@ -1,16 +1,17 @@
 package swp391.fa25.swp391.controller;
 
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import swp391.fa25.swp391.dto.*;
+import swp391.fa25.swp391.dto.request.LoginRequest;
+import swp391.fa25.swp391.dto.request.RegisterRequest;
+import swp391.fa25.swp391.dto.response.AccountResponse;
+import swp391.fa25.swp391.dto.response.LoginResponse;
+import swp391.fa25.swp391.dto.response.MessageResponse;
+import swp391.fa25.swp391.dto.response.RegisterResponse;
 import swp391.fa25.swp391.entity.Account;
 import swp391.fa25.swp391.security.JwtTokenProvider;
 import swp391.fa25.swp391.security.PasswordEncoderConfig;
@@ -97,10 +98,7 @@ public class AccountController {
         }
         return ResponseEntity.notFound().build();
     }
-    @GetMapping
-    public ResponseEntity<List<Account>> getAllAccounts() {
-        return ResponseEntity.ok(accountService.findAll());
-    }
+
 
     @PutMapping("/{id}")
     public ResponseEntity<Account> updateAccount(@PathVariable Integer id, @Validated @RequestBody Account account) {

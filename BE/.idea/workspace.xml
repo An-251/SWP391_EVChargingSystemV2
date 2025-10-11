@@ -7,11 +7,18 @@
     <list default="true" id="b035dc1f-a70f-47af-9cd3-7249037f0d5f" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/controller/AccountController.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/controller/AccountController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/AccountService.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/AccountService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/AccountResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/response/AccountResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/LoginRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/request/LoginRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/LoginResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/response/LoginResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/MessageResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/response/MessageResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/RegisterRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/request/RegisterRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/RegisterResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/response/RegisterResponse.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AccountController.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AccountController.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/entity/WorkShift.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/AccountService.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AdminController.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AdminController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/repository/models/ChargingPointRepository.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/repository/models/ChargingPointRepository.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/repository/models/ChargingSessionRepository.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/repository/models/ChargingSessionRepository.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/AccountService.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/AccountService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/IService/IAccountService.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/IService/IAccountService.class" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -121,7 +128,8 @@
       <workItem from="1759996285430" duration="4000" />
       <workItem from="1760007760811" duration="3935000" />
       <workItem from="1760029304081" duration="3219000" />
-      <workItem from="1760084273792" duration="672000" />
+      <workItem from="1760084273792" duration="13548000" />
+      <workItem from="1760150054268" duration="2312000" />
     </task>
     <servers />
   </component>
