@@ -40,5 +40,5 @@ public class Enterprise {
     private String status;
 
     @OneToMany(mappedBy = "enterprise")
-    private List<Driver> drivers = new ArrayList<>();
+    private List<Vehicle> vehicles = new ArrayList<>();
 }
