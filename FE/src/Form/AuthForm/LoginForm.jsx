@@ -39,7 +39,11 @@ export default function LoginForm() {
         case "Driver":
           navigate("/driver");
           break;
+        case "Enterprise":
+          navigate("/enterprise/dashboard");
+          break;
         default:
+          console.warn("Unknown role:", user.role, "redirecting to staff dashboard");
           navigate("/staff/dashboard");
       }
     }
