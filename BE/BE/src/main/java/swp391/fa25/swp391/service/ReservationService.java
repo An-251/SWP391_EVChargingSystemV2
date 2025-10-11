@@ -34,4 +34,14 @@ public class ReservationService implements IReservationService {
     public List<Reservation> findByUserId(Integer userId) {
         return reservationRepository.findByField("user_id",userId);
     }
+
+    @Override
+    public List<Reservation> findByChargingStationId(Integer chargingStationId) {
+        return reservationRepository.findByField("STATION_ID",chargingStationId);
+    }
+
+    @Override
+    public List<Reservation> findByChargingPointId(Integer chargingPointId) {
+        return reservationRepository.findByField("POINT_ID",chargingPointId);
+    }
 }

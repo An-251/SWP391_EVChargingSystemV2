@@ -10,4 +10,6 @@ public interface IReservationService {
     Reservation findById(Integer id);
     List<Reservation> findAll();
     List<Reservation> findByUserId(Integer userId);
+    List<Reservation> findByChargingStationId(Integer chargingStationId);
+    List<Reservation> findByChargingPointId(Integer chargingPointId);
 }
