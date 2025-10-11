@@ -35,7 +35,7 @@ public class AccountController {
         List<Account> accounts = accountService.findByUsername(accountRequest.getUsername());
 
         if (isLoginSuccessful && !accounts.isEmpty()) {
-            Account account = accounts.get(0);
+            Account account = accounts.getFirst();
             String token = jwtTokenProvider.generateToken(account);
             AccountResponse accountResponse = new AccountResponse();
             accountResponse.setUsername(account.getUsername());
@@ -94,7 +94,7 @@ public class AccountController {
     public ResponseEntity<Account> getAccountByName(@PathVariable String name) {
         List<Account> accounts = accountService.findByUsername(name);
         if (!accounts.isEmpty()) {
-            return ResponseEntity.ok(accounts.get(0));
+            return ResponseEntity.ok(accounts.getFirst());
         }
         return ResponseEntity.notFound().build();
     }
@@ -102,7 +102,7 @@ public class AccountController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Account> updateAccount(@PathVariable Integer id, @Validated @RequestBody Account account) {
-        account.setId(id);
+        this.accountService.findById(id);
         Account updatedAccount = accountService.updateAccount(account);
         if (updatedAccount != null) {
             return ResponseEntity.ok(updatedAccount);
