@@ -27,6 +27,11 @@ public class SecurityConfig {
     private final IAccountService accountService;  // Add this
 
     @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
     public UserDetailsService userDetailsService() {
         return new CustomUserDetailsService(accountService);  // Replace InMemoryUserDetailsManager with CustomUserDetailsService
     }
