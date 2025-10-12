@@ -23,7 +23,8 @@ public class GenericRepositoryImpl<T> implements GenericRepository<T> {
 
     @Override
     public Optional<T> findById(Integer id) {
-        return Optional.empty();
+        T entity = entityManager.find(entityClass, id);
+        return Optional.ofNullable(entity);
     }
 
     @Override
