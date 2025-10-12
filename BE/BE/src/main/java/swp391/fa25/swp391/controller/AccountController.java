@@ -21,6 +21,8 @@ import swp391.fa25.swp391.security.JwtTokenProvider;
 import swp391.fa25.swp391.security.PasswordEncoderConfig;
 import swp391.fa25.swp391.service.IService.IAccountService;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -75,6 +77,8 @@ public class AccountController {
         account.setUsername(registerRequest.getUsername());
         account.setEmail(registerRequest.getEmail());
         account.setPassword(passwordEncoderConfig.passwordEncoder().encode(registerRequest.getPassword()));
+        account.setCreatedDate(Instant.now());
+        account.setBalance(0.0);
         account.setAccountRole("Driver");
         account.setStatus("ACTIVE");
 
