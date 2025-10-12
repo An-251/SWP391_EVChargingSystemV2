@@ -41,4 +41,7 @@ public class ChargingStation {
 
     @OneToMany(mappedBy = "station")
     private List<ChargingPoint> chargingPoints= new ArrayList<>();
+
+    @OneToMany(mappedBy = "station")
+    private List<WorkSchedule> workSchedules = new ArrayList<>();
 }

@@ -25,8 +25,14 @@ public class WorkSchedule {
 
     // Nhân viên được gán lịch làm việc
     @ManyToOne
-    @JoinColumn(name = "EMPLOYEE_ID") // hoặc employee_id nếu có class Employee
+    @JoinColumn(name = "EMPLOYEE_ID")
     private StationEmployee employee;
+
+    //1 Station chứ nhiều lịch làm việc của nhân viên
+    @ManyToOne
+    @JoinColumn(name = "STATION_ID")
+    private ChargingStation station;
+
 
     // Một WorkSchedule có thể chứa nhiều WorkShift
     @ManyToMany
