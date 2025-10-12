@@ -6,8 +6,8 @@ import { Zap, Mail, Lock, User } from "lucide-react";
 import { Form, Input, Tabs } from "antd";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import LoginForm from "../../../../../SWP391_EVChargingSystem/FE/src/Form/AuthForm/LoginForm";
-import SignupForm from "../../../../../SWP391_EVChargingSystem/FE/src/Form/AuthForm/SignupForm";
+import LoginForm from "../../Form/AuthForm/LoginForm";
+import SignupForm from "../../Form/AuthForm/SignupForm";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -79,17 +79,19 @@ export default function LoginPage() {
                 centered
                 animated={{ inkBar: true, tabPane: true }}
                 className="modern-tabs"
-              >
-                {/* Login Tab */}
-                <Tabs.TabPane tab="Login" key="login">
-                  <LoginForm />
-                </Tabs.TabPane>
-
-                {/* Sign Up Tab */}
-                <Tabs.TabPane tab="Sign Up" key="signup">
-                  <SignupForm />
-                </Tabs.TabPane>
-              </Tabs>
+                items={[
+                  {
+                    key: 'login',
+                    label: 'Login',
+                    children: <LoginForm />
+                  },
+                  {
+                    key: 'signup', 
+                    label: 'Sign Up',
+                    children: <SignupForm />
+                  }
+                ]}
+              />
             </div>
           </div>
         </div>
