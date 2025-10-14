@@ -2,6 +2,7 @@ package swp391.fa25.swp391.service;
 
 import jakarta.transaction.Transactional;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import swp391.fa25.swp391.entity.Account;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,12 +16,17 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
+
 public class AccountService implements IAccountService {
 
     private final AccountRepository accountRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    private final PasswordEncoderConfig passwordEncoderConfig;
+    public AccountService(PasswordEncoder passwordEncoder,
+                       AccountRepository accountRepository) {
+        this.passwordEncoder = passwordEncoder;
+        this.accountRepository = accountRepository;
+    }
     @Override
     @Transactional
     public Account register(Account account) {
@@ -35,7 +41,8 @@ public class AccountService implements IAccountService {
         }
 
         // Use passwordEncoder.matches instead of equals
-        return passwordEncoderConfig.passwordEncoder().matches(password, accounts.getFirst().getPassword());
+        return passwordEncoder.matches(password, accounts.getFirst().getPassword());
+
     }
 
     public Account updateAccount(Account account) {

@@ -5,7 +5,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.http.Cookie;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,27 +20,31 @@ import swp391.fa25.swp391.security.JwtTokenProvider;
 import swp391.fa25.swp391.service.IService.IAccountService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/accounts")
-@RequiredArgsConstructor
+
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173", "http://localhost:5174"})
 public class AccountController {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final IAccountService accountService;
     private final PasswordEncoder passwordEncoder;
-
+    public AccountController(JwtTokenProvider jwtTokenProvider, IAccountService accountService,PasswordEncoder passwordEncoder) {
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.accountService = accountService;
+        this.passwordEncoder = passwordEncoder;
+    }
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest accountRequest) {
         boolean isLoginSuccessful = accountService.login(accountRequest.getUsername(), accountRequest.getPassword());
         List<Account> accounts = accountService.findByUsername(accountRequest.getUsername());
 
         if (isLoginSuccessful && !accounts.isEmpty()) {
-            Account account = accounts.get(0);
-            System.out.println("🔍 [LOGIN] Account found - ID: " + account.getId() + ", Username: " + account.getUsername());
+            Account account = accounts.getFirst();
             
             String token = jwtTokenProvider.generateToken(account);
             AccountResponse accountResponse = new AccountResponse();
@@ -51,7 +54,6 @@ public class AccountController {
             accountResponse.setEmail(account.getEmail());
             accountResponse.setRole(account.getAccountRole());
 
-            System.out.println("🔍 [LOGIN] Response - ID: " + accountResponse.getId() + ", Username: " + accountResponse.getUsername());
             return ResponseEntity.ok(new LoginResponse(token, accountResponse));
         }
 
@@ -78,6 +80,8 @@ public class AccountController {
         account.setUsername(registerRequest.getUsername());
         account.setEmail(registerRequest.getEmail());
         account.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+        account.setCreatedDate(Instant.now());
+        account.setBalance(0.0);
         account.setAccountRole("Driver");
         account.setStatus("ACTIVE");
 
@@ -109,7 +113,7 @@ public class AccountController {
     public ResponseEntity<Account> getAccountByName(@PathVariable String name) {
         List<Account> accounts = accountService.findByUsername(name);
         if (!accounts.isEmpty()) {
-            return ResponseEntity.ok(accounts.get(0));
+            return ResponseEntity.ok(accounts.getFirst());
         }
         return ResponseEntity.notFound().build();
     }
@@ -117,14 +121,10 @@ public class AccountController {
     @PutMapping("/{id}")
     public ResponseEntity<AccountResponse> updateAccount(@PathVariable Integer id, @RequestBody UpdateProfileRequest updateRequest) {
         try {
-            System.out.println("🔍 [UPDATE_PROFILE] Request received for ID: " + id);
-            System.out.println("🔍 [UPDATE_PROFILE] Update data: " + updateRequest);
-            
             Optional<Account> existingAccountOpt = accountService.findById(id);
-            System.out.println("🔍 [UPDATE_PROFILE] Account found: " + existingAccountOpt.isPresent());
+
             
             if (existingAccountOpt.isEmpty()) {
-                System.out.println("❌ [UPDATE_PROFILE] Account not found for ID: " + id);
                 return ResponseEntity.notFound().build();
             }
 

@@ -5,13 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b035dc1f-a70f-47af-9cd3-7249037f0d5f" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/data_source_mapping.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/data_source_mapping.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/controller/AccountController.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/controller/AccountController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/response/AccountResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/dto/response/AccountResponse.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/PasswordEncoderConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/security/PasswordEncoderConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/AccountService.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/service/AccountService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/application.properties" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AccountController.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AccountController.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/response/AccountResponse.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/response/AccountResponse.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/PasswordEncoderConfig.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/PasswordEncoderConfig.class" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -53,34 +56,35 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "HTTP Request.Swp391Application | #2.executor": "Run",
-    "HTTP Request.Swp391Application | #3.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RequestMappingsPanelOrder0": "0",
-    "RequestMappingsPanelOrder1": "1",
-    "RequestMappingsPanelWidth0": "75",
-    "RequestMappingsPanelWidth1": "75",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "Spring Boot.Swp391Application.executor": "Run",
-    "git-widget-placeholder": "BE",
-    "ignore.virus.scanning.warn.message": "true",
-    "junie.onboarding.icon.badge.shown": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/Gia Huy/OneDrive/Documents/GitHub/SWP391_EVChargingSystemV2/BE",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "run.code.analysis.last.selected.profile": "pProject Default",
-    "to.speed.mode.migration.done": "true",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;HTTP Request.Swp391Application | #2.executor&quot;: &quot;Run&quot;,
+    &quot;HTTP Request.Swp391Application | #3.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;Spring Boot.Swp391Application.executor&quot;: &quot;Run&quot;,
+    &quot;database.data.extractors.current.export.id&quot;: &quot;Comma-separated (CSV)_id&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;BE&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/Gia Huy/OneDrive/Documents/GitHub/SWP391_EVChargingSystemV2/BE&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="Spring Boot.Swp391Application">
     <configuration name="Swp391Application | #2" type="HttpClient.HttpRequestRunConfigurationType" factoryName="HTTP Request" temporary="true" nameIsGenerated="true" path="$APPLICATION_CONFIG_DIR$/scratches/Swp391Application.http" executionIdentifier="#2" index="2" runType="Run single request">
       <method v="2" />
@@ -125,6 +129,12 @@
       <workItem from="1760150054268" duration="4928000" />
       <workItem from="1760174019795" duration="57000" />
       <workItem from="1760174189760" duration="2795000" />
+      <workItem from="1760193036378" duration="4256000" />
+      <workItem from="1760279712273" duration="4427000" />
+      <workItem from="1760288066348" duration="1072000" />
+      <workItem from="1760290163015" duration="53000" />
+      <workItem from="1760409109729" duration="4011000" />
+      <workItem from="1760423307505" duration="767000" />
     </task>
     <servers />
   </component>
