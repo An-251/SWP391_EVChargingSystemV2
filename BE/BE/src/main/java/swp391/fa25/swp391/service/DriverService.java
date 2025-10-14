@@ -6,17 +6,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import swp391.fa25.swp391.entity.Driver;
-import swp391.fa25.swp391.repository.models.DriverReposipository;
+
+import swp391.fa25.swp391.repository.models.DriverRepository;
 import swp391.fa25.swp391.service.IService.IDriverService;
 
 import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class DriverService implements IDriverService {
-    private final DriverReposipository driverReposipository;
+    private final DriverRepository driverRepository;
     @Override
     public Optional<Driver> findById(Integer id) {
 
-        return driverReposipository.findById(id);
+        return driverRepository.findById(id);
     }
 }
