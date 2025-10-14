@@ -46,4 +46,12 @@ public class Facility {
 
     @OneToMany(mappedBy = "facility")
     private List<ChargingStation> chargingStations = new ArrayList<>();
+
+    @Transient
+    public String getFullAddress() {
+        return (streetAddress != null ? streetAddress : "")
+                + (ward != null ? ", " + ward : "")
+                + (district != null ? ", " + district : "")
+                + (city != null ? ", " + city : "");
+    }
 }
