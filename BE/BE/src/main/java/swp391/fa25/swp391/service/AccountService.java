@@ -30,21 +30,24 @@ public class AccountService implements IAccountService {
     @Override
     @Transactional
     public Account register(Account account) {
+
         return accountRepository.save(account);
     }
 
     @Override
     public boolean login(String username, String password) {
-        List<Account> accounts = accountRepository.findByField("username", username);
+        // Dùng findAllByUsername vì AccountRepository đã được sửa để trả về List
+        List<Account> accounts = accountRepository.findAllByUsername(username);
         if (accounts.isEmpty()) {
             return false;
         }
 
         // Use passwordEncoder.matches instead of equals
         return passwordEncoder.matches(password, accounts.getFirst().getPassword());
-
     }
 
+    @Override
+    @Transactional // Phương thức update cần Transactional
     public Account updateAccount(Account account) {
         Optional<Account> existingOpt = accountRepository.findById(account.getId());
         if (existingOpt.isEmpty()) {
@@ -61,64 +64,62 @@ public class AccountService implements IAccountService {
         if (account.getPhone() != null) existing.setPhone(account.getPhone());
         if (account.getEmail() != null) existing.setEmail(account.getEmail());
 
-
-
-
         return accountRepository.save(existing);
     }
+
     @Override
     public List<Account> findByEmail(String email) {
-
-        return accountRepository.findByField("email",email);
+        // Dùng findAllByEmail
+        return accountRepository.findAllByEmail(email);
     }
+
     @Override
     public List<Account> findByUsername(String username) {
-
-        return accountRepository.findByField("username",username);
+        // Dùng findAllByUsername
+        return accountRepository.findAllByUsername(username);
     }
 
 
     @Override
     public boolean existsByUsername(String username) {
-        return !accountRepository.findByField("username",username).isEmpty();
+        // Dùng existsByUsername tự sinh của JpaRepository
+        return accountRepository.existsByUsername(username);
     }
 
     @Override
     public boolean existsByEmail(String email) {
-
-        return !accountRepository.findByField("email",email).isEmpty();
+        // Dùng existsByEmail tự sinh của JpaRepository
+        return accountRepository.existsByEmail(email);
     }
+
     @Override
     public Optional<Account> findById(Integer id) {
-
+        // Dùng findById tự sinh của JpaRepository
         return accountRepository.findById(id);
     }
 
     @Override
-
-
     public List<Account> findAll() {
+        // Dùng findAll tự sinh của JpaRepository
         return accountRepository.findAll();
     }
 
 
-
     @Override
-    public boolean deleteAccount(String name) {
-        List<Account> accounts = accountRepository.findByField("username", name);
-        if (!accounts.isEmpty()) {
-            accountRepository.deleteByName(name);
-            return true;
-        }
-        return false;
-
+    @Transactional // Phương thức xóa cần Transactional
+    public boolean deleteAccount(String username) {
+        // Sử dụng phương thức deleteByUsername đã thêm vào AccountRepository
+        // Nó trả về số lượng bản ghi đã xóa
+        Long deletedCount = accountRepository.deleteByUsername(username);
+        return deletedCount > 0;
     }
 
     @Override
+    @Transactional // Phương thức xóa cần Transactional
     public boolean deleteAccountById(Integer id) {
-        Optional<Account> accountOpt = accountRepository.findById(id);
-        if (accountOpt.isPresent()) {
-            accountRepository.delete(accountOpt.get());
+        // Sử dụng phương thức deleteById chuẩn của JpaRepository
+        if (accountRepository.existsById(id)) {
+            accountRepository.deleteById(id);
             return true;
         }
         return false;
