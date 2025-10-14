@@ -8,5 +8,5 @@ import swp391.fa25.swp391.repository.GenericRepositoryImpl;
 
 @Repository
 public interface IncidentReportRepository extends JpaRepository<IncidentReport, Integer> {
-   
+
 }
