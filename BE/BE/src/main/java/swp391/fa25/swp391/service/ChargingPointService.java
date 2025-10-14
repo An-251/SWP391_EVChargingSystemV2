@@ -15,7 +15,7 @@ public class ChargingPointService implements IChargingPointService {
     private final ChargingPointRepository chargingPointRepository;
 
     @Override
-    public ChargingPoint register(ChargingPoint chargingPoint) {
+    public ChargingPoint save(ChargingPoint chargingPoint) {
         return chargingPointRepository.save(chargingPoint);
     }
 
@@ -25,11 +25,13 @@ public class ChargingPointService implements IChargingPointService {
     }
 
     @Override
-    public void deleteChargingPoint(Integer id) { chargingPointRepository.deleteById(id);
+    public void deleteChargingPoint(Integer id) {
+        chargingPointRepository.deleteById(id);
     }
 
     @Override
     public Optional<ChargingPoint> findById(Integer id) {
+
         return chargingPointRepository.findById(id);
     }
 
@@ -37,7 +39,8 @@ public class ChargingPointService implements IChargingPointService {
 
     @Override
     public List<ChargingPoint> findAll() {
-        return List.of();
+
+        return chargingPointRepository.findAll();
     }
 
     @Override
