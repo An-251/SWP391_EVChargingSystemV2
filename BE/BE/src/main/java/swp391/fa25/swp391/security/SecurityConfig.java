@@ -20,16 +20,17 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import swp391.fa25.swp391.service.IService.IAccountService;
 
 import java.util.Arrays;
-@RequiredArgsConstructor
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
     private final IAccountService accountService;  // Add this
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
+    public SecurityConfig(IAccountService accountService, PasswordEncoder passwordEncoder) {
+        this.accountService = accountService;
+        this.passwordEncoder = passwordEncoder;
     }
+
 
     @Bean
     public UserDetailsService userDetailsService() {
