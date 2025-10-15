@@ -10,7 +10,7 @@ public interface IFacilityService {
     void deleteFacility(Integer id);
     Facility updateFacility(Facility facility);
     Facility findById(Integer id);
-    List<Facility> findByFacilityName(String facilityName);
+    List<Facility> findByName(String facilityName);
     List<Facility> findAll();
-    List<Facility> findByAddress(String address);
+    List<Facility> findByFullAddress(String address);
 }
