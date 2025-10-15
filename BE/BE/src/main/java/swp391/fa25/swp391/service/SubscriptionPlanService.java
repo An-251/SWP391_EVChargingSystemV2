@@ -43,6 +43,6 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
 
     @Override
     public List<SubscriptionPlan> findSubscriptionPlanName(String subscriptionPlanName) {
-        return subscriptionPlanRepository.findByField("subscriptionPlan_name",subscriptionPlanName);
+        return subscriptionPlanRepository.findByPlanNameContaining(subscriptionPlanName);
     }
 }

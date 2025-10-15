@@ -58,6 +58,13 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findByChargingPoint_Id(Integer chargingPointId);
 
     /**
+     * Tìm Reservation theo Charging Station ID (thông qua ChargingPoint)
+     * Sử dụng Spring Data JPA method naming convention
+     * Đường dẫn: Reservation -> chargingPoint -> station -> id
+     */
+    List<Reservation> findByChargingPoint_Station_Id(Integer stationId);
+
+    /**
      * Tìm Reservation theo Charging Point và Status
      */
     List<Reservation> findByChargingPoint_IdAndStatus(Integer chargingPointId, String status);
@@ -147,7 +154,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @Param("chargingPointId") Integer chargingPointId,
             @Param("date") LocalDateTime date
     );
-
 
     /**
      * Tìm reservation theo driver và khoảng thời gian
