@@ -152,5 +152,22 @@ public class ChargingStationController {
                 );
     }
 
-    // ... (Phương thức DELETE) ...
+    @DeleteMapping("/charging-stations/{id}")
+    public ResponseEntity<?> deleteChargingStation(@PathVariable Integer id) {
+        try {
+            // Kiểm tra xem charging station có tồn tại không
+            return chargingStationService.findById(id)
+                    .<ResponseEntity<?>>map(station -> {
+                        chargingStationService.deleteChargingStation(id);
+                        return ResponseEntity.ok("Charging station with ID " + id + " deleted successfully.");
+                    })
+                    .orElseGet(() ->
+                            ResponseEntity.status(HttpStatus.NOT_FOUND)
+                                    .body("Charging station not found with ID: " + id)
+                    );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error deleting charging station: " + e.getMessage());
+        }
+    }
 }
