@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface IChargingPointService {
-    ChargingPoint register(ChargingPoint chargingPoint);
+    ChargingPoint save(ChargingPoint chargingPoint);
     void deleteChargingPoint(Integer id);
     Optional<ChargingPoint> findById(Integer id);
     ChargingPoint updateChargingPoint(ChargingPoint chargingPoint);

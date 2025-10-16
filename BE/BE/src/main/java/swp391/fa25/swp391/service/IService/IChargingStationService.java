@@ -14,4 +14,5 @@ public interface IChargingStationService {
     List<ChargingStation> findAll();
     ChargingStation updateChargingStationStatus(ChargingStation chargingStation);
     boolean existsByStationName(String stationName);
+    ChargingStation save(ChargingStation chargingStation);
 }

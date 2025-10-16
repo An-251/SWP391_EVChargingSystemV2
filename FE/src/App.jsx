@@ -15,6 +15,13 @@ import DriverPage from "./Page/DriverPage";
 import DriverProfile from "./Page/DriverPage/DriverProfile";
 import AdminPage from "./Page/AdminPage";
 import RoleBasedRoute from "./Components/RoleBasedRoute";
+import AdminLayout from "./Layout/Admin/AdminLayout";
+import AdminDashboard from "./Page/AdminPage/Dashboard/AdminDashboard";
+import AccountsManagement from "./Page/AdminPage/Accounts/AccountsManagement";
+import StationsManagement from "./Page/AdminPage/Stations/StationsManagement";
+import ChargingPointsManagement from "./Page/AdminPage/ChargingPoints/ChargingPointsManagement";
+import SubscriptionsManagement from "./Page/AdminPage/Subscriptions/SubscriptionsManagement";
+import ErrorBoundary from "./Components/ErrorBoundary";
 
 // Error boundary component for Map
 function MapErrorBoundary({ children }) {
@@ -75,15 +82,17 @@ function App() {
             path="/driver" 
             element={
               <RoleBasedRoute allowedRoles={["Driver"]}>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.5 }}
-                  style={{ minHeight: "100vh" }}
-                >
-                  <DriverPage />
-                </motion.div>
+                <ErrorBoundary>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.5 }}
+                    style={{ minHeight: "100vh" }}
+                  >
+                    <DriverPage />
+                  </motion.div>
+                </ErrorBoundary>
               </RoleBasedRoute>
             } 
           />
@@ -93,36 +102,37 @@ function App() {
             path="/driver/profile" 
             element={
               <RoleBasedRoute allowedRoles={["Driver"]}>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.5 }}
-                  style={{ minHeight: "100vh" }}
-                >
-                  <DriverProfile />
-                </motion.div>
+                <ErrorBoundary>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.5 }}
+                    style={{ minHeight: "100vh" }}
+                  >
+                    <DriverProfile />
+                  </motion.div>
+                </ErrorBoundary>
               </RoleBasedRoute>
             } 
           />
 
           {/* Admin Routes - Protected */}
           <Route 
-            path="/admin/dashboard" 
+            path="/admin" 
             element={
               <RoleBasedRoute allowedRoles={["Admin"]}>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.5 }}
-                  style={{ minHeight: "100vh" }}
-                >
-                  <AdminPage />
-                </motion.div>
+                <AdminLayout />
               </RoleBasedRoute>
-            } 
-          />
+            }
+          >
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="accounts" element={<AccountsManagement />} />
+            <Route path="stations" element={<StationsManagement />} />
+            <Route path="charging-points" element={<ChargingPointsManagement />} />
+            <Route path="subscriptions" element={<SubscriptionsManagement />} />
+          </Route>
 
           {/* Staff Routes - Protected */}
           <Route path="/staff" element={

@@ -1,7 +1,27 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
 html,
 body,
 #root {
   background-color: #aab0ab; /* màu nền đen */
   min-height: 100vh;
+}
+
+/* Custom Leaflet marker styles */
+.custom-marker,
+.user-location-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Leaflet popup customization */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  padding: 0;
 }
