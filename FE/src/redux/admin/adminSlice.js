@@ -85,8 +85,16 @@ export const fetchStations = createAsyncThunk(
   "admin/fetchStations",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get("/admin/stations");
-      return response.data;
+      // Backend uses /charging-stations for both Admin and Driver
+      // Backend has fixed circular reference issue
+      const response = await api.get("/charging-stations");
+      
+      // Use response data directly
+      const stations = Array.isArray(response.data) 
+        ? response.data 
+        : (response.data?.data || response.data?.content || []);
+      
+      return stations;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch stations");
     }
@@ -97,7 +105,8 @@ export const createStation = createAsyncThunk(
   "admin/createStation",
   async (data, { rejectWithValue }) => {
     try {
-      const response = await api.post("/admin/stations", data);
+      // Backend uses /charging-stations for both Admin and Driver
+      const response = await api.post("/charging-stations", data);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to create station");
@@ -109,7 +118,8 @@ export const updateStation = createAsyncThunk(
   "admin/updateStation",
   async ({ id, data }, { rejectWithValue }) => {
     try {
-      const response = await api.put(`/admin/stations/${id}`, data);
+      // Backend uses /charging-stations for both Admin and Driver
+      const response = await api.put(`/charging-stations/${id}`, data);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to update station");
@@ -121,7 +131,8 @@ export const deleteStation = createAsyncThunk(
   "admin/deleteStation",
   async (id, { rejectWithValue }) => {
     try {
-      await api.delete(`/admin/stations/${id}`);
+      // Backend uses /charging-stations for both Admin and Driver
+      await api.delete(`/charging-stations/${id}`);
       return id;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to delete station");
@@ -134,10 +145,47 @@ export const fetchFacilities = createAsyncThunk(
   "admin/fetchFacilities",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get("/admin/facilities");
+      // Backend uses /facilities (not /admin/facilities)
+      const response = await api.get("/facilities");
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch facilities");
+    }
+  }
+);
+
+export const createFacility = createAsyncThunk(
+  "admin/createFacility",
+  async (data, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/facilities", data);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to create facility");
+    }
+  }
+);
+
+export const updateFacility = createAsyncThunk(
+  "admin/updateFacility",
+  async ({ id, data }, { rejectWithValue }) => {
+    try {
+      const response = await api.put(`/facilities/${id}`, data);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to update facility");
+    }
+  }
+);
+
+export const deleteFacility = createAsyncThunk(
+  "admin/deleteFacility",
+  async (id, { rejectWithValue }) => {
+    try {
+      await api.delete(`/facilities/${id}`);
+      return id;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to delete facility");
     }
   }
 );
@@ -147,7 +195,8 @@ export const fetchChargingPoints = createAsyncThunk(
   "admin/fetchChargingPoints",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get("/admin/charging-points");
+      // Backend uses /charging-points (not /admin/charging-points)
+      const response = await api.get("/charging-points");
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch charging points");
@@ -159,7 +208,8 @@ export const createChargingPoint = createAsyncThunk(
   "admin/createChargingPoint",
   async (data, { rejectWithValue }) => {
     try {
-      const response = await api.post("/admin/charging-points", data);
+      // Backend uses /charging-points (not /admin/charging-points)
+      const response = await api.post("/charging-points", data);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to create charging point");
@@ -171,7 +221,8 @@ export const updateChargingPoint = createAsyncThunk(
   "admin/updateChargingPoint",
   async ({ id, data }, { rejectWithValue }) => {
     try {
-      const response = await api.put(`/admin/charging-points/${id}`, data);
+      // Backend uses /charging-points (not /admin/charging-points)
+      const response = await api.put(`/charging-points/${id}`, data);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to update charging point");
@@ -183,7 +234,8 @@ export const deleteChargingPoint = createAsyncThunk(
   "admin/deleteChargingPoint",
   async (id, { rejectWithValue }) => {
     try {
-      await api.delete(`/admin/charging-points/${id}`);
+      // Backend uses /charging-points (not /admin/charging-points)
+      await api.delete(`/charging-points/${id}`);
       return id;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to delete charging point");
@@ -332,14 +384,25 @@ const adminSlice = createSlice({
       
       // Stations
       .addCase(fetchStations.fulfilled, (state, action) => {
-        state.stations = action.payload;
+        // Ensure stations is always an array
+        state.stations = Array.isArray(action.payload) 
+          ? action.payload 
+          : (action.payload?.data || action.payload?.content || []);
       })
       .addCase(createStation.fulfilled, (state, action) => {
         state.successMessage = "Station created successfully";
+        // Ensure stations is an array before pushing
+        if (!Array.isArray(state.stations)) {
+          state.stations = [];
+        }
         state.stations.push(action.payload);
       })
       .addCase(updateStation.fulfilled, (state, action) => {
         state.successMessage = "Station updated successfully";
+        // Ensure stations is an array
+        if (!Array.isArray(state.stations)) {
+          state.stations = [];
+        }
         const index = state.stations.findIndex(s => s.id === action.payload.id);
         if (index !== -1) {
           state.stations[index] = action.payload;
@@ -347,12 +410,31 @@ const adminSlice = createSlice({
       })
       .addCase(deleteStation.fulfilled, (state, action) => {
         state.successMessage = "Station deleted successfully";
+        // Ensure stations is an array
+        if (!Array.isArray(state.stations)) {
+          state.stations = [];
+        }
         state.stations = state.stations.filter(s => s.id !== action.payload);
       })
       
       // Facilities
       .addCase(fetchFacilities.fulfilled, (state, action) => {
         state.facilities = action.payload;
+      })
+      .addCase(createFacility.fulfilled, (state, action) => {
+        state.successMessage = "Facility created successfully";
+        state.facilities.push(action.payload);
+      })
+      .addCase(updateFacility.fulfilled, (state, action) => {
+        state.successMessage = "Facility updated successfully";
+        const index = state.facilities.findIndex(f => f.id === action.payload.id);
+        if (index !== -1) {
+          state.facilities[index] = action.payload;
+        }
+      })
+      .addCase(deleteFacility.fulfilled, (state, action) => {
+        state.successMessage = "Facility deleted successfully";
+        state.facilities = state.facilities.filter(f => f.id !== action.payload);
       })
       
       // Charging Points

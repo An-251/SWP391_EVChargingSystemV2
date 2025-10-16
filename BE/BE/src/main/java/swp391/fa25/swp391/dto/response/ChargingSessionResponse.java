@@ -24,11 +24,12 @@ public class ChargingSessionResponse {
     private Integer vehicleId;
     private String vehicleName;
     private String licensePlate;
-
+    private String vehicleModel;
     // Charging point info
     private Integer chargingPointId;
     private String chargingPointName;
     private String stationName;
+    private String stationAddress;
     private String connectorType;
 
     // Session timing
@@ -40,6 +41,7 @@ public class ChargingSessionResponse {
     // Charging data
     private Integer startPercentage;
     private Integer endPercentage;
+    private Integer chargedPercentage;
     private BigDecimal kwhUsed; // Điện năng tiêu thụ (kWh)
     private BigDecimal cost; // Tổng chi phí (VND)
 

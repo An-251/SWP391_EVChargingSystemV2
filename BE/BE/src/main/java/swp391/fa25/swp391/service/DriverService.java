@@ -2,6 +2,7 @@ package swp391.fa25.swp391.service;
 
 
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,5 +24,10 @@ public class DriverService implements IDriverService {
     @Override
     public Optional<Driver> findByUsername(String username) {
         return driverRepository.findByAccountUsername(username);
+    }
+    @Override
+    @Transactional // Phương thức ghi dữ liệu cần @Transactional
+    public Driver save(Driver driver) {
+        return driverRepository.save(driver);
     }
 }

@@ -36,6 +36,7 @@ export const loginUser = createAsyncThunk("loginUser", async (values, { rejectWi
 
     console.log("🔑 [LOGIN] Token:", token);
     console.log("👤 [LOGIN] Account:", account);
+    console.log("🚗 [LOGIN] Driver ID:", account.driverId);
 
     // Lưu token vào localStorage (hoặc sessionStorage) để duy trì trạng thái đăng nhập
     localStorage.setItem("accessToken", token);
@@ -83,6 +84,10 @@ export const registerUser = createAsyncThunk("registerUser", async (values, { re
 
     console.log("✅ [REGISTER] Response received:", response);
     console.log("📥 [REGISTER] Response data:", response.data);
+    
+    // BE trả về: { success, message, data: { message, id, username, email, role, token, driverId } }
+    const registrationResult = response.data.data;
+    console.log("🚗 [REGISTER] Driver ID created:", registrationResult?.driverId);
 
     return response.data;
   } catch (error) {

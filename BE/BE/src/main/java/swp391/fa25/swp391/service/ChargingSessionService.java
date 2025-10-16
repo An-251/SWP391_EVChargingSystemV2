@@ -229,29 +229,29 @@ public class ChargingSessionService implements IChargingSessionService {
 
         ChargingPoint cp = session.getChargingPoint();
 
-//        return ChargingSessionResponse.builder()
-//                .sessionId(session.getId())
-//                .status(session.getStatus())
-//                .startTime(session.getStartTime())
-//                .endTime(session.getEndTime())
-//                .durationMinutes(durationMinutes)
-//                .overusedTime(session.getOverusedTime())
-//                .driverId(session.getDriver().getId())
-//                .driverName(session.getDriver().getAccount().getFullName()) // Thay bằng field thực tế
-//                .vehicleId(session.getVehicle().getId())
-//                .vehicleModel(session.getVehicle().getModel())
-//                .licensePlate(session.getVehicle().getLicensePlate())
-//                .chargingPointId(cp.getId())
-//                .chargingPointName(cp.getPointName())
-//                .connectorType(cp.getConnectorType())
-//                .stationName(cp.getStation() != null ? cp.getStation().getStationName() : null)
-//                .stationAddress(cp.getStation() != null ? cp.getStation().getFacility().getFullAddress() : null)
-//                .startPercentage(session.getStartPercentage())
-//                .endPercentage(session.getEndPercentage())
-//                .chargedPercentage(chargedPercentage)
-//                .kwhUsed(session.getKwhUsed())
-//                .cost(session.getCost())
-//                .build();
-        return null;
+        return ChargingSessionResponse.builder()
+                .sessionId(session.getId())
+                .status(session.getStatus())
+                .startTime(session.getStartTime())
+                .endTime(session.getEndTime())
+                .durationMinutes(durationMinutes)
+                .overusedTime(session.getOverusedTime())
+                .driverId(session.getDriver().getId())
+                .driverName(session.getDriver().getAccount().getFullName()) // Thay bằng field thực tế
+                .vehicleId(session.getVehicle().getId())
+                .vehicleModel(session.getVehicle().getModel())
+                .licensePlate(session.getVehicle().getLicensePlate())
+                .chargingPointId(cp.getId())
+                .chargingPointName(cp.getPointName())
+                .connectorType(cp.getConnectorType())
+                .stationName(cp.getStation() != null ? cp.getStation().getStationName() : null)
+                .stationAddress(cp.getStation() != null ? cp.getStation().getFacility().getFullAddress() : null)
+                .startPercentage(session.getStartPercentage())
+                .endPercentage(session.getEndPercentage())
+                .chargedPercentage(chargedPercentage)
+                .kwhUsed(session.getKwhUsed())
+                .cost(session.getCost())
+                .build();
+
     }
 }

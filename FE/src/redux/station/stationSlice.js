@@ -6,18 +6,33 @@ const initialState = {
   selectedStation: null,
   loading: false,
   error: null,
+  filters: {
+    connectorType: null,
+    powerLevel: null,
+    availability: 'all', // 'all', 'available', 'busy'
+    maxDistance: null, // in km
+    minRating: 0,
+  },
 };
 
-// Fetch all charging stations
+// Fetch all charging stations (Backend: GET /api/charging-stations)
 export const fetchStations = createAsyncThunk(
   "station/fetchStations",
   async (_, { rejectWithValue }) => {
     try {
       console.log("🚀 [STATIONS] Fetching all charging stations...");
-      const response = await api.get("/drivers/stations");
-      console.log("✅ [STATIONS] Response:", response.data);
+      const response = await api.get("/charging-stations");
+      console.log("✅ [STATIONS] Response received, count:", response.data?.length || 0);
       
-      return response.data;
+      // Backend has fixed circular reference issue
+      // Now we can use response.data directly
+      const stations = Array.isArray(response.data) 
+        ? response.data 
+        : (response.data?.data || response.data?.content || []);
+      
+      console.log("✅ [STATIONS] Stations loaded:", stations.length);
+      return stations;
+      
     } catch (error) {
       console.error("❌ [STATIONS] Error fetching stations:", error);
       return rejectWithValue(
@@ -64,6 +79,18 @@ const stationSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    setFilters: (state, action) => {
+      state.filters = { ...state.filters, ...action.payload };
+    },
+    resetFilters: (state) => {
+      state.filters = {
+        connectorType: null,
+        powerLevel: null,
+        availability: 'all',
+        maxDistance: null,
+        minRating: 0,
+      };
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -74,7 +101,10 @@ const stationSlice = createSlice({
       })
       .addCase(fetchStations.fulfilled, (state, action) => {
         state.loading = false;
-        state.stations = action.payload;
+        // Ensure stations is always an array
+        state.stations = Array.isArray(action.payload) 
+          ? action.payload 
+          : (action.payload?.data || action.payload?.content || []);
         state.error = null;
       })
       .addCase(fetchStations.rejected, (state, action) => {
@@ -99,5 +129,12 @@ const stationSlice = createSlice({
   },
 });
 
-export const { setSelectedStation, clearSelectedStation, clearError } = stationSlice.actions;
+export const { 
+  setSelectedStation, 
+  clearSelectedStation, 
+  clearError,
+  setFilters,
+  resetFilters
+} = stationSlice.actions;
+
 export default stationSlice.reducer;

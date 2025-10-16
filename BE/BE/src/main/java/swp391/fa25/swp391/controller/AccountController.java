@@ -11,9 +11,12 @@ import swp391.fa25.swp391.dto.request.UpdateProfileRequest;
 import swp391.fa25.swp391.dto.response.AccountResponse;
 import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.entity.Account;
+import swp391.fa25.swp391.entity.Driver; // Import Driver
 import swp391.fa25.swp391.service.IService.IAccountService;
+import swp391.fa25.swp391.service.IService.IDriverService; // Import IDriverService
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Controller xử lý Account management: Profile, Update, Delete
@@ -25,6 +28,7 @@ import java.util.List;
 public class AccountController {
 
     private final IAccountService accountService;
+    private final IDriverService driverService; // Inject IDriverService
 
     // ==================== PROFILE MANAGEMENT ====================
 
@@ -50,6 +54,14 @@ public class AccountController {
             }
 
             Account account = accounts.getFirst();
+
+            // Lấy DriverId
+            Integer driverId = null;
+            if ("Driver".equalsIgnoreCase(account.getAccountRole())) {
+                Optional<Driver> driverOpt = driverService.findByUsername(account.getUsername());
+                driverId = driverOpt.map(Driver::getId).orElse(null);
+            }
+
             AccountResponse accountResponse = AccountResponse.builder()
                     .id(account.getId())
                     .username(account.getUsername())
@@ -61,6 +73,7 @@ public class AccountController {
                     .role(account.getAccountRole())
                     .balance(account.getBalance())
                     .status(account.getStatus())
+                    .driverId(driverId) // Thêm driverId vào AccountResponse
                     .build();
 
             return ResponseEntity.ok(ApiResponse.success("Profile retrieved successfully", accountResponse));
@@ -110,6 +123,14 @@ public class AccountController {
 
             Account updatedAccount = accountService.updateAccount(existingAccount);
 
+            // Lấy DriverId (Giữ nguyên logic Profile hiện tại)
+            Integer driverId = null;
+            if ("Driver".equalsIgnoreCase(updatedAccount.getAccountRole())) {
+                Optional<Driver> driverOpt = driverService.findByUsername(updatedAccount.getUsername());
+                driverId = driverOpt.map(Driver::getId).orElse(null);
+            }
+
+
             // Create response
             AccountResponse accountResponse = AccountResponse.builder()
                     .id(updatedAccount.getId())
@@ -120,6 +141,7 @@ public class AccountController {
                     .gender(updatedAccount.getGender())
                     .dob(updatedAccount.getDob())
                     .role(updatedAccount.getAccountRole())
+                    .driverId(driverId) // Thêm driverId vào AccountResponse
                     .build();
 
             return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", accountResponse));
@@ -144,6 +166,9 @@ public class AccountController {
             }
 
             String username = userDetails.getUsername();
+            // Lưu ý: Việc xóa Account có thể không tự động xóa Driver liên quan (tùy thuộc vào cấu hình Cascade/Orphan Removal).
+            // Cần đảm bảo rằng Driver liên quan cũng được xử lý (xóa hoặc đặt trạng thái không hoạt động).
+
             boolean deleted = accountService.deleteAccount(username);
 
             if (deleted) {
@@ -177,12 +202,21 @@ public class AccountController {
 
             Account account = accounts.getFirst();
 
+            // Lấy DriverId
+            Integer driverId = null;
+            if ("Driver".equalsIgnoreCase(account.getAccountRole())) {
+                Optional<Driver> driverOpt = driverService.findByUsername(account.getUsername());
+                driverId = driverOpt.map(Driver::getId).orElse(null);
+            }
+
+
             // Return limited information for public endpoint
             AccountResponse accountResponse = AccountResponse.builder()
                     .id(account.getId())
                     .username(account.getUsername())
                     .fullName(account.getFullName())
                     .role(account.getAccountRole())
+                    .driverId(driverId) // Thêm driverId vào AccountResponse
                     .build();
 
             return ResponseEntity.ok(ApiResponse.success("Account found", accountResponse));

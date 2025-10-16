@@ -6,6 +6,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Nationalized;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "DRIVER")
 @Data
@@ -25,5 +28,6 @@ public class Driver {
     @Column(name = "ID_NUMBER", length = 50)
     private String idNumber;
 
-
+    @OneToMany(mappedBy = "driver")
+    private List<Vehicle> vehicles = new ArrayList<>();
 }
