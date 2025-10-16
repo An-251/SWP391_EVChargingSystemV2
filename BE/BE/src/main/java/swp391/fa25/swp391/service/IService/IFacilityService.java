@@ -13,4 +13,5 @@ public interface IFacilityService {
     List<Facility> findByName(String facilityName);
     List<Facility> findAll();
     List<Facility> findByFullAddress(String address);
+    Facility save(Facility facility);
 }

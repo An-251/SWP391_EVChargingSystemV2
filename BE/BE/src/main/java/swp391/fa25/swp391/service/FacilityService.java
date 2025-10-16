@@ -73,4 +73,8 @@ public class FacilityService implements IFacilityService {
 
         return facility.get().getChargingStations();
     }
+    @Override
+    public Facility save(Facility facility) {
+        return facilityRepository.save(facility);
+    }
 }

@@ -62,4 +62,8 @@ public class ChargingStationService implements IChargingStationService {
         // bằng phương thức tự sinh: existsByStationName(String stationName)
         return chargingStationRepository.existsByStationName(stationName);
     }
+    @Override
+    public ChargingStation save(ChargingStation chargingStation) {
+        return chargingStationRepository.save(chargingStation);s
+    }
 }
