@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Data
 @Builder
@@ -17,4 +18,9 @@ public class AccountResponse {
     private String fullName;
     private String email;
     private String role;
+    private String phone;
+    private LocalDate dob;
+    private String gender;
+    private String status;
+    private Double balance;
 }

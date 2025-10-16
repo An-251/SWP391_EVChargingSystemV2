@@ -187,12 +187,12 @@ public class AccountController {
                     .username(account.getUsername())
                     .fullName(account.getFullName())
                     .email(account.getEmail())
-//                    .phone(account.getPhone())
-//                    .gender(account.getGender())
-//                    .dob(account.getDob())
+                    .phone(account.getPhone())
+                    .gender(account.getGender())
+                    .dob(account.getDob())
                     .role(account.getAccountRole())
-//                    .balance(account.getBalance())
-//                    .status(account.getStatus())
+                    .balance(account.getBalance())
+                    .status(account.getStatus())
                     .build();
 
             return ResponseEntity.ok(ApiResponse.success("Profile retrieved successfully", accountResponse));
@@ -248,9 +248,9 @@ public class AccountController {
                     .username(updatedAccount.getUsername())
                     .fullName(updatedAccount.getFullName())
                     .email(updatedAccount.getEmail())
-//                    .phone(updatedAccount.getPhone())
-//                    .gender(updatedAccount.getGender())
-//                    .dob(updatedAccount.getDob())
+                    .phone(updatedAccount.getPhone())
+                    .gender(updatedAccount.getGender())
+                    .dob(updatedAccount.getDob())
                     .role(updatedAccount.getAccountRole())
                     .build();
 
