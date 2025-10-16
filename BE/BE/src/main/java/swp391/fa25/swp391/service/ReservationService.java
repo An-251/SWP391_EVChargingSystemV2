@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import swp391.fa25.swp391.entity.Reservation;
-import swp391.fa25.swp391.repository.models.ReservationRepository;
+import swp391.fa25.swp391.repository.ReservationRepository;
 import swp391.fa25.swp391.service.IService.IReservationService;
 
 import java.util.List;

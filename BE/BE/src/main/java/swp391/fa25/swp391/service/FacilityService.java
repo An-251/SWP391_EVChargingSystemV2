@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import swp391.fa25.swp391.entity.ChargingStation;
 import swp391.fa25.swp391.entity.Facility;
-import swp391.fa25.swp391.repository.models.FacilityRepository;
+import swp391.fa25.swp391.repository.FacilityRepository;
 import swp391.fa25.swp391.service.IService.IFacilityService;
 
 import java.util.ArrayList;

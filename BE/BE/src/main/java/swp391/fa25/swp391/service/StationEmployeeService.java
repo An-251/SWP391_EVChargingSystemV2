@@ -3,7 +3,7 @@ package swp391.fa25.swp391.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import swp391.fa25.swp391.entity.StationEmployee;
-import swp391.fa25.swp391.repository.models.StationEmployeeRepository;
+import swp391.fa25.swp391.repository.StationEmployeeRepository;
 import swp391.fa25.swp391.service.IService.IStationEmployeeService;
 
 import java.util.List;

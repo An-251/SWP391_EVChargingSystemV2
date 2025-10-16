@@ -4,12 +4,10 @@ import jakarta.transaction.Transactional;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import swp391.fa25.swp391.entity.Account;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 
-import swp391.fa25.swp391.repository.models.AccountRepository;
-import swp391.fa25.swp391.security.PasswordEncoderConfig;
+import swp391.fa25.swp391.repository.AccountRepository;
 import swp391.fa25.swp391.service.IService.IAccountService;
 
 import java.util.List;

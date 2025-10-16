@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import swp391.fa25.swp391.entity.Vehicle;
-import swp391.fa25.swp391.repository.models.VehicleRepository;
+import swp391.fa25.swp391.repository.VehicleRepository;
 import swp391.fa25.swp391.service.IService.IVehicleService;
 import java.util.List;
 import java.util.Optional;

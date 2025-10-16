@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.service.IService.IChargingPointService;
-import swp391.fa25.swp391.repository.models.ChargingPointRepository;
+import swp391.fa25.swp391.repository.ChargingPointRepository;
 
 import java.util.List;
 import java.util.Optional;

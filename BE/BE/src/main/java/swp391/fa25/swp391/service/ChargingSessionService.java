@@ -12,7 +12,7 @@ import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.ChargingSession;
 import swp391.fa25.swp391.entity.Driver;
 import swp391.fa25.swp391.entity.Vehicle;
-import swp391.fa25.swp391.repository.models.ChargingSessionRepository;
+import swp391.fa25.swp391.repository.ChargingSessionRepository;
 import swp391.fa25.swp391.service.IService.*;
 
 import java.math.BigDecimal;

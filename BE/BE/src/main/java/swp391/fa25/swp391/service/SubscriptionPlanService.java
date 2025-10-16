@@ -2,9 +2,8 @@ package swp391.fa25.swp391.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import swp391.fa25.swp391.entity.Facility;
 import swp391.fa25.swp391.entity.SubscriptionPlan;
-import swp391.fa25.swp391.repository.models.SubscriptionPlanRepository;
+import swp391.fa25.swp391.repository.SubscriptionPlanRepository;
 import swp391.fa25.swp391.service.IService.ISubscriptionPlanService;
 
 import java.util.List;

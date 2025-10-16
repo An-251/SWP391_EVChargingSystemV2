@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import swp391.fa25.swp391.entity.ChargingStation;
-import swp391.fa25.swp391.repository.models.ChargingStationRepository;
+import swp391.fa25.swp391.repository.ChargingStationRepository;
 import swp391.fa25.swp391.service.IService.IChargingStationService;
 
 import java.util.List;
