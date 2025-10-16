@@ -89,7 +89,7 @@ public class FacilityController {
     public ResponseEntity<?> createFacility(@Valid @RequestBody FacilityRequest request) {
         try {
             Facility newFacility = convertToEntity(request);
-            Facility savedFacility = facilityService.save(newFacility);
+            Facility savedFacility = facilityService.register(newFacility);
             return ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(savedFacility));
         } catch (Exception e) {
             // Cân nhắc log lỗi ra để debug
