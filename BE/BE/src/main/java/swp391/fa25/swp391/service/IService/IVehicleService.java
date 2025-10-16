@@ -1,20 +1,20 @@
 package swp391.fa25.swp391.service.IService;
 
 import swp391.fa25.swp391.entity.Vehicle;
-
+import java.util.List;
 import java.util.Optional;
-// import java.util.List; // Thêm nếu cần
 
 public interface IVehicleService {
-    /**
-     * Tìm Vehicle theo ID.
-     */
+
     Optional<Vehicle> findById(Integer id);
 
-    /**
-     * Lưu hoặc cập nhật Vehicle.
-     */
     Vehicle save(Vehicle vehicle);
 
-    // Có thể thêm các phương thức khác như findAll, delete...
+    List<Vehicle> findByDriverId(Integer driverId);
+
+    int countByDriverId(Integer driverId);
+
+    boolean existsByLicensePlate(String licensePlate);
+
+    void deleteById(Integer id);
 }

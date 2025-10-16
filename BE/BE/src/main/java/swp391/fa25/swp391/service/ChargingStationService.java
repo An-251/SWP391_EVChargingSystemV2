@@ -64,6 +64,6 @@ public class ChargingStationService implements IChargingStationService {
     }
     @Override
     public ChargingStation save(ChargingStation chargingStation) {
-        return chargingStationRepository.save(chargingStation);s
+        return chargingStationRepository.save(chargingStation);
     }
 }
