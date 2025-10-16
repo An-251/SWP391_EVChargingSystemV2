@@ -75,6 +75,11 @@ const DriverPage = () => {
     setShowProfileMenu(false);
   };
 
+  const handleNavigateToVehicles = () => {
+    navigate('/driver/vehicles');
+    setShowProfileMenu(false);
+  };
+
   const handleLogout = async () => {
     try {
       await dispatch(logoutUser()).unwrap();
@@ -96,6 +101,7 @@ const DriverPage = () => {
         setShowProfileMenu={setShowProfileMenu}
         onRefreshStations={handleRefreshStations}
         onNavigateToProfile={handleNavigateToProfile}
+        onNavigateToVehicles={handleNavigateToVehicles}
         onLogout={handleLogout}
       />
 
