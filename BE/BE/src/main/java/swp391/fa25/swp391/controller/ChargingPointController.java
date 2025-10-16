@@ -9,7 +9,7 @@ import swp391.fa25.swp391.service.ChargingPointService;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/charging-points")
+@RequestMapping("/api")
 public class ChargingPointController {
 
     private final ChargingPointService chargingPointService;
