@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/facilities")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class FacilityController {
@@ -85,7 +85,7 @@ public class FacilityController {
 
     // ==================== CONTROLLER ENDPOINTS ====================
 
-    @PostMapping("/facilities")
+    @PostMapping("/profile")
     public ResponseEntity<?> createFacility(@Valid @RequestBody FacilityRequest request) {
         try {
             Facility newFacility = convertToEntity(request);
@@ -97,7 +97,7 @@ public class FacilityController {
         }
     }
 
-    @PutMapping("/facilities/{id}")
+    @PutMapping("/{id}")
     public ResponseEntity<?> updateFacility(@PathVariable Integer id, @Valid @RequestBody FacilityRequest request) {
         try {
             Facility existingFacility = facilityService.findById(id);
@@ -109,7 +109,7 @@ public class FacilityController {
         }
     }
 
-    @GetMapping("/facilities")
+    @GetMapping("/profile")
     public ResponseEntity<List<FacilityResponse>> getAllFacilities() {
         List<Facility> facilities = facilityService.findAll();
         List<FacilityResponse> responseList = facilities.stream()
