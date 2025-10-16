@@ -20,9 +20,6 @@ public class Admin {
     @OneToOne(optional = false)
     @JoinColumn(name = "ACCOUNT_ID", nullable = false)
     private Account account;
-
-    @Nationalized
-    @Column(name = "ROLE", length = 100)
-    private String role;
+    
 
 }
