@@ -20,4 +20,8 @@ public class DriverService implements IDriverService {
 
         return driverRepository.findById(id);
     }
+    @Override
+    public Optional<Driver> findByUsername(String username) {
+        return driverRepository.findByAccountUsername(username);
+    }
 }
