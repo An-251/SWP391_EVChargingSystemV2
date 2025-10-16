@@ -39,6 +39,9 @@ const StationsManagement = () => {
   const dispatch = useDispatch();
   const { stations, facilities, loading, successMessage, error } = useSelector((state) => state.admin);
   
+  // Ensure stations is always an array
+  const stationsList = Array.isArray(stations) ? stations : [];
+  
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({
@@ -179,7 +182,7 @@ const StationsManagement = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {stations.map((station) => (
+          {stationsList.map((station) => (
             <div
               key={station.id}
               className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow"
@@ -236,7 +239,7 @@ const StationsManagement = () => {
         </div>
       )}
 
-      {stations.length === 0 && !loading && (
+      {stationsList.length === 0 && !loading && (
         <div className="text-center py-12 bg-white rounded-xl shadow-md">
           <MapPin className="mx-auto text-gray-400 mb-4" size={48} />
           <h3 className="text-lg font-semibold text-gray-700 mb-2">No stations yet</h3>
