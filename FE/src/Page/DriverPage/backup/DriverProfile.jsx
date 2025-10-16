@@ -10,10 +10,16 @@ import {
   Save, 
   ArrowLeft,
   Edit3,
-  Camera
+  Camera,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
-import { Form, Input, Button, DatePicker, Select, Upload, message } from 'antd';
-import { updateDriverProfile } from '../../redux/auth/authSlice';
+import { Form, Input, Button, DatePicker, Select, Upload, message, Modal } from 'antd';
+import { 
+  getCurrentProfile, 
+  updateDriverProfile, 
+  deleteDriverProfile 
+} from '../../redux/auth/authSlice';
 import dayjs from 'dayjs';
 
 const { Option } = Select;
@@ -26,6 +32,11 @@ const DriverProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
 
+  // Fetch current profile on mount
+  useEffect(() => {
+    dispatch(getCurrentProfile());
+  }, [dispatch]);
+
   useEffect(() => {
     if (user) {
       form.setFieldsValue({
@@ -35,7 +46,6 @@ const DriverProfile = () => {
         phone: user.phone,
         gender: user.gender,
         dob: user.dob ? dayjs(user.dob) : null,
-        idNumber: user.idNumber,
       });
     }
   }, [user, form]);
@@ -53,6 +63,33 @@ const DriverProfile = () => {
     } catch (error) {
       message.error(error || 'Cập nhật thông tin thất bại!');
     }
+  };
+
+  const handleDeleteAccount = () => {
+    Modal.confirm({
+      title: 'Xóa tài khoản',
+      icon: <AlertTriangle className="text-red-500" />,
+      content: (
+        <div>
+          <p className="mb-2">Bạn có chắc chắn muốn xóa tài khoản này?</p>
+          <p className="text-red-600 font-semibold">
+            Hành động này không thể hoàn tác và tất cả dữ liệu của bạn sẽ bị xóa vĩnh viễn!
+          </p>
+        </div>
+      ),
+      okText: 'Xóa tài khoản',
+      okType: 'danger',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          await dispatch(deleteDriverProfile()).unwrap();
+          message.success('Tài khoản đã được xóa thành công!');
+          navigate('/auth/login');
+        } catch (error) {
+          message.error(error || 'Xóa tài khoản thất bại!');
+        }
+      }
+    });
   };
 
   const handleAvatarChange = (info) => {
@@ -253,21 +290,20 @@ const DriverProfile = () => {
                   />
                 </Form.Item>
 
-                <Form.Item
-                  label="Số CCCD/CMND"
-                  name="idNumber"
-                  rules={[
-                    { required: true, message: 'Vui lòng nhập số CCCD/CMND!' },
-                    { pattern: /^[0-9]{9,12}$/, message: 'Số CCCD/CMND không hợp lệ!' }
-                  ]}
-                  className="md:col-span-2"
-                >
-                  <Input placeholder="Nhập số CCCD/CMND" className="h-12" />
-                </Form.Item>
               </div>
 
               {isEditing && (
-                <div className="flex justify-end mt-8">
+                <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+                  <Button
+                    type="text"
+                    danger
+                    icon={<Trash2 className="w-4 h-4" />}
+                    onClick={handleDeleteAccount}
+                    size="large"
+                  >
+                    Xóa tài khoản
+                  </Button>
+                  
                   <Button
                     type="primary"
                     htmlType="submit"
