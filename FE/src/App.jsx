@@ -13,12 +13,14 @@ import StaffLayout from "./Layout/Staff/StaffLayout";
 import StaffHome from "./Page/Staff/StaffHome/Home";
 import DriverPage from "./Page/DriverPage";
 import DriverProfile from "./Page/DriverPage/DriverProfile";
+import DriverVehicles from "./Page/DriverPage/DriverVehicles";
 import AdminPage from "./Page/AdminPage";
 import RoleBasedRoute from "./Components/RoleBasedRoute";
 import AdminLayout from "./Layout/Admin/AdminLayout";
 import AdminDashboard from "./Page/AdminPage/Dashboard/AdminDashboard";
 import AccountsManagement from "./Page/AdminPage/Accounts/AccountsManagement";
 import StationsManagement from "./Page/AdminPage/Stations/StationsManagement";
+import FacilitiesManagement from "./Page/AdminPage/Facilities/FacilitiesManagement";
 import ChargingPointsManagement from "./Page/AdminPage/ChargingPoints/ChargingPointsManagement";
 import SubscriptionsManagement from "./Page/AdminPage/Subscriptions/SubscriptionsManagement";
 import ErrorBoundary from "./Components/ErrorBoundary";
@@ -117,6 +119,26 @@ function App() {
             } 
           />
 
+          {/* Driver Vehicles Route - Protected */}
+          <Route 
+            path="/driver/vehicles" 
+            element={
+              <RoleBasedRoute allowedRoles={["Driver"]}>
+                <ErrorBoundary>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.5 }}
+                    style={{ minHeight: "100vh" }}
+                  >
+                    <DriverVehicles />
+                  </motion.div>
+                </ErrorBoundary>
+              </RoleBasedRoute>
+            } 
+          />
+
           {/* Admin Routes - Protected */}
           <Route 
             path="/admin" 
@@ -130,6 +152,7 @@ function App() {
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="accounts" element={<AccountsManagement />} />
             <Route path="stations" element={<StationsManagement />} />
+            <Route path="facilities" element={<FacilitiesManagement />} />
             <Route path="charging-points" element={<ChargingPointsManagement />} />
             <Route path="subscriptions" element={<SubscriptionsManagement />} />
           </Route>
