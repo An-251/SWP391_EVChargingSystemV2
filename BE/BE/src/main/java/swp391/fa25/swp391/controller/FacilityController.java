@@ -118,7 +118,7 @@ public class FacilityController {
         return ResponseEntity.ok(responseList);
     }
 
-    @DeleteMapping("/profile")
+    @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteFacility(@PathVariable Integer id) {
         try {
             facilityService.deleteFacility(id);
