@@ -23,10 +23,10 @@ export const loginUser = createAsyncThunk("loginUser", async (values, { rejectWi
       password: values.password
     };
     
-    console.log("📤 [LOGIN] Sending request to /accounts/login with data:", loginData);
-    console.log("📍 [LOGIN] Full URL:", "http://localhost:8080/api/accounts/login");
+    console.log("📤 [LOGIN] Sending request to /api/auth/login with data:", loginData);
+    console.log("📍 [LOGIN] Full URL:", "http://localhost:8080/api/auth/login");
     
-    const response = await api.post("/accounts/login", loginData);
+    const response = await api.post("/api/auth/login", loginData);
 
     console.log("✅ [LOGIN] Response received:", response);
     console.log("📥 [LOGIN] Response data:", response.data);
@@ -76,10 +76,10 @@ export const registerUser = createAsyncThunk("registerUser", async (values, { re
       password: values.password
     };
     
-    console.log("📤 [REGISTER] Sending request to /accounts/register with data:", registerData);
-    console.log("📍 [REGISTER] Full URL:", "http://localhost:8080/api/accounts/register");
+    console.log("📤 [REGISTER] Sending request to /api/auth/register with data:", registerData);
+    console.log("📍 [REGISTER] Full URL:", "http://localhost:8080/api/auth/register");
     
-    const response = await api.post("/accounts/register", registerData);
+    const response = await api.post("/api/auth/register", registerData);
 
     console.log("✅ [REGISTER] Response received:", response);
     console.log("📥 [REGISTER] Response data:", response.data);
@@ -309,7 +309,7 @@ export const logoutUser = createAsyncThunk("auth/logoutUser", async (_, { reject
     if (token) {
       // Call logout API if available
       try {
-        await api.post("/accounts/logout");
+        await api.post("/api/auth/logout");
         console.log("✅ [LOGOUT] API logout successful");
       } catch (error) {
         console.warn("⚠️ [LOGOUT] API logout failed, but continuing with local logout:", error);
