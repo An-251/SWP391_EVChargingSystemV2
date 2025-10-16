@@ -7,4 +7,5 @@ import java.util.Optional;
 public interface IDriverService {
     Optional<Driver> findById(Integer userId);
     Optional<Driver> findByUsername(String username);
+    Driver save(Driver driver);
 }

@@ -16,11 +16,14 @@ import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.dto.response.LoginResponse;
 import swp391.fa25.swp391.dto.response.RegisterResponse;
 import swp391.fa25.swp391.entity.Account;
+import swp391.fa25.swp391.entity.Driver;
 import swp391.fa25.swp391.security.JwtTokenProvider;
 import swp391.fa25.swp391.service.IService.IAccountService;
+import swp391.fa25.swp391.service.IService.IDriverService;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Controller xử lý Authentication: Login, Register, Logout
@@ -33,6 +36,7 @@ public class AuthController {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final IAccountService accountService;
+    private final IDriverService driverService; // Inject IDriverService
     private final PasswordEncoder passwordEncoder;
 
     /**
@@ -52,6 +56,13 @@ public class AuthController {
             if (isLoginSuccessful && !accounts.isEmpty()) {
                 Account account = accounts.getFirst();
 
+                // Lấy DriverId
+                Integer driverId = null;
+                if ("Driver".equalsIgnoreCase(account.getAccountRole())) {
+                    Optional<Driver> driverOpt = driverService.findByUsername(account.getUsername());
+                    driverId = driverOpt.map(Driver::getId).orElse(null);
+                }
+
                 String token = jwtTokenProvider.generateToken(account);
 
                 AccountResponse accountResponse = AccountResponse.builder()
@@ -60,6 +71,7 @@ public class AuthController {
                         .fullName(account.getFullName())
                         .email(account.getEmail())
                         .role(account.getAccountRole())
+                        .driverId(driverId) // Thêm driverId vào AccountResponse
                         .build();
 
                 LoginResponse loginResponse = new LoginResponse(token, accountResponse);
@@ -94,30 +106,42 @@ public class AuthController {
                         .body(ApiResponse.error("Email is already in use"));
             }
 
-            // Create new account
+            String role = "Driver"; // Giả định tất cả đăng ký đều là Driver
+
+            // 1. Create new account
             Account account = new Account();
             account.setUsername(registerRequest.getUsername());
             account.setEmail(registerRequest.getEmail());
             account.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
             account.setCreatedDate(Instant.now());
             account.setBalance(0.0);
-            account.setAccountRole("Driver");
+            account.setAccountRole(role);
             account.setStatus("ACTIVE");
 
-            // Save account
+            // 2. Save account
             Account savedAccount = accountService.register(account);
 
-            // Generate JWT token
+            // 3. Create and Save Driver if role is Driver
+            Integer driverId = null;
+            if ("Driver".equalsIgnoreCase(role)) {
+                Driver driver = new Driver();
+                driver.setAccount(savedAccount); // Liên kết Driver với Account
+                Driver savedDriver = driverService.save(driver);
+                driverId = savedDriver.getId();
+            }
+
+            // 4. Generate JWT token
             String jwt = jwtTokenProvider.generateToken(savedAccount);
 
-            // Create response
+            // 5. Create response
             RegisterResponse registerResponse = new RegisterResponse(
                     "User registered successfully",
                     savedAccount.getId(),
                     savedAccount.getUsername(),
                     savedAccount.getEmail(),
                     savedAccount.getAccountRole(),
-                    jwt
+                    jwt,
+                    driverId // Thêm driverId vào RegisterResponse
             );
 
             return ResponseEntity.status(HttpStatus.CREATED)

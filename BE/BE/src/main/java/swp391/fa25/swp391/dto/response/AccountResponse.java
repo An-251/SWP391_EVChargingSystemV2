@@ -23,4 +23,5 @@ public class AccountResponse {
     private String gender;
     private String status;
     private Double balance;
+    private Integer driverId;
 }
