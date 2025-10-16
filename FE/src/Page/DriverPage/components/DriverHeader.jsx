@@ -4,7 +4,8 @@ import {
   Battery, 
   RefreshCw, 
   User, 
-  LogOut 
+  LogOut,
+  Car 
 } from 'lucide-react';
 
 const DriverHeader = ({ 
@@ -15,6 +16,7 @@ const DriverHeader = ({
   setShowProfileMenu,
   onRefreshStations, 
   onNavigateToProfile,
+  onNavigateToVehicles,
   onLogout 
 }) => {
   return (
@@ -69,6 +71,13 @@ const DriverHeader = ({
                     >
                       <User className="w-4 h-4" />
                       <span>Thông tin cá nhân</span>
+                    </button>
+                    <button
+                      onClick={onNavigateToVehicles}
+                      className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      <Car className="w-4 h-4" />
+                      <span>Phương tiện của tôi</span>
                     </button>
                     <button
                       onClick={onLogout}
