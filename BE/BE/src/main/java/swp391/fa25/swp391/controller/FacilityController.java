@@ -117,4 +117,14 @@ public class FacilityController {
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responseList);
     }
+
+    @DeleteMapping("/profile")
+    public ResponseEntity<String> deleteFacility(@PathVariable Integer id) {
+        try {
+            facilityService.deleteFacility(id);
+            return ResponseEntity.ok("Facility with ID " + id + " deleted successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Facility not found or could not be deleted.");
+        }
+    }
 }
