@@ -9,7 +9,7 @@ import swp391.fa25.swp391.service.IService.ISubscriptionPlanService;
 
 import java.util.List;
 @RestController
-@RequestMapping("/api/subscriptions")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 

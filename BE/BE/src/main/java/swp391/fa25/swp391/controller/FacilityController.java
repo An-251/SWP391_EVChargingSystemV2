@@ -9,7 +9,7 @@ import swp391.fa25.swp391.service.IService.IFacilityService;
 
 import java.util.List;
 @RestController
-@RequestMapping("/api/facilities")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 
