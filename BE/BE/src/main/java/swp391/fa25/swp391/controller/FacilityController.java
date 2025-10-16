@@ -108,7 +108,16 @@ public class FacilityController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Facility not found with ID: " + id);
         }
     }
-
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getFacilityById(@PathVariable Integer id) {
+        try {
+            Facility facility = facilityService.findById(id);
+            return ResponseEntity.ok(convertToDto(facility));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Facility not found with ID: " + id);
+        }
+    }
     @GetMapping("/profile")
     public ResponseEntity<List<FacilityResponse>> getAllFacilities() {
         List<Facility> facilities = facilityService.findAll();
