@@ -8,6 +8,7 @@ import {
   MapPin, 
   Zap, 
   CreditCard,
+  Building2,
   Menu,
   X,
   LogOut,
@@ -26,6 +27,7 @@ const AdminLayout = () => {
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/admin/accounts', icon: Users, label: 'Accounts' },
     { path: '/admin/stations', icon: MapPin, label: 'Stations' },
+    { path: '/admin/facilities', icon: Building2, label: 'Facilities' },
     { path: '/admin/charging-points', icon: Zap, label: 'Charging Points' },
     { path: '/admin/subscriptions', icon: CreditCard, label: 'Subscriptions' },
   ];
