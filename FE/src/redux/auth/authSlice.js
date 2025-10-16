@@ -31,8 +31,8 @@ export const loginUser = createAsyncThunk("loginUser", async (values, { rejectWi
     console.log("✅ [LOGIN] Response received:", response);
     console.log("📥 [LOGIN] Response data:", response.data);
 
-    // BE trả về {token, account} không phải {token, user}
-    const { token, account } = response.data;
+    // BE trả về cấu trúc: { success, message, data: { token, account } }
+    const { token, account } = response.data.data;
 
     console.log("🔑 [LOGIN] Token:", token);
     console.log("👤 [LOGIN] Account:", account);
@@ -184,27 +184,59 @@ export const resetPassword = createAsyncThunk("auth/resetPassword", async (crede
   }
 });
 
-// Update Driver Profile thunk
-export const updateDriverProfile = createAsyncThunk("auth/updateDriverProfile", async (profileData, { rejectWithValue, getState }) => {
+// Get Current User Profile thunk
+export const getCurrentProfile = createAsyncThunk("auth/getCurrentProfile", async (_, { rejectWithValue }) => {
   try {
-    console.log("🚀 [UPDATE_PROFILE] Starting update profile request with data:", profileData);
+    console.log("🚀 [GET_PROFILE] Fetching current user profile...");
     
-    const { auth } = getState();
-    const userId = auth.user?.id;
+    const response = await api.get("/accounts/profile");
     
-    if (!userId) {
-      return rejectWithValue("Không tìm thấy thông tin user ID");
+    console.log("✅ [GET_PROFILE] Response received:", response);
+    console.log("📥 [GET_PROFILE] Response data:", response.data);
+    
+    // Backend returns { success, message, data: { account } }
+    const accountData = response.data.data || response.data;
+    
+    // Update localStorage
+    localStorage.setItem("currentUser", JSON.stringify(accountData));
+    
+    console.log("💾 [GET_PROFILE] Updated localStorage successfully");
+    
+    return accountData;
+  } catch (error) {
+    console.error("❌ [GET_PROFILE] Error occurred:", error);
+    console.error("📄 [GET_PROFILE] Error response:", error.response?.data);
+    
+    let errorMessage = "Không thể tải thông tin profile.";
+    
+    if (error.response) {
+      if (error.response.status === 401) {
+        errorMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+      } else if (error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      }
     }
     
-    console.log("📤 [UPDATE_PROFILE] Sending request to update profile for user ID:", userId);
+    return rejectWithValue(errorMessage);
+  }
+});
+
+// Update Driver Profile thunk
+export const updateDriverProfile = createAsyncThunk("auth/updateDriverProfile", async (profileData, { rejectWithValue }) => {
+  try {
+    console.log("� [UPDATE_PROFILE] Starting update profile request with data:", profileData);
     
-    const response = await api.put(`/accounts/${userId}`, profileData);
+    console.log("📤 [UPDATE_PROFILE] Sending request to /accounts/profile");
+    
+    const response = await api.put("/accounts/profile", profileData);
     
     console.log("✅ [UPDATE_PROFILE] Response received:", response);
     console.log("📥 [UPDATE_PROFILE] Response data:", response.data);
     
+    // Backend returns { success, message, data: { account } }
+    const updatedUser = response.data.data || response.data;
+    
     // Update localStorage with new user data
-    const updatedUser = { ...auth.user, ...profileData };
     localStorage.setItem("currentUser", JSON.stringify(updatedUser));
     
     console.log("💾 [UPDATE_PROFILE] Updated localStorage successfully");
@@ -220,8 +252,45 @@ export const updateDriverProfile = createAsyncThunk("auth/updateDriverProfile", 
     if (error.response) {
       if (error.response.status === 400) {
         errorMessage = error.response.data.message || "Dữ liệu không hợp lệ!";
+      } else if (error.response.status === 401) {
+        errorMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
       } else if (error.response.status === 404) {
         errorMessage = "Không tìm thấy tài khoản!";
+      } else if (error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      }
+    }
+    
+    return rejectWithValue(errorMessage);
+  }
+});
+
+// Delete Driver Profile thunk
+export const deleteDriverProfile = createAsyncThunk("auth/deleteDriverProfile", async (_, { rejectWithValue }) => {
+  try {
+    console.log("🚀 [DELETE_PROFILE] Starting delete profile request...");
+    
+    const response = await api.delete("/accounts/profile");
+    
+    console.log("✅ [DELETE_PROFILE] Response received:", response);
+    console.log("📥 [DELETE_PROFILE] Response data:", response.data);
+    
+    // Clear localStorage
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("currentUser");
+    
+    console.log("💾 [DELETE_PROFILE] Cleared localStorage successfully");
+    
+    return true;
+  } catch (error) {
+    console.error("❌ [DELETE_PROFILE] Error occurred:", error);
+    console.error("📄 [DELETE_PROFILE] Error response:", error.response?.data);
+    
+    let errorMessage = "Không thể xóa tài khoản. Vui lòng thử lại.";
+    
+    if (error.response) {
+      if (error.response.status === 401) {
+        errorMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
       } else if (error.response.data && error.response.data.message) {
         errorMessage = error.response.data.message;
       }
@@ -450,7 +519,22 @@ const authSlice = createSlice({
         state.notificationType = "warning";
       })
 
-      // Add cases for updateDriverProfile
+      // Get Current Profile
+      .addCase(getCurrentProfile.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getCurrentProfile.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+        state.error = null;
+      })
+      .addCase(getCurrentProfile.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      
+      // Update Driver Profile
       .addCase(updateDriverProfile.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -465,6 +549,22 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
         state.success = false;
+      })
+      
+      // Delete Driver Profile
+      .addCase(deleteDriverProfile.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteDriverProfile.fulfilled, (state) => {
+        state.loading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+        state.error = null;
+      })
+      .addCase(deleteDriverProfile.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });
