@@ -6,6 +6,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Nationalized;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "ADMIN")
 @Data
@@ -20,6 +23,9 @@ public class Admin {
     @OneToOne(optional = false)
     @JoinColumn(name = "ACCOUNT_ID", nullable = false)
     private Account account;
-    
+
+
+    @OneToMany(mappedBy = "admin") // "admin" là tên trường Admin trong Facility.java
+    private List<Facility> facilities = new ArrayList<>(); // Bạn cần import List và ArrayList
 
 }
