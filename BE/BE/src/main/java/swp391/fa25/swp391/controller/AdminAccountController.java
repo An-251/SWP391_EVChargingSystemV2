@@ -1,10 +1,16 @@
 package swp391.fa25.swp391.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import swp391.fa25.swp391.dto.request.CreateEmployeeRequest;
+import swp391.fa25.swp391.dto.response.AccountResponse;
+import swp391.fa25.swp391.dto.response.ApiResponse;
+import swp391.fa25.swp391.dto.response.EmployeeResponse;
 import swp391.fa25.swp391.entity.Account;
+import swp391.fa25.swp391.service.AuthService;
 import swp391.fa25.swp391.service.IService.IAccountService;
 
 import java.util.List;
@@ -17,6 +23,7 @@ import java.util.Optional;
 public class AdminAccountController {
 
     private final IAccountService accountService;
+    private final AuthService authService;
 
     @GetMapping
     public ResponseEntity<List<Account>> getAllAccounts() {
@@ -48,6 +55,20 @@ public class AdminAccountController {
             return ResponseEntity.ok("Account with ID " + id + " deleted successfully.");
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Account not found or could not be deleted.");
+        }
+    }
+    @PostMapping("/employees")
+    public ResponseEntity<?> createEmployee(@Valid @RequestBody CreateEmployeeRequest request) {
+        try {
+            EmployeeResponse response = authService.createStationEmployee(request);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Employee created successfully", response));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error creating employee: " + e.getMessage()));
         }
     }
 }

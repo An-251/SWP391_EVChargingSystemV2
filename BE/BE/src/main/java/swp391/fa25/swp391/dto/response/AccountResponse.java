@@ -23,5 +23,9 @@ public class AccountResponse {
     private String gender;
     private String status;
     private Double balance;
+    // Role-specific IDs
     private Integer driverId;
+    private Integer adminId;
+    private Integer employeeId;
+    private Integer enterpriseId;
 }

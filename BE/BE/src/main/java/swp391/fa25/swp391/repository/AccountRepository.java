@@ -1,7 +1,5 @@
 package swp391.fa25.swp391.repository;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import swp391.fa25.swp391.entity.Account;
@@ -15,10 +13,6 @@ import java.util.Optional;
  */
 @Repository
 public interface AccountRepository extends JpaRepository<Account, Integer> {
-
-    // ============================================
-    // SIMPLE QUERIES - Spring tự động generate
-    // ============================================
 
     /**
      * Tìm Account theo username để phục vụ đăng nhập/kiểm tra tồn tại
@@ -50,14 +44,12 @@ public interface AccountRepository extends JpaRepository<Account, Integer> {
      */
     boolean existsByEmail(String email);
 
+
     /**
      * Xóa Account theo username
      * @return số lượng bản ghi đã xóa
      */
     Long deleteByUsername(String username);
 
-    // Pagination theo Role (ví dụ)
-    // Page<Account> findByRoleName(String roleName, Pageable pageable);
-
-    // Bạn có thể thêm các phương thức tìm kiếm hoặc thống kê khác nếu cần
+    boolean existsByAccountRole(String role);
 }
