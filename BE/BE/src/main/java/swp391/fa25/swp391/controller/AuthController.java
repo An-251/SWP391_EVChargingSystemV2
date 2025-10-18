@@ -137,7 +137,22 @@ public class AuthController {
                     .body(ApiResponse.error("Registration error: " + e.getMessage()));
         }
     }
+    /**
+     * Check if any admin exists in the system
+     * GET /api/auth/has-admin
+     * Public endpoint to help FE decide registration flow
+     */
+    @GetMapping("/has-admin")
+    public ResponseEntity<?> hasAdmin() {
+        try {
+            boolean adminExists = authService.hasAdmin();
+            return ResponseEntity.ok(ApiResponse.success("Admin check completed", adminExists));
 
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error checking admin existence: " + e.getMessage()));
+        }
+    }
     /**
      * Logout endpoint
      */

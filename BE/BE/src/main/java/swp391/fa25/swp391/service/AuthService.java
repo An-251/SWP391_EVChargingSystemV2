@@ -266,4 +266,7 @@ public class AuthService {
         // Trả về EmployeeResponse
         return employeeResponse;
     }
+    public boolean hasAdmin() {
+        return accountRepository.existsByAccountRole("Admin");
+    }
 }
