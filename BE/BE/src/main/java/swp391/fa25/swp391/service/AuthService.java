@@ -96,7 +96,7 @@ public class AuthService {
      * Service layer sẽ ném Exception khi có lỗi.
      */
     @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN')")
     public RegisterResponse registerAdmin(RegisterRequest request) { // Sửa kiểu trả về
         // Validate và NÉM EXCEPTION
         if (accountRepository.existsByUsername(request.getUsername())) {
@@ -217,7 +217,7 @@ public class AuthService {
      * Service layer sẽ ném Exception khi có lỗi.
      */
     @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public EmployeeResponse createStationEmployee(CreateEmployeeRequest request) { // Sửa kiểu trả về
         // Validate và NÉM EXCEPTION
         if (accountRepository.existsByUsername(request.getUsername())) {
