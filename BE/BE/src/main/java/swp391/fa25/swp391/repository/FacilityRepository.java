@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import swp391.fa25.swp391.entity.Facility;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository cho Facility
@@ -19,7 +20,6 @@ public interface FacilityRepository extends JpaRepository<Facility, Integer> {
      * Tìm Facility theo tên cơ sở (facility_name).
      */
     List<Facility> findByName(String facilityName);
-
     /**
      * Tìm Facility theo bất kỳ phần nào của địa chỉ (street, ward, district, city)
      * Thay thế cho findByFullAddressContaining
