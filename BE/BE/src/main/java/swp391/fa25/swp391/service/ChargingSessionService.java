@@ -8,23 +8,21 @@ import org.springframework.transaction.annotation.Transactional;
 import swp391.fa25.swp391.dto.request.StartChargingSessionRequest;
 import swp391.fa25.swp391.dto.request.StopChargingSessionRequest;
 import swp391.fa25.swp391.dto.response.ChargingSessionResponse;
-import swp391.fa25.swp391.entity.ChargingPoint;
-import swp391.fa25.swp391.entity.ChargingSession;
-import swp391.fa25.swp391.entity.Driver;
-import swp391.fa25.swp391.entity.Vehicle;
+import swp391.fa25.swp391.entity.*;
 import swp391.fa25.swp391.repository.ChargingSessionRepository;
-import swp391.fa25.swp391.service.IService.*;
+import swp391.fa25.swp391.service.IService.IChargingPointService;
+import swp391.fa25.swp391.service.IService.IChargingSessionService;
+import swp391.fa25.swp391.service.IService.IDriverService;
+import swp391.fa25.swp391.service.IService.IVehicleService;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Service Implementation cho ChargingSession
- */
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -34,24 +32,20 @@ public class ChargingSessionService implements IChargingSessionService {
     private final IDriverService driverService;
     private final IVehicleService vehicleService;
     private final IChargingPointService chargingPointService;
+    private final InvoiceService invoiceService; // ✅ thêm service hóa đơn
 
-    // Hằng số giả lập
     private static final BigDecimal KWH_PER_PERCENT = new BigDecimal("0.5"); // 0.5 kWh/1%
     private static final BigDecimal COST_PER_KWH = new BigDecimal("3000"); // 3,000 VND/kWh
 
-
     @Override
     public ChargingSessionResponse startChargingSession(StartChargingSessionRequest request) {
-        // 1. Validate driver
         Driver driver = driverService.findById(request.getDriverId())
                 .orElseThrow(() -> new RuntimeException("Driver not found with ID: " + request.getDriverId()));
 
-        // 2. Check if driver already has active session
         if (chargingSessionRepository.existsByDriverIdAndStatus(request.getDriverId(), "ACTIVE")) {
             throw new RuntimeException("Driver already has an active charging session");
         }
 
-        // 3. Validate vehicle
         Vehicle vehicle = vehicleService.findById(request.getVehicleId())
                 .orElseThrow(() -> new RuntimeException("Vehicle not found with ID: " + request.getVehicleId()));
 
@@ -59,7 +53,6 @@ public class ChargingSessionService implements IChargingSessionService {
             throw new RuntimeException("Vehicle does not belong to this driver");
         }
 
-        // 4. Validate charging point
         ChargingPoint chargingPoint = chargingPointService.findById(request.getChargingPointId())
                 .orElseThrow(() -> new RuntimeException("Charging point not found with ID: " + request.getChargingPointId()));
 
@@ -67,14 +60,12 @@ public class ChargingSessionService implements IChargingSessionService {
             throw new RuntimeException("Charging point is not available");
         }
 
-        // 5. Check if charging point already in use
         Optional<ChargingSession> pointSession =
                 chargingSessionRepository.findActiveSessionByChargingPointId(request.getChargingPointId());
         if (pointSession.isPresent()) {
             throw new RuntimeException("Charging point is currently in use");
         }
 
-        // 6. Create charging session
         ChargingSession session = new ChargingSession();
         session.setDriver(driver);
         session.setVehicle(vehicle);
@@ -88,7 +79,6 @@ public class ChargingSessionService implements IChargingSessionService {
 
         ChargingSession savedSession = chargingSessionRepository.save(session);
 
-        // 7. Update charging point status
         chargingPoint.setStatus("IN_USE");
         chargingPointService.save(chargingPoint);
 
@@ -97,31 +87,25 @@ public class ChargingSessionService implements IChargingSessionService {
 
     @Override
     public ChargingSessionResponse stopChargingSession(Integer sessionId, StopChargingSessionRequest request) {
-        // 1. Find session
         ChargingSession session = chargingSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Charging session not found with ID: " + sessionId));
 
-        // 2. Validate session status
         if (!"ACTIVE".equalsIgnoreCase(session.getStatus())) {
             throw new RuntimeException("Can only stop active sessions");
         }
 
-        // 3. Validate end percentage
         if (request.getEndPercentage() < session.getStartPercentage()) {
             throw new RuntimeException("End percentage cannot be less than start percentage");
         }
 
-        // 4. Calculate charging data
         LocalDateTime endTime = LocalDateTime.now();
         session.setEndTime(endTime);
         session.setEndPercentage(request.getEndPercentage());
 
-        // Calculate kWh used
         int percentageCharged = request.getEndPercentage() - session.getStartPercentage();
         BigDecimal kwhUsed = KWH_PER_PERCENT.multiply(new BigDecimal(percentageCharged))
                 .setScale(2, RoundingMode.HALF_UP);
 
-        // Calculate cost
         BigDecimal totalCost = kwhUsed.multiply(COST_PER_KWH)
                 .setScale(0, RoundingMode.HALF_UP);
 
@@ -131,10 +115,20 @@ public class ChargingSessionService implements IChargingSessionService {
 
         ChargingSession updatedSession = chargingSessionRepository.save(session);
 
-        // 5. Update charging point status
+        // ✅ Giải phóng trụ sạc
         ChargingPoint chargingPoint = session.getChargingPoint();
         chargingPoint.setStatus("AVAILABLE");
         chargingPointService.save(chargingPoint);
+
+        // ✅ Tạo hóa đơn tự động
+        Invoice invoice = new Invoice();
+        invoice.setIssueDate(Instant.now());
+        invoice.setTotalCost(totalCost);
+        invoice.setPaymentMethod("CASH"); // hoặc "BANK_TRANSFER", "VNPAY", ...
+        invoice.setStatus("PAID"); // hoặc "UNPAID" nếu muốn xác nhận sau
+        invoice.setDriver(session.getDriver());
+        invoice.setSession(session);
+        invoiceService.save(invoice);
 
         return buildResponse(updatedSession);
     }
@@ -152,12 +146,12 @@ public class ChargingSessionService implements IChargingSessionService {
         session.setEndTime(LocalDateTime.now());
         chargingSessionRepository.save(session);
 
-        // Update charging point
         ChargingPoint chargingPoint = session.getChargingPoint();
         chargingPoint.setStatus("AVAILABLE");
         chargingPointService.save(chargingPoint);
     }
 
+    // ======= Các method còn lại giữ nguyên =======
     @Override
     @Transactional(readOnly = true)
     public Optional<ChargingSession> findById(Integer id) {
@@ -214,7 +208,7 @@ public class ChargingSessionService implements IChargingSessionService {
         return chargingSessionRepository.findByDriverIdOrderByStartTimeDesc(driverId, pageable);
     }
 
-    // Helper method
+    // Helper
     private ChargingSessionResponse buildResponse(ChargingSession session) {
         Long durationMinutes = null;
         Integer chargedPercentage = null;
@@ -237,7 +231,7 @@ public class ChargingSessionService implements IChargingSessionService {
                 .durationMinutes(durationMinutes)
                 .overusedTime(session.getOverusedTime())
                 .driverId(session.getDriver().getId())
-                .driverName(session.getDriver().getAccount().getFullName()) // Thay bằng field thực tế
+                .driverName(session.getDriver().getAccount().getFullName())
                 .vehicleId(session.getVehicle().getId())
                 .vehicleModel(session.getVehicle().getModel())
                 .licensePlate(session.getVehicle().getLicensePlate())
@@ -252,6 +246,5 @@ public class ChargingSessionService implements IChargingSessionService {
                 .kwhUsed(session.getKwhUsed())
                 .cost(session.getCost())
                 .build();
-
     }
 }
