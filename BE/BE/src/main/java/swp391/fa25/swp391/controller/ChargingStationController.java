@@ -48,7 +48,7 @@ public class ChargingStationController {
     }
 
     private ChargingStationResponse convertToDto(ChargingStation station) {
-        // ... (logic không đổi so với lần sửa trước) ...
+
         List<ChargingPointResponse> pointResponses = station.getChargingPoints().stream()
                 .map(this::convertToPointDto)
                 .collect(Collectors.toList());

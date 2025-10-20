@@ -35,7 +35,7 @@ public class ChargingSessionService implements IChargingSessionService {
     private final IDriverService driverService;
     private final IVehicleService vehicleService;
     private final IChargingPointService chargingPointService;
-    private final InvoiceService invoiceService; // ✅ Tự động tạo hóa đơn
+    private final InvoiceService invoiceService;
 
     // Hằng số cấu hình
     private static final BigDecimal KWH_PER_PERCENT = new BigDecimal("0.5"); // 0.5 kWh/1%
@@ -134,20 +134,16 @@ public class ChargingSessionService implements IChargingSessionService {
         chargingPoint.setStatus("AVAILABLE");
         chargingPointService.save(chargingPoint);
 
-        // ✅ Tạo hóa đơn khi hoàn thành
-// Generate invoice ID manually (Invoice entity không có @GeneratedValue)
-        Integer nextInvoiceId = generateNextInvoiceId();
-
+        // ✅ Tạo hóa đơn khi hoàn thành (Loại bỏ logic sinh ID thủ công)
         Invoice invoice = new Invoice();
-        invoice.setId(nextInvoiceId); // ✅ FIX: Set ID thủ công
         invoice.setIssueDate(Instant.now());
         invoice.setTotalCost(totalCost);
-        invoice.setPaymentMethod("CASH"); // Có thể thay bằng "VNPAY" hoặc "BANK_TRANSFER"
-        invoice.setStatus("PAID");        // Hoặc "UNPAID" nếu cần xác nhận
+        invoice.setPaymentMethod("CASH");
+        invoice.setStatus("PAID");
         invoice.setDriver(session.getDriver());
         invoice.setSession(session);
 
-        invoiceService.save(invoice);
+        invoiceService.save(invoice); // ID sẽ được sinh tự động nhờ @GeneratedValue
 
         return buildResponse(updatedSession);
     }
@@ -236,21 +232,7 @@ public class ChargingSessionService implements IChargingSessionService {
     /**
      * Generate next Invoice ID manually (vì Invoice entity thiếu @GeneratedValue)
      */
-    private Integer generateNextInvoiceId() {
-        // Lấy invoice có ID lớn nhất từ database
-        List<Invoice> allInvoices = invoiceService.findAll();
-        if (allInvoices.isEmpty()) {
-            return 1; // First invoice
-        }
 
-        // Tìm ID lớn nhất
-        Integer maxId = allInvoices.stream()
-                .map(Invoice::getId)
-                .max(Integer::compareTo)
-                .orElse(0);
-
-        return maxId + 1;
-    }
 
     private ChargingSessionResponse buildResponse(ChargingSession session) {
         Long durationMinutes = null;
