@@ -63,7 +63,6 @@ public class ChargingSessionService implements IChargingSessionService {
 
         ChargingPoint chargingPoint = chargingPointService.findById(request.getChargingPointId())
                 .orElseThrow(() -> new RuntimeException("Charging point not found with ID: " + request.getChargingPointId()));
-
         if (!"AVAILABLE".equalsIgnoreCase(chargingPoint.getStatus())) {
             throw new RuntimeException("Charging point is not available");
         }
@@ -136,7 +135,11 @@ public class ChargingSessionService implements IChargingSessionService {
         chargingPointService.save(chargingPoint);
 
         // ✅ Tạo hóa đơn khi hoàn thành
+// Generate invoice ID manually (Invoice entity không có @GeneratedValue)
+        Integer nextInvoiceId = generateNextInvoiceId();
+
         Invoice invoice = new Invoice();
+        invoice.setId(nextInvoiceId); // ✅ FIX: Set ID thủ công
         invoice.setIssueDate(Instant.now());
         invoice.setTotalCost(totalCost);
         invoice.setPaymentMethod("CASH"); // Có thể thay bằng "VNPAY" hoặc "BANK_TRANSFER"
@@ -229,6 +232,26 @@ public class ChargingSessionService implements IChargingSessionService {
     }
 
     // ======= Helper =======
+
+    /**
+     * Generate next Invoice ID manually (vì Invoice entity thiếu @GeneratedValue)
+     */
+    private Integer generateNextInvoiceId() {
+        // Lấy invoice có ID lớn nhất từ database
+        List<Invoice> allInvoices = invoiceService.findAll();
+        if (allInvoices.isEmpty()) {
+            return 1; // First invoice
+        }
+
+        // Tìm ID lớn nhất
+        Integer maxId = allInvoices.stream()
+                .map(Invoice::getId)
+                .max(Integer::compareTo)
+                .orElse(0);
+
+        return maxId + 1;
+    }
+
     private ChargingSessionResponse buildResponse(ChargingSession session) {
         Long durationMinutes = null;
         Integer chargedPercentage = null;
@@ -243,6 +266,12 @@ public class ChargingSessionService implements IChargingSessionService {
 
         ChargingPoint cp = session.getChargingPoint();
 
+        // Build vehicle name from model and licensePlate
+        String vehicleName = String.format("%s (%s)",
+                session.getVehicle().getModel() != null ? session.getVehicle().getModel() : "Unknown",
+                session.getVehicle().getLicensePlate() != null ? session.getVehicle().getLicensePlate() : "No Plate"
+        );
+
         return ChargingSessionResponse.builder()
                 .sessionId(session.getId())
                 .status(session.getStatus())
@@ -253,6 +282,7 @@ public class ChargingSessionService implements IChargingSessionService {
                 .driverId(session.getDriver().getId())
                 .driverName(session.getDriver().getAccount().getFullName())
                 .vehicleId(session.getVehicle().getId())
+                .vehicleName(vehicleName) // ✅ FIX: Add vehicle name
                 .vehicleModel(session.getVehicle().getModel())
                 .licensePlate(session.getVehicle().getLicensePlate())
                 .chargingPointId(cp.getId())
