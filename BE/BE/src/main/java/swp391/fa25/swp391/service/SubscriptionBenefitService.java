@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import swp391.fa25.swp391.entity.PlanBenefit;
 import swp391.fa25.swp391.entity.PlanRegistration;
-import swp391.fa25.swp391.repository.models.PlanRegistrationRepository;
+import swp391.fa25.swp391.repository.PlanRegistrationRepository;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
