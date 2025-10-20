@@ -23,6 +23,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Service xử lý logic cho Charging Session và tạo hóa đơn (Invoice) khi kết thúc sạc.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -32,16 +35,21 @@ public class ChargingSessionService implements IChargingSessionService {
     private final IDriverService driverService;
     private final IVehicleService vehicleService;
     private final IChargingPointService chargingPointService;
-    private final InvoiceService invoiceService; // ✅ thêm service hóa đơn
+    private final InvoiceService invoiceService; // ✅ Tự động tạo hóa đơn
 
+    // Hằng số cấu hình
     private static final BigDecimal KWH_PER_PERCENT = new BigDecimal("0.5"); // 0.5 kWh/1%
-    private static final BigDecimal COST_PER_KWH = new BigDecimal("3000"); // 3,000 VND/kWh
+    private static final BigDecimal COST_PER_KWH = new BigDecimal("3000");   // 3,000 VND/kWh
 
+    /**
+     * Bắt đầu một phiên sạc mới
+     */
     @Override
     public ChargingSessionResponse startChargingSession(StartChargingSessionRequest request) {
         Driver driver = driverService.findById(request.getDriverId())
                 .orElseThrow(() -> new RuntimeException("Driver not found with ID: " + request.getDriverId()));
 
+        // Kiểm tra driver có session đang ACTIVE chưa
         if (chargingSessionRepository.existsByDriverIdAndStatus(request.getDriverId(), "ACTIVE")) {
             throw new RuntimeException("Driver already has an active charging session");
         }
@@ -60,12 +68,14 @@ public class ChargingSessionService implements IChargingSessionService {
             throw new RuntimeException("Charging point is not available");
         }
 
+        // Kiểm tra trụ sạc có đang sử dụng
         Optional<ChargingSession> pointSession =
                 chargingSessionRepository.findActiveSessionByChargingPointId(request.getChargingPointId());
         if (pointSession.isPresent()) {
             throw new RuntimeException("Charging point is currently in use");
         }
 
+        // Tạo session mới
         ChargingSession session = new ChargingSession();
         session.setDriver(driver);
         session.setVehicle(vehicle);
@@ -79,12 +89,16 @@ public class ChargingSessionService implements IChargingSessionService {
 
         ChargingSession savedSession = chargingSessionRepository.save(session);
 
+        // Cập nhật trạng thái trụ sạc
         chargingPoint.setStatus("IN_USE");
         chargingPointService.save(chargingPoint);
 
         return buildResponse(savedSession);
     }
 
+    /**
+     * Kết thúc một phiên sạc → Tự động sinh hóa đơn
+     */
     @Override
     public ChargingSessionResponse stopChargingSession(Integer sessionId, StopChargingSessionRequest request) {
         ChargingSession session = chargingSessionRepository.findById(sessionId)
@@ -98,6 +112,7 @@ public class ChargingSessionService implements IChargingSessionService {
             throw new RuntimeException("End percentage cannot be less than start percentage");
         }
 
+        // Tính toán thông tin sạc
         LocalDateTime endTime = LocalDateTime.now();
         session.setEndTime(endTime);
         session.setEndPercentage(request.getEndPercentage());
@@ -120,19 +135,23 @@ public class ChargingSessionService implements IChargingSessionService {
         chargingPoint.setStatus("AVAILABLE");
         chargingPointService.save(chargingPoint);
 
-        // ✅ Tạo hóa đơn tự động
+        // ✅ Tạo hóa đơn khi hoàn thành
         Invoice invoice = new Invoice();
         invoice.setIssueDate(Instant.now());
         invoice.setTotalCost(totalCost);
-        invoice.setPaymentMethod("CASH"); // hoặc "BANK_TRANSFER", "VNPAY", ...
-        invoice.setStatus("PAID"); // hoặc "UNPAID" nếu muốn xác nhận sau
+        invoice.setPaymentMethod("CASH"); // Có thể thay bằng "VNPAY" hoặc "BANK_TRANSFER"
+        invoice.setStatus("PAID");        // Hoặc "UNPAID" nếu cần xác nhận
         invoice.setDriver(session.getDriver());
         invoice.setSession(session);
+
         invoiceService.save(invoice);
 
         return buildResponse(updatedSession);
     }
 
+    /**
+     * Hủy session sạc
+     */
     @Override
     public void cancelChargingSession(Integer sessionId) {
         ChargingSession session = chargingSessionRepository.findById(sessionId)
@@ -151,7 +170,8 @@ public class ChargingSessionService implements IChargingSessionService {
         chargingPointService.save(chargingPoint);
     }
 
-    // ======= Các method còn lại giữ nguyên =======
+    // ======= Các method hỗ trợ =======
+
     @Override
     @Transactional(readOnly = true)
     public Optional<ChargingSession> findById(Integer id) {
@@ -208,7 +228,7 @@ public class ChargingSessionService implements IChargingSessionService {
         return chargingSessionRepository.findByDriverIdOrderByStartTimeDesc(driverId, pageable);
     }
 
-    // Helper
+    // ======= Helper =======
     private ChargingSessionResponse buildResponse(ChargingSession session) {
         Long durationMinutes = null;
         Integer chargedPercentage = null;
