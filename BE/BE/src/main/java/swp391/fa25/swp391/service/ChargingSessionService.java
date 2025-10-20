@@ -267,10 +267,6 @@ public class ChargingSessionService implements IChargingSessionService {
         ChargingPoint cp = session.getChargingPoint();
 
         // Build vehicle name from model and licensePlate
-        String vehicleName = String.format("%s (%s)",
-                session.getVehicle().getModel() != null ? session.getVehicle().getModel() : "Unknown",
-                session.getVehicle().getLicensePlate() != null ? session.getVehicle().getLicensePlate() : "No Plate"
-        );
 
         return ChargingSessionResponse.builder()
                 .sessionId(session.getId())
@@ -282,7 +278,7 @@ public class ChargingSessionService implements IChargingSessionService {
                 .driverId(session.getDriver().getId())
                 .driverName(session.getDriver().getAccount().getFullName())
                 .vehicleId(session.getVehicle().getId())
-                .vehicleName(vehicleName) // ✅ FIX: Add vehicle name
+
                 .vehicleModel(session.getVehicle().getModel())
                 .licensePlate(session.getVehicle().getLicensePlate())
                 .chargingPointId(cp.getId())

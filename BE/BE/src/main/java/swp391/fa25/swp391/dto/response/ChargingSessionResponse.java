@@ -22,7 +22,7 @@ public class ChargingSessionResponse {
 
     // Vehicle info
     private Integer vehicleId;
-    private String vehicleName;
+
     private String vehicleModel;
     private String licensePlate;
 
