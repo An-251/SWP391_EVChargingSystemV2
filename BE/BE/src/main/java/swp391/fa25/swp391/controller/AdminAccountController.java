@@ -14,7 +14,7 @@ import swp391.fa25.swp391.service.AuthService;
 import swp391.fa25.swp391.service.IService.IAccountService;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin/accounts")
@@ -26,26 +26,39 @@ public class AdminAccountController {
     private final AuthService authService;
 
     @GetMapping
-    public ResponseEntity<List<Account>> getAllAccounts() {
+    public ResponseEntity<List<AccountResponse>> getAllAccounts() {
         List<Account> accounts = accountService.findAll();
-        return ResponseEntity.ok(accounts);
+
+        // Map the list of Account entities to your AccountResponse DTO
+        List<AccountResponse> accountResponses = accounts.stream()
+                .map(this::mapToAccountResponse) // Using a helper method for clarity
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(accountResponses);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateAccountByAdmin(@PathVariable Integer id, @RequestBody Account updatedAccount) {
-        Optional<Account> existingAccountOpt = accountService.findById(id);
-        if (existingAccountOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Account not found with ID: " + id);
+    // Helper method to convert an Account entity to an AccountResponse DTO
+    private AccountResponse mapToAccountResponse(Account account) {
+        AccountResponse.AccountResponseBuilder builder = AccountResponse.builder()
+                .id(account.getId())
+                .username(account.getUsername())
+                .fullName(account.getFullName())
+                .email(account.getEmail())
+                .role(account.getAccountRole())
+                .phone(account.getPhone())
+                .dob(account.getDob())
+                .gender(account.getGender())
+                .status(account.getStatus())
+                .balance(account.getBalance());
+
+        if (account.getDriver() != null) {
+            builder.driverId(account.getDriver().getId());
+        }
+        if (account.getAdmin() != null) {
+            builder.adminId(account.getAdmin().getId());
         }
 
-        Account accountToUpdate = existingAccountOpt.get();
-        accountToUpdate.setEmail(updatedAccount.getEmail());
-        accountToUpdate.setUsername(updatedAccount.getUsername());
-        accountToUpdate.setPhone(updatedAccount.getPhone());
-        accountToUpdate.setAccountRole(updatedAccount.getAccountRole());
-
-        Account savedAccount = accountService.updateAccount(accountToUpdate);
-        return ResponseEntity.ok(savedAccount);
+        return builder.build();
     }
 
     @DeleteMapping("/{id}")
