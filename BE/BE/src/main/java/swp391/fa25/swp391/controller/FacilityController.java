@@ -4,11 +4,15 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import swp391.fa25.swp391.dto.request.FacilityRequest;
+import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.dto.response.FacilityResponse;
 import swp391.fa25.swp391.entity.Admin;
 import swp391.fa25.swp391.entity.Facility;
+import swp391.fa25.swp391.security.CustomUserDetails;
+import swp391.fa25.swp391.service.IService.IAdminService;
 import swp391.fa25.swp391.service.IService.IFacilityService;
 
 import java.util.List;
@@ -21,119 +25,195 @@ import java.util.stream.Collectors;
 public class FacilityController {
 
     private final IFacilityService facilityService;
-
-    // ==================== HELPER CONVERTER METHODS ====================
-
-    /**
-     * Chuyển đổi từ Facility Entity sang FacilityResponse DTO.
-     */
-    private FacilityResponse convertToDto(Facility facility) {
-        return FacilityResponse.builder()
-                .id(facility.getId())
-                .name(facility.getName())
-                .city(facility.getCity())
-                .district(facility.getDistrict())
-                .ward(facility.getWard())
-                .streetAddress(facility.getStreetAddress())
-                .fullAddress(facility.getFullAddress()) // Sử dụng phương thức transient
-                .adminId(facility.getAdmin() != null ? facility.getAdmin().getId() : null)
-                .stationCount(facility.getChargingStations() != null ? facility.getChargingStations().size() : 0)
-                .build();
-    }
+    private final IAdminService adminService;
 
     /**
-     * Chuyển đổi từ FacilityRequest DTO sang Facility Entity (khi tạo mới).
+     * Create new facility
+     * POST /api/facilities/profile
      */
-    private Facility convertToEntity(FacilityRequest request) {
-        Facility facility = new Facility();
-        facility.setName(request.getName());
-        facility.setCity(request.getCity());
-        facility.setDistrict(request.getDistrict());
-        facility.setWard(request.getWard());
-        facility.setStreetAddress(request.getStreetAddress());
-
-        // Thiết lập quan hệ với Admin
-        // Service sẽ chịu trách nhiệm kiểm tra adminId có tồn tại không
-        if (request.getAdminId() != null) {
-            Admin admin = new Admin();
-            admin.setId(request.getAdminId());
-            facility.setAdmin(admin);
-        }
-        return facility;
-    }
-
-    /**
-     * Cập nhật một Facility Entity đã tồn tại từ FacilityRequest DTO.
-     */
-    private void updateEntityFromRequest(Facility facility, FacilityRequest request) {
-        facility.setName(request.getName());
-        facility.setCity(request.getCity());
-        facility.setDistrict(request.getDistrict());
-        facility.setWard(request.getWard());
-        facility.setStreetAddress(request.getStreetAddress());
-
-        // Cập nhật quan hệ với Admin
-        if (request.getAdminId() != null) {
-            Admin admin = new Admin();
-            admin.setId(request.getAdminId());
-            facility.setAdmin(admin);
-        } else {
-            facility.setAdmin(null);
-        }
-    }
-
-
-    // ==================== CONTROLLER ENDPOINTS ====================
-
     @PostMapping("/profile")
-    public ResponseEntity<?> createFacility(@Valid @RequestBody FacilityRequest request) {
+    public ResponseEntity<?> createFacility(
+            @Valid @RequestBody FacilityRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
-            Facility newFacility = convertToEntity(request);
+            // Lấy Account ID từ CustomUserDetails
+            Integer accountId = userDetails.getAccount().getId();
+
+            // Tìm Admin theo Account ID
+            Admin currentAdmin = adminService.findByAccountId(accountId);
+
+            Facility newFacility = new Facility();
+            newFacility.setName(request.getName());
+            newFacility.setCity(request.getCity());
+            newFacility.setDistrict(request.getDistrict());
+            newFacility.setWard(request.getWard());
+            newFacility.setStreetAddress(request.getStreetAddress());
+            newFacility.setAdmin(currentAdmin); // Gán admin đã đăng nhập
+
             Facility savedFacility = facilityService.register(newFacility);
-            return ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(savedFacility));
+
+            FacilityResponse facilityResponse = FacilityResponse.builder()
+                    .id(savedFacility.getId())
+                    .name(savedFacility.getName())
+                    .city(savedFacility.getCity())
+                    .district(savedFacility.getDistrict())
+                    .ward(savedFacility.getWard())
+                    .streetAddress(savedFacility.getStreetAddress())
+                    .fullAddress(savedFacility.getFullAddress())
+                    .adminId(savedFacility.getAdmin().getId())
+                    .stationCount(0) // Mới tạo nên luôn là 0
+                    .build();
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Facility created successfully", facilityResponse));
+
         } catch (Exception e) {
-            // Cân nhắc log lỗi ra để debug
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error creating facility: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("Error creating facility: " + e.getMessage()));
         }
     }
 
+    /**
+     * Update facility by ID
+     * PUT /api/facilities/{id}
+     */
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateFacility(@PathVariable Integer id, @Valid @RequestBody FacilityRequest request) {
+    public ResponseEntity<?> updateFacility(
+            @PathVariable Integer id,
+            @Valid @RequestBody FacilityRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
             Facility existingFacility = facilityService.findById(id);
-            updateEntityFromRequest(existingFacility, request);
+
+            // Lấy Admin của user hiện tại
+            Integer accountId = userDetails.getAccount().getId();
+            Admin currentAdmin = adminService.findByAccountId(accountId);
+
+            // Kiểm tra quyền sở hữu
+            if (!existingFacility.getAdmin().getId().equals(currentAdmin.getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("You don't have permission to update this facility"));
+            }
+
+            // Update các trường (KHÔNG update admin)
+            existingFacility.setName(request.getName());
+            existingFacility.setCity(request.getCity());
+            existingFacility.setDistrict(request.getDistrict());
+            existingFacility.setWard(request.getWard());
+            existingFacility.setStreetAddress(request.getStreetAddress());
+
             Facility updatedFacility = facilityService.updateFacility(existingFacility);
-            return ResponseEntity.ok(convertToDto(updatedFacility));
-        } catch (Exception e) { // Bắt lỗi nếu service ném ra (vd: không tìm thấy)
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Facility not found with ID: " + id);
+
+            FacilityResponse facilityResponse = FacilityResponse.builder()
+                    .id(updatedFacility.getId())
+                    .name(updatedFacility.getName())
+                    .city(updatedFacility.getCity())
+                    .district(updatedFacility.getDistrict())
+                    .ward(updatedFacility.getWard())
+                    .streetAddress(updatedFacility.getStreetAddress())
+                    .fullAddress(updatedFacility.getFullAddress())
+                    .adminId(updatedFacility.getAdmin().getId())
+                    .stationCount(updatedFacility.getChargingStations() != null ?
+                            updatedFacility.getChargingStations().size() : 0)
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("Facility updated successfully", facilityResponse));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Facility not found with ID: " + id));
         }
     }
+
+    /**
+     * Get facility by ID
+     * GET /api/facilities/{id}
+     */
     @GetMapping("/{id}")
     public ResponseEntity<?> getFacilityById(@PathVariable Integer id) {
         try {
             Facility facility = facilityService.findById(id);
-            return ResponseEntity.ok(convertToDto(facility));
+
+            FacilityResponse facilityResponse = FacilityResponse.builder()
+                    .id(facility.getId())
+                    .name(facility.getName())
+                    .city(facility.getCity())
+                    .district(facility.getDistrict())
+                    .ward(facility.getWard())
+                    .streetAddress(facility.getStreetAddress())
+                    .fullAddress(facility.getFullAddress())
+                    .adminId(facility.getAdmin() != null ? facility.getAdmin().getId() : null)
+                    .stationCount(facility.getChargingStations() != null ?
+                            facility.getChargingStations().size() : 0)
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("Facility found", facilityResponse));
+
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Facility not found with ID: " + id);
+                    .body(ApiResponse.error("Facility not found with ID: " + id));
         }
     }
+
+    /**
+     * Get all facilities
+     * GET /api/facilities/profile
+     */
     @GetMapping("/profile")
-    public ResponseEntity<List<FacilityResponse>> getAllFacilities() {
-        List<Facility> facilities = facilityService.findAll();
-        List<FacilityResponse> responseList = facilities.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(responseList);
+    public ResponseEntity<?> getAllFacilities() {
+        try {
+            List<Facility> facilities = facilityService.findAll();
+
+            List<FacilityResponse> responseList = facilities.stream()
+                    .map(facility -> FacilityResponse.builder()
+                            .id(facility.getId())
+                            .name(facility.getName())
+                            .city(facility.getCity())
+                            .district(facility.getDistrict())
+                            .ward(facility.getWard())
+                            .streetAddress(facility.getStreetAddress())
+                            .fullAddress(facility.getFullAddress())
+                            .adminId(facility.getAdmin() != null ? facility.getAdmin().getId() : null)
+                            .stationCount(facility.getChargingStations() != null ?
+                                    facility.getChargingStations().size() : 0)
+                            .build())
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(ApiResponse.success("Facilities retrieved successfully", responseList));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error retrieving facilities: " + e.getMessage()));
+        }
     }
 
+    /**
+     * Delete facility by ID
+     * DELETE /api/facilities/{id}
+     */
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteFacility(@PathVariable Integer id) {
+    public ResponseEntity<?> deleteFacility(
+            @PathVariable Integer id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
+            Facility existingFacility = facilityService.findById(id);
+
+            // Lấy Admin của user hiện tại
+            Integer accountId = userDetails.getAccount().getId();
+            Admin currentAdmin = adminService.findByAccountId(accountId);
+
+            // Kiểm tra quyền sở hữu
+            if (!existingFacility.getAdmin().getId().equals(currentAdmin.getId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("You don't have permission to delete this facility"));
+            }
+
             facilityService.deleteFacility(id);
-            return ResponseEntity.ok("Facility with ID " + id + " deleted successfully.");
+            return ResponseEntity.ok(ApiResponse.success("Facility with ID " + id + " deleted successfully"));
+
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Facility not found or could not be deleted.");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Facility not found or could not be deleted"));
         }
     }
 }

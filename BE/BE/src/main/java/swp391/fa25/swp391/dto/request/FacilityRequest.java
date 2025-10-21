@@ -30,6 +30,4 @@ public class FacilityRequest {
     @Size(max = 255, message = "Street address cannot exceed 255 characters") // Giả sử cột STREET_ADDRESS có độ dài 255
     private String streetAddress;
 
-    @NotNull(message = "Admin ID cannot be null")
-    private Integer adminId;
 }

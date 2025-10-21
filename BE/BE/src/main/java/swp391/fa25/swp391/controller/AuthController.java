@@ -1,14 +1,15 @@
 package swp391.fa25.swp391.controller;
 
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.Cookie;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import swp391.fa25.swp391.dto.request.CreateEmployeeRequest;
 import swp391.fa25.swp391.dto.request.LoginRequest;
 import swp391.fa25.swp391.dto.request.RegisterRequest;
 import swp391.fa25.swp391.dto.response.AccountResponse;
@@ -18,16 +19,13 @@ import swp391.fa25.swp391.dto.response.RegisterResponse;
 import swp391.fa25.swp391.entity.Account;
 import swp391.fa25.swp391.entity.Driver;
 import swp391.fa25.swp391.security.JwtTokenProvider;
+import swp391.fa25.swp391.service.AuthService;
 import swp391.fa25.swp391.service.IService.IAccountService;
 import swp391.fa25.swp391.service.IService.IDriverService;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Controller xử lý Authentication: Login, Register, Logout
- */
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -36,12 +34,11 @@ public class AuthController {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final IAccountService accountService;
-    private final IDriverService driverService; // Inject IDriverService
-    private final PasswordEncoder passwordEncoder;
+    private final IDriverService driverService;
+    private final AuthService authService; // ✅ Inject AuthService mới
 
     /**
      * Login endpoint
-     * POST /api/auth/login
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
@@ -54,7 +51,7 @@ public class AuthController {
             List<Account> accounts = accountService.findByUsername(loginRequest.getUsername());
 
             if (isLoginSuccessful && !accounts.isEmpty()) {
-                Account account = accounts.getFirst();
+                Account account = accounts.get(0);
 
                 // Lấy DriverId
                 Integer driverId = null;
@@ -65,14 +62,13 @@ public class AuthController {
 
                 String token = jwtTokenProvider.generateToken(account);
 
-                AccountResponse accountResponse = AccountResponse.builder()
-                        .id(account.getId())
-                        .username(account.getUsername())
-                        .fullName(account.getFullName())
-                        .email(account.getEmail())
-                        .role(account.getAccountRole())
-                        .driverId(driverId) // Thêm driverId vào AccountResponse
-                        .build();
+                AccountResponse accountResponse = new AccountResponse();
+                accountResponse.setId(account.getId());
+                accountResponse.setUsername(account.getUsername());
+                accountResponse.setFullName(account.getFullName());
+                accountResponse.setEmail(account.getEmail());
+                accountResponse.setRole(account.getAccountRole());
+                accountResponse.setDriverId(driverId);
 
                 LoginResponse loginResponse = new LoginResponse(token, accountResponse);
                 return ResponseEntity.ok(ApiResponse.success("Login successful", loginResponse));
@@ -88,65 +84,17 @@ public class AuthController {
     }
 
     /**
-     * Register endpoint
-     * POST /api/auth/register
+     * Register Driver - Public endpoint
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest) {
         try {
-            // Check if username already exists
-            if (accountService.existsByUsername(registerRequest.getUsername())) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Username is already taken"));
-            }
-
-            // Check if email already exists
-            if (accountService.existsByEmail(registerRequest.getEmail())) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Email is already in use"));
-            }
-
-            String role = "Driver"; // Giả định tất cả đăng ký đều là Driver
-
-            // 1. Create new account
-            Account account = new Account();
-            account.setUsername(registerRequest.getUsername());
-            account.setEmail(registerRequest.getEmail());
-            account.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
-            account.setCreatedDate(Instant.now());
-            account.setBalance(0.0);
-            account.setAccountRole(role);
-            account.setStatus("ACTIVE");
-
-            // 2. Save account
-            Account savedAccount = accountService.register(account);
-
-            // 3. Create and Save Driver if role is Driver
-            Integer driverId = null;
-            if ("Driver".equalsIgnoreCase(role)) {
-                Driver driver = new Driver();
-                driver.setAccount(savedAccount); // Liên kết Driver với Account
-                Driver savedDriver = driverService.save(driver);
-                driverId = savedDriver.getId();
-            }
-
-            // 4. Generate JWT token
-            String jwt = jwtTokenProvider.generateToken(savedAccount);
-
-            // 5. Create response
-            RegisterResponse registerResponse = new RegisterResponse(
-                    "User registered successfully",
-                    savedAccount.getId(),
-                    savedAccount.getUsername(),
-                    savedAccount.getEmail(),
-                    savedAccount.getAccountRole(),
-                    jwt,
-                    driverId // Thêm driverId vào RegisterResponse
-            );
-
+            RegisterResponse response = authService.registerDriver(registerRequest);
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success("User registered successfully", registerResponse));
-
+                    .body(ApiResponse.success("Driver registered successfully", response));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Registration error: " + e.getMessage()));
@@ -154,13 +102,63 @@ public class AuthController {
     }
 
     /**
+     * Register Admin - CHỈ admin hiện tại mới gọi được
+     */
+    @PostMapping("/register-admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> registerAdmin(@Valid @RequestBody RegisterRequest registerRequest) {
+        try {
+            RegisterResponse response = authService.registerAdmin(registerRequest);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Admin registered successfully", response));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Registration error: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Register First Admin - CHỈ khi chưa có admin nào
+     */
+    @PostMapping("/register-first-admin")
+    public ResponseEntity<?> registerFirstAdmin(@Valid @RequestBody RegisterRequest registerRequest) {
+        try {
+            RegisterResponse response = authService.registerFirstAdmin(registerRequest);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("First admin created successfully", response));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Registration error: " + e.getMessage()));
+        }
+    }
+    /**
+     * Check if any admin exists in the system
+     * GET /api/auth/has-admin
+     * Public endpoint to help FE decide registration flow
+     */
+    @GetMapping("/has-admin")
+    public ResponseEntity<?> hasAdmin() {
+        try {
+            boolean adminExists = authService.hasAdmin();
+            return ResponseEntity.ok(ApiResponse.success("Admin check completed", adminExists));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error checking admin existence: " + e.getMessage()));
+        }
+    }
+    /**
      * Logout endpoint
-     * POST /api/auth/logout
      */
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
         try {
-            // Clear cookie (if used)
             Cookie cookie = new Cookie("jwt", null);
             cookie.setPath("/");
             cookie.setMaxAge(0);

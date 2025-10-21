@@ -22,9 +22,10 @@ public class ChargingSessionResponse {
 
     // Vehicle info
     private Integer vehicleId;
-    private String vehicleName;
-    private String licensePlate;
+
     private String vehicleModel;
+    private String licensePlate;
+
     // Charging point info
     private Integer chargingPointId;
     private String chargingPointName;

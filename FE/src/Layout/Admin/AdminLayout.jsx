@@ -12,7 +12,9 @@ import {
   Menu,
   X,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  BarChart3,
+  UserPlus
 } from 'lucide-react';
 import { message } from 'antd';
 
@@ -24,21 +26,23 @@ const AdminLayout = () => {
   const location = useLocation();
 
   const menuItems = [
-    { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/admin/accounts', icon: Users, label: 'Accounts' },
-    { path: '/admin/stations', icon: MapPin, label: 'Stations' },
+    { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/admin/facilities', icon: Building2, label: 'Facilities' },
+    { path: '/admin/stations', icon: MapPin, label: 'Stations' },
     { path: '/admin/charging-points', icon: Zap, label: 'Charging Points' },
+    { path: '/admin/accounts', icon: Users, label: 'Accounts' },
+    { path: '/admin/admin-registration', icon: UserPlus, label: 'Register Admin' },
     { path: '/admin/subscriptions', icon: CreditCard, label: 'Subscriptions' },
+    { path: '/admin/reports', icon: BarChart3, label: 'Reports' },
   ];
 
   const handleLogout = async () => {
     try {
       await dispatch(logoutUser()).unwrap();
-      message.success('Đăng xuất thành công!');
+      message.success('Logout successful!');
       navigate('/auth/login');
     } catch (error) {
-      message.warning('Đăng xuất thành công!');
+      message.warning('Logout successful!');
       navigate('/auth/login');
     }
   };

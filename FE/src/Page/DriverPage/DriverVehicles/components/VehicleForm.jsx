@@ -26,17 +26,6 @@ const VehicleForm = ({ initialValues, onSubmit, onCancel, loading }) => {
       className="space-y-2"
     >
       <Form.Item
-        label="Vehicle Model"
-        name="model"
-        rules={[{ required: true, message: 'Please enter vehicle model' }]}
-      >
-        <Input 
-          placeholder="e.g., Tesla Model 3, VinFast VF8" 
-          size="large"
-        />
-      </Form.Item>
-
-      <Form.Item
         label="License Plate"
         name="licensePlate"
         rules={[
@@ -51,25 +40,33 @@ const VehicleForm = ({ initialValues, onSubmit, onCancel, loading }) => {
       </Form.Item>
 
       <Form.Item
-        label="Battery Capacity (kWh)"
-        name="batteryCapacity"
-        rules={[{ required: true, message: 'Please enter battery capacity' }]}
+        label="Brand"
+        name="brand"
+        rules={[{ required: true, message: 'Please enter vehicle brand' }]}
       >
-        <InputNumber 
-          min={1} 
-          max={200} 
-          className="w-full" 
+        <Input 
+          placeholder="e.g., Tesla, VinFast, Porsche" 
           size="large"
-          placeholder="e.g., 75"
         />
       </Form.Item>
 
       <Form.Item
-        label="Connector Type"
-        name="connectorType"
-        rules={[{ required: true, message: 'Please select connector type' }]}
+        label="Model"
+        name="model"
+        rules={[{ required: true, message: 'Please enter vehicle model' }]}
       >
-        <Select placeholder="Select connector type" size="large">
+        <Input 
+          placeholder="e.g., Model 3, VF8, Taycan" 
+          size="large"
+        />
+      </Form.Item>
+
+      <Form.Item
+        label="Charging Port"
+        name="chargingPort"
+        rules={[{ required: true, message: 'Please select charging port' }]}
+      >
+        <Select placeholder="Select charging port type" size="large">
           <Option value="CCS">CCS (Combined Charging System)</Option>
           <Option value="CHAdeMO">CHAdeMO</Option>
           <Option value="Type2">Type 2 (Mennekes) - AC</Option>
@@ -80,25 +77,19 @@ const VehicleForm = ({ initialValues, onSubmit, onCancel, loading }) => {
       </Form.Item>
 
       <Form.Item
-        label="Color (Optional)"
-        name="color"
-      >
-        <Input 
-          placeholder="e.g., White, Black, Red" 
-          size="large"
-        />
-      </Form.Item>
-
-      <Form.Item
-        label="Manufacturing Year (Optional)"
-        name="year"
+        label="Battery Capacity (kWh)"
+        name="batteryCapacity"
+        rules={[
+          { required: true, message: 'Please enter battery capacity' },
+          { type: 'number', min: 1, max: 200, message: 'Battery capacity must be between 1-200 kWh' }
+        ]}
       >
         <InputNumber 
-          min={2000} 
-          max={2030} 
+          min={1} 
+          max={200} 
           className="w-full" 
           size="large"
-          placeholder="e.g., 2024"
+          placeholder="e.g., 75"
         />
       </Form.Item>
 

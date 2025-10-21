@@ -1,14 +1,14 @@
 package swp391.fa25.swp391.service.IService;
 
-import swp391.fa25.swp391.entity.Account;
+import swp391.fa25.swp391.entity.Admin;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface IAdminService {
-    List<Account> findAllAccounts();
-    Optional<Account> findById(Integer id);
-
+    List<Admin> findAllAccounts();
+    Admin findByAccountId(Integer accountId);
+    Admin findById(Integer accountId);
     void deleteAccount(Integer id);
 
 }

@@ -91,6 +91,10 @@ public class AccountService implements IAccountService {
     }
 
     @Override
+    public boolean existsByRole(String role) {
+        return accountRepository.existsByAccountRole(role);
+    }
+    @Override
     public Optional<Account> findById(Integer id) {
         // Dùng findById tự sinh của JpaRepository
         return accountRepository.findById(id);
@@ -122,5 +126,6 @@ public class AccountService implements IAccountService {
         }
         return false;
     }
+
 
 }

@@ -12,10 +12,11 @@ const api = axios.create({
 // Interceptor để thêm Authorization token vào mỗi request
 api.interceptors.request.use(
   (config) => {
-    console.log("🚀 [AXIOS] Request config:", config);
-    console.log("🚀 [AXIOS] Request URL:", config.url);
-    console.log("🚀 [AXIOS] Request method:", config.method);
-    console.log("🚀 [AXIOS] Request data:", config.data);
+    // Simplified logging - only essential info
+    console.log(`🚀 [AXIOS] ${config.method?.toUpperCase()} ${config.url}`);
+    if (config.data) {
+      console.log("� [AXIOS] Request body:", config.data);
+    }
     
     const accessToken = localStorage.getItem("accessToken");
 
@@ -26,7 +27,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error("❌ [AXIOS] Request interceptor error:", error);
+    console.error("❌ [AXIOS] Request error:", error);
     return Promise.reject(error);
   }
 );
@@ -34,22 +35,25 @@ api.interceptors.request.use(
 // Interceptor để xử lý lỗi response (ví dụ: logout nếu token hết hạn)
 api.interceptors.response.use(
   (response) => {
-    console.log("✅ [AXIOS] Response received:", response);
+    // Log response briefly - show data structure
+    console.log(`✅ [AXIOS] ${response.config.method?.toUpperCase()} ${response.config.url} → Status ${response.status}`);
+    console.log("📥 [AXIOS] Response data:", response.data);
+    
+    // IMPORTANT: Do NOT modify response.data here!
+    // Return original response to preserve BE structure
     return response;
   },
   (error) => {
-    console.error("❌ [AXIOS] Response interceptor error:", error);
-    console.error("❌ [AXIOS] Error details:", {
-      message: error.message,
-      code: error.code,
-      config: error.config,
-      response: error.response
-    });
+    console.error("❌ [AXIOS] Response error:", error.message);
+    if (error.response) {
+      console.error("❌ [AXIOS] Error status:", error.response.status);
+      console.error("❌ [AXIOS] Error data:", error.response.data);
+    }
     
     if (error.response && error.response.status === 401) {
       // Token hết hạn hoặc không hợp lệ, chuyển hướng về trang đăng nhập
       localStorage.removeItem("accessToken");
-      localStorage.removeItem("currentUser"); // Hoặc 'user'
+      localStorage.removeItem("currentUser");
       // window.location.href = '/login'; // Có thể dùng navigate nếu trong component React
     }
     return Promise.reject(error);

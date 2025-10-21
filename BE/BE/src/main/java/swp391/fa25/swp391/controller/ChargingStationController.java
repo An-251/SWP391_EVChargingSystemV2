@@ -29,11 +29,53 @@ public class ChargingStationController {
 
     // ==================== HELPER CONVERTER METHODS ====================
 
+    private String buildAddress(String street, String ward, String district, String city) {
+        StringBuilder address = new StringBuilder();
+        if (street != null && !street.isEmpty()) address.append(street);
+        if (ward != null && !ward.isEmpty()) {
+            if (address.length() > 0) address.append(", ");
+            address.append(ward);
+        }
+        if (district != null && !district.isEmpty()) {
+            if (address.length() > 0) address.append(", ");
+            address.append(district);
+        }
+        if (city != null && !city.isEmpty()) {
+            if (address.length() > 0) address.append(", ");
+            address.append(city);
+        }
+        return address.toString();
+    }
+
     private ChargingStationResponse convertToDto(ChargingStation station) {
-        // ... (logic không đổi so với lần sửa trước) ...
+
         List<ChargingPointResponse> pointResponses = station.getChargingPoints().stream()
                 .map(this::convertToPointDto)
                 .collect(Collectors.toList());
+
+        // Build facility info to avoid circular reference
+        ChargingStationResponse.FacilityInfo facilityInfo = null;
+        if (station.getFacility() != null) {
+            Facility facility = station.getFacility();
+
+            // Build full address from components
+            String fullAddress = buildAddress(
+                    facility.getStreetAddress(),
+                    facility.getWard(),
+                    facility.getDistrict(),
+                    facility.getCity()
+            );
+
+            facilityInfo = ChargingStationResponse.FacilityInfo.builder()
+                    .id(facility.getId())
+                    .name(facility.getName())
+                    .streetAddress(facility.getStreetAddress())
+                    .ward(facility.getWard())
+                    .district(facility.getDistrict())
+                    .city(facility.getCity())
+                    .address(fullAddress) // Full address for backward compatibility
+                    .build();
+        }
 
         return ChargingStationResponse.builder()
                 .id(station.getId())
@@ -41,8 +83,8 @@ public class ChargingStationController {
                 .latitude(station.getLatitude())
                 .longitude(station.getLongitude())
                 .status(station.getStatus())
-                // Tránh trả về toàn bộ Facility Entity
                 .facilityId(station.getFacility() != null ? station.getFacility().getId() : null)
+                .facility(facilityInfo)
                 .chargingPoints(pointResponses)
                 .build();
     }
