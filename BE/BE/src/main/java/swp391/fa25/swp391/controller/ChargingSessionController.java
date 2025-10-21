@@ -140,7 +140,7 @@ public class ChargingSessionController {
     @GetMapping("/driver/{driverId}/active")
     public ResponseEntity<?> getActiveSession(@PathVariable Integer driverId) {
         try {
-            // ⬅️ Service trả về Optional<Entity>
+            //  Service trả về Optional<Entity>
             Optional<ChargingSession> session =
                     chargingSessionService.findActiveSessionByDriverId(driverId);
 
@@ -149,7 +149,7 @@ public class ChargingSessionController {
                         .body(ApiResponse.error("No active charging session found"));
             }
 
-            // ⬅️ Controller (hoặc Mapper) chuyển đổi Entity sang DTO Response
+            //  Controller (hoặc Mapper) chuyển đổi Entity sang DTO Response
             ChargingSessionResponse response = mapToResponse(session.get());
             return ResponseEntity.ok(ApiResponse.success("Active session retrieved", response));
 
@@ -158,7 +158,29 @@ public class ChargingSessionController {
                     .body(ApiResponse.error("Error fetching active session: " + e.getMessage()));
         }
     }
+    @GetMapping("/active")
+    public ResponseEntity<?> getAllActiveSessions() {
+        try {
+            //  Service trả về List<Entity>
+            List<ChargingSession> sessions = chargingSessionService.findByStatus("ACTIVE");
 
+            // Controller (hoặc Mapper) chuyển đổi Entity List sang DTO Response List
+            List<ChargingSessionResponse> responses = sessions.stream()
+                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+
+            ChargingSessionListResponse listResponse = ChargingSessionListResponse.builder()
+                    .sessions(responses)
+                    .totalSessions(responses.size())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("All active sessions retrieved", listResponse));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error fetching active sessions: " + e.getMessage()));
+        }
+    }
     /**
      * Lấy tất cả sessions của driver (có pagination)
      */
