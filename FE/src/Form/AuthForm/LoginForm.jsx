@@ -34,7 +34,7 @@ export default function LoginForm() {
           navigate("/staff/dashboard");
           break;
         case "Admin":
-          navigate("/admin/dashboard");
+          navigate("/admin");
           break;
         case "Driver":
           navigate("/driver");
