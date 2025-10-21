@@ -55,3 +55,43 @@ export const normalizeLocation = (location) => {
   if (!location) return null;
   return location.lat ? [location.lat, location.lng] : location;
 };
+
+// Format duration in seconds to readable string
+const formatDuration = (seconds) => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes} phút`;
+};
+
+// Get simple straight-line route between two points
+export const getSimpleRoute = (origin, destination) => {
+  // Calculate distance using Haversine formula
+  const distance = calculateDistance(
+    origin.lat,
+    origin.lng,
+    destination.lat,
+    destination.lng
+  );
+
+  // Create simple straight-line route
+  const route = [
+    [origin.lat, origin.lng],
+    [destination.lat, destination.lng]
+  ];
+
+  // Estimate duration (assuming average speed of 40 km/h)
+  const durationMinutes = Math.round((distance / 40) * 60);
+  const durationSeconds = durationMinutes * 60;
+
+  return {
+    route,
+    distance: `${distance.toFixed(1)} km`,
+    duration: formatDuration(durationSeconds),
+    distanceValue: distance * 1000, // meters
+    durationValue: durationSeconds
+  };
+};
