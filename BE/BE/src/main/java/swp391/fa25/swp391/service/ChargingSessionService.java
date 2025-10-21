@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import swp391.fa25.swp391.dto.request.StartChargingSessionRequest;
 import swp391.fa25.swp391.dto.request.StopChargingSessionRequest;
-import swp391.fa25.swp391.dto.response.ChargingSessionResponse;
 import swp391.fa25.swp391.entity.*;
 import swp391.fa25.swp391.repository.ChargingSessionRepository;
 import swp391.fa25.swp391.service.IService.IChargingPointService;
@@ -17,7 +16,6 @@ import swp391.fa25.swp391.service.IService.IVehicleService;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,6 +23,7 @@ import java.util.Optional;
 
 /**
  * Service xử lý logic cho Charging Session và tạo hóa đơn (Invoice) khi kết thúc sạc.
+ * CHỈ TRẢ VỀ ENTITY VÀ KHÔNG BIẾT ĐẾN DTO RESPONSE.
  */
 @Service
 @RequiredArgsConstructor
@@ -45,7 +44,7 @@ public class ChargingSessionService implements IChargingSessionService {
      * Bắt đầu một phiên sạc mới
      */
     @Override
-    public ChargingSessionResponse startChargingSession(StartChargingSessionRequest request) {
+    public ChargingSession startChargingSession(StartChargingSessionRequest request) {
         Driver driver = driverService.findById(request.getDriverId())
                 .orElseThrow(() -> new RuntimeException("Driver not found with ID: " + request.getDriverId()));
 
@@ -92,14 +91,14 @@ public class ChargingSessionService implements IChargingSessionService {
         chargingPoint.setStatus("IN_USE");
         chargingPointService.save(chargingPoint);
 
-        return buildResponse(savedSession);
+        return savedSession; // ⬅️ Trả về Entity
     }
 
     /**
      * Kết thúc một phiên sạc → Tự động sinh hóa đơn
      */
     @Override
-    public ChargingSessionResponse stopChargingSession(Integer sessionId, StopChargingSessionRequest request) {
+    public ChargingSession stopChargingSession(Integer sessionId, StopChargingSessionRequest request) {
         ChargingSession session = chargingSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Charging session not found with ID: " + sessionId));
 
@@ -134,7 +133,7 @@ public class ChargingSessionService implements IChargingSessionService {
         chargingPoint.setStatus("AVAILABLE");
         chargingPointService.save(chargingPoint);
 
-        // ✅ Tạo hóa đơn khi hoàn thành (Loại bỏ logic sinh ID thủ công)
+
         Invoice invoice = new Invoice();
         invoice.setIssueDate(Instant.now());
         invoice.setTotalCost(totalCost);
@@ -143,9 +142,9 @@ public class ChargingSessionService implements IChargingSessionService {
         invoice.setDriver(session.getDriver());
         invoice.setSession(session);
 
-        invoiceService.save(invoice); // ID sẽ được sinh tự động nhờ @GeneratedValue
+        invoiceService.save(invoice);
 
-        return buildResponse(updatedSession);
+        return updatedSession; // ⬅️ Trả về Entity
     }
 
     /**
@@ -169,7 +168,7 @@ public class ChargingSessionService implements IChargingSessionService {
         chargingPointService.save(chargingPoint);
     }
 
-    // ======= Các method hỗ trợ =======
+    // ======= Các method hỗ trợ (CHỈ TRẢ VỀ ENTITY) =======
 
     @Override
     @Transactional(readOnly = true)
@@ -179,10 +178,10 @@ public class ChargingSessionService implements IChargingSessionService {
 
     @Override
     @Transactional(readOnly = true)
-    public ChargingSessionResponse getSessionById(Integer id) {
-        ChargingSession session = chargingSessionRepository.findById(id)
+    // Sửa kiểu trả về từ ChargingSessionResponse sang ChargingSession
+    public ChargingSession getSessionById(Integer id) {
+        return chargingSessionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Charging session not found with ID: " + id));
-        return buildResponse(session);
     }
 
     @Override
@@ -225,54 +224,5 @@ public class ChargingSessionService implements IChargingSessionService {
     @Transactional(readOnly = true)
     public Page<ChargingSession> findByDriverId(Integer driverId, Pageable pageable) {
         return chargingSessionRepository.findByDriverIdOrderByStartTimeDesc(driverId, pageable);
-    }
-
-    // ======= Helper =======
-
-    /**
-     * Generate next Invoice ID manually (vì Invoice entity thiếu @GeneratedValue)
-     */
-
-
-    private ChargingSessionResponse buildResponse(ChargingSession session) {
-        Long durationMinutes = null;
-        Integer chargedPercentage = null;
-
-        if (session.getEndTime() != null) {
-            durationMinutes = Duration.between(session.getStartTime(), session.getEndTime()).toMinutes();
-        }
-
-        if (session.getEndPercentage() != null && session.getStartPercentage() != null) {
-            chargedPercentage = session.getEndPercentage() - session.getStartPercentage();
-        }
-
-        ChargingPoint cp = session.getChargingPoint();
-
-        // Build vehicle name from model and licensePlate
-
-        return ChargingSessionResponse.builder()
-                .sessionId(session.getId())
-                .status(session.getStatus())
-                .startTime(session.getStartTime())
-                .endTime(session.getEndTime())
-                .durationMinutes(durationMinutes)
-                .overusedTime(session.getOverusedTime())
-                .driverId(session.getDriver().getId())
-                .driverName(session.getDriver().getAccount().getFullName())
-                .vehicleId(session.getVehicle().getId())
-
-                .vehicleModel(session.getVehicle().getModel())
-                .licensePlate(session.getVehicle().getLicensePlate())
-                .chargingPointId(cp.getId())
-                .chargingPointName(cp.getPointName())
-                .connectorType(cp.getConnectorType())
-                .stationName(cp.getStation() != null ? cp.getStation().getStationName() : null)
-                .stationAddress(cp.getStation() != null ? cp.getStation().getFacility().getFullAddress() : null)
-                .startPercentage(session.getStartPercentage())
-                .endPercentage(session.getEndPercentage())
-                .chargedPercentage(chargedPercentage)
-                .kwhUsed(session.getKwhUsed())
-                .cost(session.getCost())
-                .build();
     }
 }
