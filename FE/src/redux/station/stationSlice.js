@@ -31,6 +31,14 @@ export const fetchStations = createAsyncThunk(
         : (response.data?.data || response.data?.content || []);
       
       console.log("✅ [STATIONS] Stations loaded:", stations.length);
+      console.log("📊 [STATIONS] Sample station data:", stations[0]);
+      console.log("📊 [STATIONS] Has facility?", !!stations[0]?.facility);
+      console.log("📊 [STATIONS] Has chargingPoints?", !!stations[0]?.chargingPoints);
+      console.log("📊 [STATIONS] Has coordinates?", { 
+        lat: stations[0]?.latitude, 
+        lng: stations[0]?.longitude 
+      });
+      
       return stations;
       
     } catch (error) {
