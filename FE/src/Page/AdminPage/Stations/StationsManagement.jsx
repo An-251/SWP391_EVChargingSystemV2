@@ -131,12 +131,13 @@ const StationsManagement = () => {
       return;
     }
 
+    // Build request matching ChargingStationRequest.java
     const submitData = {
       stationName: formData.stationName,
       latitude: formData.latitude,
       longitude: formData.longitude,
       status: formData.status,
-      facility: formData.facility ? { id: formData.facility } : null
+      facilityId: formData.facility || null  // ✅ Flat facilityId, not nested object
     };
 
     if (editMode) {
