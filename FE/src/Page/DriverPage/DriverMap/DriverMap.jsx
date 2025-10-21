@@ -10,11 +10,14 @@ import RoutePolyline from './components/RoutePolyline';
 import StationMarker from './components/StationMarker';
 import StationFilters from './components/StationFilters';
 import StationPopup from './components/StationPopup';
+import BookingModal from './components/BookingModal';
+import NavigationPanel from './components/NavigationPanel';
 import { 
   createCustomIcon, 
   userLocationIcon, 
   DEFAULT_CENTER, 
-  normalizeLocation 
+  normalizeLocation,
+  getSimpleRoute 
 } from './mapUtils';
 import { 
   fetchStations, 
@@ -35,6 +38,12 @@ function DriverMap() {
   const mapRef = useRef(null);
   const [activeMarker, setActiveMarker] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
+  const [bookingModalVisible, setBookingModalVisible] = useState(false);
+  const [selectedStationForBooking, setSelectedStationForBooking] = useState(null);
+  const [routePolyline, setRoutePolyline] = useState(null);
+  const [navigationMode, setNavigationMode] = useState(false);
+  const [navigationInfo, setNavigationInfo] = useState(null);
+  const [navigationDestination, setNavigationDestination] = useState(null);
   const [favorites, setFavorites] = useState(() => {
     const saved = localStorage.getItem('favoriteStations');
     return saved ? JSON.parse(saved) : [];
@@ -157,19 +166,62 @@ function DriverMap() {
 
   // Handle booking
   const handleBook = (station) => {
-    console.log('📅 [DriverMap] Booking station:', station);
-    message.info('Booking feature coming soon!');
-    // TODO: Open booking modal
+    const stationName = station.stationName || station.name || 'Trạm sạc';
+    console.log('📅 [DriverMap] Opening booking modal for:', stationName);
+    setSelectedStationForBooking(station);
+    setBookingModalVisible(true);
+    
+    // Calculate and display route if user location is available
+    if (userLocation && station.latitude && station.longitude) {
+      const routeData = getSimpleRoute(
+        userLocation,
+        { lat: station.latitude, lng: station.longitude }
+      );
+      setRoutePolyline(routeData.route);
+      console.log('🗺️ [DriverMap] Route calculated:', routeData);
+    }
   };
 
-  // Handle get directions
+  // Handle get directions - NOW WORKS IN-APP!
   const handleGetDirections = (station) => {
+    if (!userLocation) {
+      message.warning('Không thể lấy vị trí của bạn. Vui lòng bật GPS.');
+      return;
+    }
+    
+    const stationName = station.stationName || station.name || 'Trạm sạc';
+    
     if (station.latitude && station.longitude) {
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${station.latitude},${station.longitude}`;
-      window.open(url, '_blank');
+      console.log('🧭 [DriverMap] Starting navigation to:', stationName);
+      
+      // Enable navigation mode
+      setNavigationMode(true);
+      setNavigationDestination({
+        lat: station.latitude,
+        lng: station.longitude,
+        name: stationName
+      });
+      
+      // Select the station to show route on map
+      dispatch(setSelectedStation(station));
+      
+      message.success(`Đang chỉ đường đến ${stationName}`);
     } else {
       message.warning('Không có tọa độ trạm sạc');
     }
+  };
+
+  // Handle route info update from RoutePolyline
+  const handleRouteInfoUpdate = (info) => {
+    setNavigationInfo(info);
+  };
+
+  // Close navigation
+  const handleCloseNavigation = () => {
+    setNavigationMode(false);
+    setNavigationInfo(null);
+    setNavigationDestination(null);
+    dispatch(clearSelectedStation());
   };
 
   // Handle toggle favorite
@@ -268,14 +320,55 @@ function DriverMap() {
           );
         })}
 
-        {/* Route polyline */}
-        {selectedStation && userLocation && selectedStation.latitude && selectedStation.longitude && (
+        {/* Route polyline - Show only in navigation mode */}
+        {navigationMode && navigationDestination && userLocation && (
+          <RoutePolyline
+            userLocation={userLocation}
+            destination={navigationDestination}
+            showInstructions={true}
+            onRouteInfoUpdate={handleRouteInfoUpdate}
+          />
+        )}
+
+        {/* Selected station route (when not in navigation mode) */}
+        {!navigationMode && selectedStation && userLocation && selectedStation.latitude && selectedStation.longitude && (
           <RoutePolyline
             userLocation={userLocation}
             destination={{ lat: selectedStation.latitude, lng: selectedStation.longitude }}
+            showInstructions={false}
+          />
+        )}
+
+        {/* Booking route polyline */}
+        {routePolyline && !navigationMode && (
+          <RoutePolyline
+            userLocation={{ lat: routePolyline[0][0], lng: routePolyline[0][1] }}
+            destination={{ lat: routePolyline[1][0], lng: routePolyline[1][1] }}
+            showInstructions={false}
           />
         )}
       </MapContainer>
+
+      {/* Navigation Panel - Shows route instructions */}
+      {navigationMode && navigationInfo && (
+        <NavigationPanel
+          routeInfo={navigationInfo}
+          stationName={navigationDestination?.name}
+          onClose={handleCloseNavigation}
+        />
+      )}
+
+      {/* Booking Modal */}
+      <BookingModal
+        visible={bookingModalVisible}
+        onClose={() => {
+          setBookingModalVisible(false);
+          setSelectedStationForBooking(null);
+          setRoutePolyline(null);
+        }}
+        station={selectedStationForBooking}
+        userLocation={userLocation}
+      />
 
       {/* No Results Message */}
       {filteredStations.length === 0 && stationsList.length > 0 && (
