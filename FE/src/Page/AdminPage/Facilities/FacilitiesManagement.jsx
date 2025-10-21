@@ -18,8 +18,11 @@ const FacilitiesManagement = () => {
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({
-    address: '',
-    description: ''
+    name: '',
+    city: '',
+    district: '',
+    ward: '',
+    streetAddress: ''
   });
   const [currentFacilityId, setCurrentFacilityId] = useState(null);
 
@@ -45,15 +48,21 @@ const FacilitiesManagement = () => {
       setEditMode(true);
       setCurrentFacilityId(facility.id);
       setFormData({
-        address: facility.address || '',
-        description: facility.description || ''
+        name: facility.name || '',
+        city: facility.city || '',
+        district: facility.district || '',
+        ward: facility.ward || '',
+        streetAddress: facility.streetAddress || ''
       });
     } else {
       setEditMode(false);
       setCurrentFacilityId(null);
       setFormData({
-        address: '',
-        description: ''
+        name: '',
+        city: '',
+        district: '',
+        ward: '',
+        streetAddress: ''
       });
     }
     setShowModal(true);
@@ -64,22 +73,48 @@ const FacilitiesManagement = () => {
     setEditMode(false);
     setCurrentFacilityId(null);
     setFormData({
-      address: '',
-      description: ''
+      name: '',
+      city: '',
+      district: '',
+      ward: '',
+      streetAddress: ''
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.address.trim()) {
-      message.error('Please enter facility address');
+    // Get adminId from localStorage (FIXED: use 'currentUser' key to match authSlice)
+    const userStr = localStorage.getItem('currentUser');
+    if (!userStr) {
+      message.error('Admin information not found. Please login again.');
+      return;
+    }
+    
+    const user = JSON.parse(userStr);
+    // Try multiple possible ID fields (accountId, adminId, id)
+    const adminId = user.adminId || user.accountId || user.id;
+    
+    if (!adminId) {
+      message.error('Admin ID not found. Please login again.');
       return;
     }
 
+    // Validate all required fields
+    if (!formData.name.trim() || !formData.city.trim() || !formData.district.trim() || 
+        !formData.ward.trim() || !formData.streetAddress.trim()) {
+      message.error('Please fill in all required fields');
+      return;
+    }
+
+    // Build request matching FacilityRequest.java
     const facilityData = {
-      address: formData.address.trim(),
-      description: formData.description.trim()
+      name: formData.name.trim(),
+      city: formData.city.trim(),
+      district: formData.district.trim(),
+      ward: formData.ward.trim(),
+      streetAddress: formData.streetAddress.trim(),
+      adminId: adminId
     };
 
     if (editMode && currentFacilityId) {
@@ -154,16 +189,16 @@ const FacilitiesManagement = () => {
 
               <div className="space-y-3 mb-4">
                 <div>
-                  <span className="text-xs font-medium text-gray-500">Address:</span>
-                  <p className="text-sm text-gray-700 mt-1">{facility.address || 'N/A'}</p>
+                  <span className="text-xs font-medium text-gray-500">Name:</span>
+                  <p className="text-sm font-semibold text-gray-800 mt-1">{facility.name || 'N/A'}</p>
                 </div>
                 
-                {facility.description && (
-                  <div>
-                    <span className="text-xs font-medium text-gray-500">Description:</span>
-                    <p className="text-sm text-gray-600 mt-1">{facility.description}</p>
-                  </div>
-                )}
+                <div>
+                  <span className="text-xs font-medium text-gray-500">Full Address:</span>
+                  <p className="text-sm text-gray-700 mt-1">
+                    {facility.streetAddress}, {facility.ward}, {facility.district}, {facility.city}
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center space-x-2 pt-4 border-t border-gray-100">
@@ -219,38 +254,81 @@ const FacilitiesManagement = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              {/* Address Field */}
+              {/* Facility Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Address *
+                  Facility Name *
                 </label>
-                <textarea
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  rows={3}
-                  placeholder="Enter facility address..."
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter facility name (e.g., Parkson Mall)"
+                  required
+                />
+              </div>
+
+              {/* City */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  City *
+                </label>
+                <input
+                  type="text"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter city (e.g., Ho Chi Minh City)"
+                  required
+                />
+              </div>
+
+              {/* District */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  District *
+                </label>
+                <input
+                  type="text"
+                  value={formData.district}
+                  onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter district (e.g., District 1)"
+                  required
+                />
+              </div>
+
+              {/* Ward */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ward *
+                </label>
+                <input
+                  type="text"
+                  value={formData.ward}
+                  onChange={(e) => setFormData({ ...formData, ward: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter ward (e.g., Ben Nghe Ward)"
+                  required
+                />
+              </div>
+
+              {/* Street Address */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Street Address *
+                </label>
+                <input
+                  type="text"
+                  value={formData.streetAddress}
+                  onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter street address (e.g., 35A Le Loi Street)"
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Full address of the facility location
-                </p>
-              </div>
-
-              {/* Description Field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description (Optional)
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  rows={4}
-                  placeholder="Enter facility description, amenities, parking info, etc..."
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Additional information about the facility
+                  Complete address format: Street, Ward, District, City
                 </p>
               </div>
 
