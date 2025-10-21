@@ -21,7 +21,8 @@ const ChargingPointsManagement = () => {
   const [formData, setFormData] = useState({
     pointName: '',
     connectorType: 'Type 2',
-    powerOutput: '',
+    maxPower: '',
+    pricePerKwh: '',
     status: 'AVAILABLE',
     station: null
   });
@@ -50,7 +51,8 @@ const ChargingPointsManagement = () => {
         id: point.id,
         pointName: point.pointName || '',
         connectorType: point.connectorType || 'Type 2',
-        powerOutput: point.powerOutput || '',
+        maxPower: point.maxPower || '',
+        pricePerKwh: point.pricePerKwh || '',
         status: point.status || 'AVAILABLE',
         station: point.station?.id || null
       });
@@ -59,7 +61,8 @@ const ChargingPointsManagement = () => {
       setFormData({
         pointName: '',
         connectorType: 'Type 2',
-        powerOutput: '',
+        maxPower: '',
+        pricePerKwh: '',
         status: 'AVAILABLE',
         station: null
       });
@@ -75,12 +78,20 @@ const ChargingPointsManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validate required fields
+    if (!formData.maxPower || !formData.pricePerKwh) {
+      message.error('Please fill in all required fields');
+      return;
+    }
+
+    // Build request matching ChargingPointRequest.java
     const submitData = {
       pointName: formData.pointName,
       connectorType: formData.connectorType,
-      powerOutput: formData.powerOutput,
+      maxPower: parseFloat(formData.maxPower),  // Convert to BigDecimal
+      pricePerKwh: parseFloat(formData.pricePerKwh),  // Convert to BigDecimal
       status: formData.status,
-      station: formData.station ? { id: formData.station } : null
+      stationId: formData.station  // ✅ Flat stationId, not nested object
     };
 
     if (editMode) {
@@ -152,7 +163,8 @@ const ChargingPointsManagement = () => {
 
               <div className="space-y-2 text-sm text-gray-600 mb-4">
                 <div><span className="font-medium">Connector:</span> {point.connectorType}</div>
-                <div><span className="font-medium">Power:</span> {point.powerOutput} kW</div>
+                <div><span className="font-medium">Max Power:</span> {point.maxPower} kW</div>
+                <div><span className="font-medium">Price:</span> {point.pricePerKwh} VNĐ/kWh</div>
                 <div><span className="font-medium">Station:</span> {point.station?.stationName || 'N/A'}</div>
               </div>
 
@@ -218,12 +230,28 @@ const ChargingPointsManagement = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Power Output (kW)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Max Power (kW) *</label>
                   <input
-                    type="text"
-                    value={formData.powerOutput}
-                    onChange={(e) => setFormData({ ...formData, powerOutput: e.target.value })}
+                    type="number"
+                    step="0.1"
+                    value={formData.maxPower}
+                    onChange={(e) => setFormData({ ...formData, maxPower: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g., 150"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Price per kWh (VNĐ) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.pricePerKwh}
+                    onChange={(e) => setFormData({ ...formData, pricePerKwh: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g., 3500"
+                    required
                   />
                 </div>
 
@@ -241,7 +269,7 @@ const ChargingPointsManagement = () => {
                   </select>
                 </div>
 
-                <div className="md:col-span-2">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Station *</label>
                   <select
                     value={formData.station || ''}

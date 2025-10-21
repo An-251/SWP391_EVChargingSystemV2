@@ -10,8 +10,8 @@ import { fetchStations, setSelectedStation as setReduxSelectedStation } from '..
 import DriverHeader from './components/DriverHeader';
 import StationListPanel from './components/StationListPanel';
 import DriverMap from './DriverMap';
+import BookingModal from './DriverMap/components/BookingModal';
 import useUserLocation from './hooks/useUserLocation';
-import useChargingStations from './hooks/useChargingStations';
 
 const DriverPage = () => {
   const { user, loading: authLoading } = useSelector((state) => state.auth);
@@ -24,10 +24,14 @@ const DriverPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [bookingModalVisible, setBookingModalVisible] = useState(false);
+  const [stationToBook, setStationToBook] = useState(null);
 
   // Custom hooks
   const { userLocation } = useUserLocation();
-  const chargingStations = useChargingStations(rawStations, userLocation);
+  
+  // Use raw stations from Redux (already has facility, chargingPoints)
+  const chargingStations = rawStations || [];
 
   // Fetch stations from API on mount
   useEffect(() => {
@@ -49,10 +53,15 @@ const DriverPage = () => {
   }, [showProfileMenu]);
 
   // Filter stations by search query
-  const filteredStations = chargingStations.filter(station =>
-    station.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    station.address.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredStations = chargingStations.filter(station => {
+    const stationName = station.stationName || station.name || '';
+    const address = station.facility?.address || 
+                   [station.facility?.streetAddress, station.facility?.ward, station.facility?.district, station.facility?.city]
+                   .filter(Boolean).join(', ') || '';
+    const searchLower = searchQuery.toLowerCase();
+    return stationName.toLowerCase().includes(searchLower) ||
+           address.toLowerCase().includes(searchLower);
+  });
 
   // Handlers
   const handleStationSelect = (station) => {
@@ -66,8 +75,14 @@ const DriverPage = () => {
   };
 
   const handleBookStation = (station) => {
-    // Handle booking logic here
-    alert(`Đang đặt trạm ${station.name}...`);
+    console.log('📅 [DriverPage] Opening booking modal for:', station.stationName || station.name);
+    setStationToBook(station);
+    setBookingModalVisible(true);
+  };
+
+  const handleCloseBookingModal = () => {
+    setBookingModalVisible(false);
+    setStationToBook(null);
   };
 
   const handleNavigateToProfile = () => {
@@ -116,6 +131,7 @@ const DriverPage = () => {
           stationLoading={stationLoading}
           onStationSelect={handleStationSelect}
           onBookStation={handleBookStation}
+          userLocation={userLocation}
         />
 
         {/* Right Panel - Map */}
@@ -137,6 +153,14 @@ const DriverPage = () => {
           </div>
         </div>
       </div>
+      
+      {/* Booking Modal */}
+      <BookingModal
+        visible={bookingModalVisible}
+        onClose={handleCloseBookingModal}
+        station={stationToBook}
+        userLocation={userLocation}
+      />
     </div>
   );
 };

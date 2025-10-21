@@ -21,10 +21,10 @@ const SubscriptionsManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState({
     planName: '',
+    planType: 'BASIC',
     price: 0,
-    duration: 30,
-    description: '',
-    status: 'ACTIVE'
+    validityDays: '30',
+    description: ''
   });
 
   useEffect(() => {
@@ -59,19 +59,19 @@ const SubscriptionsManagement = () => {
       setFormData({
         id: subscription.id,
         planName: subscription.planName || '',
+        planType: subscription.planType || 'BASIC',
         price: subscription.price || 0,
-        duration: subscription.duration || 30,
-        description: subscription.description || '',
-        status: subscription.status || 'ACTIVE'
+        validityDays: subscription.validityDays || '30',
+        description: subscription.description || ''
       });
     } else {
       setEditMode(false);
       setFormData({
         planName: '',
+        planType: 'BASIC',
         price: 0,
-        duration: 30,
-        description: '',
-        status: 'ACTIVE'
+        validityDays: '30',
+        description: ''
       });
     }
     setShowModal(true);
@@ -85,10 +85,19 @@ const SubscriptionsManagement = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
+    // Build request matching SubscriptionPlanRequest.java
+    const submitData = {
+      planName: formData.planName,
+      planType: formData.planType,
+      price: parseFloat(formData.price),
+      validityDays: formData.validityDays.toString(),  // BE expects String
+      description: formData.description || ''
+    };
+
     if (editMode) {
-      dispatch(updateSubscription({ id: formData.id, data: formData }));
+      dispatch(updateSubscription({ id: formData.id, data: submitData }));
     } else {
-      dispatch(createSubscription(formData));
+      dispatch(createSubscription(submitData));
     }
   };
 
@@ -149,10 +158,8 @@ const SubscriptionsManagement = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-800">{sub.planName}</h3>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      sub.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {sub.status}
+                    <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700">
+                      {sub.planType}
                     </span>
                   </div>
                 </div>
@@ -160,7 +167,8 @@ const SubscriptionsManagement = () => {
 
               <div className="space-y-2 text-sm text-gray-600 mb-4">
                 <div className="text-2xl font-bold text-green-600">{sub.price?.toLocaleString()} VNĐ</div>
-                <div><span className="font-medium">Duration:</span> {sub.duration} days</div>
+                <div><span className="font-medium">Type:</span> {sub.planType}</div>
+                <div><span className="font-medium">Validity:</span> {sub.validityDays} days</div>
                 <div className="text-xs">{sub.description}</div>
               </div>
 
@@ -212,6 +220,21 @@ const SubscriptionsManagement = () => {
                 </div>
 
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Plan Type *</label>
+                  <select
+                    value={formData.planType}
+                    onChange={(e) => setFormData({ ...formData, planType: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    required
+                  >
+                    <option value="BASIC">Basic</option>
+                    <option value="STANDARD">Standard</option>
+                    <option value="PREMIUM">Premium</option>
+                    <option value="ENTERPRISE">Enterprise</option>
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Price (VNĐ) *</label>
                   <input
                     type="number"
@@ -223,14 +246,16 @@ const SubscriptionsManagement = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Duration (days) *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Validity (days) *</label>
                   <input
-                    type="number"
-                    value={formData.duration}
-                    onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+                    type="text"
+                    value={formData.validityDays}
+                    onChange={(e) => setFormData({ ...formData, validityDays: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g., 30, 90, 365"
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">Number of days this plan is valid</p>
                 </div>
 
                 <div className="md:col-span-2">
@@ -240,19 +265,8 @@ const SubscriptionsManagement = () => {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                     rows="3"
+                    placeholder="Describe the plan benefits, features, etc..."
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="ACTIVE">Active</option>
-                    <option value="INACTIVE">Inactive</option>
-                  </select>
                 </div>
               </div>
 

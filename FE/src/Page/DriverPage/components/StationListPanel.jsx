@@ -11,7 +11,8 @@ const StationListPanel = ({
   setShowFilters,
   stationLoading,
   onStationSelect,
-  onBookStation
+  onBookStation,
+  userLocation
 }) => {
   return (
     <div className="w-96 bg-white shadow-lg border-r border-gray-200 flex flex-col">
@@ -84,6 +85,7 @@ const StationListPanel = ({
                 isSelected={selectedStation?.id === station.id}
                 onSelect={onStationSelect}
                 onBook={onBookStation}
+                userLocation={userLocation}
               />
             ))}
           </div>
