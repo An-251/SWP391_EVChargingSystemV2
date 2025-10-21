@@ -14,16 +14,18 @@ import swp391.fa25.swp391.dto.request.StopChargingSessionRequest;
 import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.dto.response.ChargingSessionListResponse;
 import swp391.fa25.swp391.dto.response.ChargingSessionResponse;
+import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.ChargingSession;
 import swp391.fa25.swp391.service.IService.IChargingSessionService;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
  * REST Controller cho ChargingSession
- * Quản lý các API liên quan đến phiên sạc
+ * Quản lý các API liên quan đến phiên sạc và MAPPING ENTITY SANG DTO
  */
 @RestController
 @RequestMapping("/api/charging-sessions")
@@ -39,21 +41,17 @@ public class ChargingSessionController {
 
     /**
      * Bắt đầu phiên sạc
-     * POST /api/charging-sessions/start
-     *
-     * Request body:
-     * {
-     *   "driverId": 1,
-     *   "chargingPointId": 5,
-     *   "vehicleId": 2,
-     *   "startPercentage": 20
-     * }
      */
     @PostMapping("/start")
     public ResponseEntity<?> startChargingSession(
             @Valid @RequestBody StartChargingSessionRequest request) {
         try {
-            ChargingSessionResponse response = chargingSessionService.startChargingSession(request);
+
+            ChargingSession session = chargingSessionService.startChargingSession(request);
+
+            // ⬅️ Controller (hoặc Mapper) chuyển đổi Entity sang DTO Response
+            ChargingSessionResponse response = mapToResponse(session);
+
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Charging session started successfully", response));
         } catch (RuntimeException e) {
@@ -67,20 +65,19 @@ public class ChargingSessionController {
 
     /**
      * Dừng phiên sạc
-     * POST /api/charging-sessions/{sessionId}/stop
-     *
-     * Request body:
-     * {
-     *   "endPercentage": 80
-     * }
      */
     @PostMapping("/{sessionId}/stop")
     public ResponseEntity<?> stopChargingSession(
             @PathVariable Integer sessionId,
             @Valid @RequestBody StopChargingSessionRequest request) {
         try {
-            ChargingSessionResponse response =
+            // ⬅️ Service trả về Entity
+            ChargingSession session =
                     chargingSessionService.stopChargingSession(sessionId, request);
+
+            // ⬅️ Controller (hoặc Mapper) chuyển đổi Entity sang DTO Response
+            ChargingSessionResponse response = mapToResponse(session);
+
             return ResponseEntity.ok(
                     ApiResponse.success("Charging session completed successfully", response));
         } catch (RuntimeException e) {
@@ -94,11 +91,11 @@ public class ChargingSessionController {
 
     /**
      * Hủy phiên sạc (emergency stop)
-     * DELETE /api/charging-sessions/{sessionId}
      */
     @DeleteMapping("/{sessionId}")
     public ResponseEntity<?> cancelChargingSession(@PathVariable Integer sessionId) {
         try {
+            // Service chỉ thực hiện logic, không cần trả về DTO
             chargingSessionService.cancelChargingSession(sessionId);
             return ResponseEntity.ok(
                     ApiResponse.success("Charging session cancelled successfully"));
@@ -117,12 +114,16 @@ public class ChargingSessionController {
 
     /**
      * Lấy thông tin chi tiết một session
-     * GET /api/charging-sessions/{sessionId}
      */
     @GetMapping("/{sessionId}")
     public ResponseEntity<?> getSessionById(@PathVariable Integer sessionId) {
         try {
-            ChargingSessionResponse response = chargingSessionService.getSessionById(sessionId);
+            // ⬅️ Service trả về Entity
+            ChargingSession session = chargingSessionService.getSessionById(sessionId);
+
+            // ⬅️ Controller (hoặc Mapper) chuyển đổi Entity sang DTO Response
+            ChargingSessionResponse response = mapToResponse(session);
+
             return ResponseEntity.ok(ApiResponse.success("Session retrieved successfully", response));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -135,11 +136,11 @@ public class ChargingSessionController {
 
     /**
      * Lấy session đang ACTIVE của driver
-     * GET /api/charging-sessions/driver/{driverId}/active
      */
     @GetMapping("/driver/{driverId}/active")
     public ResponseEntity<?> getActiveSession(@PathVariable Integer driverId) {
         try {
+            // ⬅️ Service trả về Optional<Entity>
             Optional<ChargingSession> session =
                     chargingSessionService.findActiveSessionByDriverId(driverId);
 
@@ -148,7 +149,8 @@ public class ChargingSessionController {
                         .body(ApiResponse.error("No active charging session found"));
             }
 
-            ChargingSessionResponse response = chargingSessionService.getSessionById(session.get().getId());
+            // ⬅️ Controller (hoặc Mapper) chuyển đổi Entity sang DTO Response
+            ChargingSessionResponse response = mapToResponse(session.get());
             return ResponseEntity.ok(ApiResponse.success("Active session retrieved", response));
 
         } catch (Exception e) {
@@ -159,7 +161,6 @@ public class ChargingSessionController {
 
     /**
      * Lấy tất cả sessions của driver (có pagination)
-     * GET /api/charging-sessions/driver/{driverId}?page=0&size=10
      */
     @GetMapping("/driver/{driverId}")
     public ResponseEntity<?> getDriverSessions(
@@ -168,15 +169,17 @@ public class ChargingSessionController {
             @RequestParam(defaultValue = "10") int size) {
         try {
             if (size <= 0 || size > 100) {
-                size = 10; // Default và max size
+                size = 10;
             }
 
             Pageable pageable = PageRequest.of(page, size);
+            // ⬅️ Service trả về Page<Entity>
             Page<ChargingSession> sessionPage =
                     chargingSessionService.findByDriverId(driverId, pageable);
 
+            // ⬅️ Controller (hoặc Mapper) chuyển đổi Entity List sang DTO Response List
             List<ChargingSessionResponse> responses = sessionPage.getContent().stream()
-                    .map(session -> chargingSessionService.getSessionById(session.getId()))
+                    .map(this::mapToResponse) // Sử dụng helper method của Controller
                     .collect(Collectors.toList());
 
             ChargingSessionListResponse listResponse = ChargingSessionListResponse.builder()
@@ -194,15 +197,16 @@ public class ChargingSessionController {
 
     /**
      * Lấy tất cả sessions của driver (không pagination)
-     * GET /api/charging-sessions/driver/{driverId}/all
      */
     @GetMapping("/driver/{driverId}/all")
     public ResponseEntity<?> getAllDriverSessions(@PathVariable Integer driverId) {
         try {
+            // ⬅️ Service trả về List<Entity>
             List<ChargingSession> sessions = chargingSessionService.findByDriverId(driverId);
 
+            // ⬅️ Controller (hoặc Mapper) chuyển đổi Entity List sang DTO Response List
             List<ChargingSessionResponse> responses = sessions.stream()
-                    .map(session -> chargingSessionService.getSessionById(session.getId()))
+                    .map(this::mapToResponse) // Sử dụng helper method của Controller
                     .collect(Collectors.toList());
 
             ChargingSessionListResponse listResponse = ChargingSessionListResponse.builder()
@@ -220,16 +224,16 @@ public class ChargingSessionController {
 
     /**
      * Lấy sessions theo status
-     * GET /api/charging-sessions/status/{status}
-     * status: ACTIVE, COMPLETED, CANCELLED
      */
     @GetMapping("/status/{status}")
     public ResponseEntity<?> getSessionsByStatus(@PathVariable String status) {
         try {
+            // ⬅️ Service trả về List<Entity>
             List<ChargingSession> sessions = chargingSessionService.findByStatus(status);
 
+            // ⬅️ Controller (hoặc Mapper) chuyển đổi Entity List sang DTO Response List
             List<ChargingSessionResponse> responses = sessions.stream()
-                    .map(session -> chargingSessionService.getSessionById(session.getId()))
+                    .map(this::mapToResponse) // Sử dụng helper method của Controller
                     .collect(Collectors.toList());
 
             ChargingSessionListResponse listResponse = ChargingSessionListResponse.builder()
@@ -246,12 +250,11 @@ public class ChargingSessionController {
     }
 
     // ============================================
-    // STATISTICS APIs
+    // STATISTICS APIs (Không thay đổi vì Service đã trả về kiểu dữ liệu cơ bản)
     // ============================================
 
     /**
      * Lấy tổng chi phí của driver
-     * GET /api/charging-sessions/driver/{driverId}/total-cost
      */
     @GetMapping("/driver/{driverId}/total-cost")
     public ResponseEntity<?> getTotalCostByDriver(@PathVariable Integer driverId) {
@@ -266,7 +269,6 @@ public class ChargingSessionController {
 
     /**
      * Đếm số sessions theo status
-     * GET /api/charging-sessions/count?status=COMPLETED
      */
     @GetMapping("/count")
     public ResponseEntity<?> countByStatus(@RequestParam String status) {
@@ -285,10 +287,58 @@ public class ChargingSessionController {
 
     /**
      * Health check endpoint
-     * GET /api/charging-sessions/health
      */
     @GetMapping("/health")
     public ResponseEntity<?> healthCheck() {
         return ResponseEntity.ok(ApiResponse.success("ChargingSession API is running"));
+    }
+
+    // ============================================
+    // HELPER METHODS (MAPPING ENTITY -> DTO)
+    // ============================================
+
+    /**
+     * Helper method để chuyển đổi ChargingSession Entity sang ChargingSessionResponse DTO
+     * (Logic này được di chuyển từ Service sang Controller/Mapper)
+     */
+    private ChargingSessionResponse mapToResponse(ChargingSession session) {
+        Long durationMinutes = null;
+        Integer chargedPercentage = null;
+
+        if (session.getEndTime() != null) {
+            durationMinutes = Duration.between(session.getStartTime(), session.getEndTime()).toMinutes();
+        }
+
+        if (session.getEndPercentage() != null && session.getStartPercentage() != null) {
+            chargedPercentage = session.getEndPercentage() - session.getStartPercentage();
+        }
+
+        // Đảm bảo các Entity liên quan (ChargingPoint, Driver, Vehicle) đã được fetch
+        // (Đây là lý do logic này thường được đặt trong Mapper độc lập hoặc Controller)
+        ChargingPoint cp = session.getChargingPoint();
+
+        return ChargingSessionResponse.builder()
+                .sessionId(session.getId())
+                .status(session.getStatus())
+                .startTime(session.getStartTime())
+                .endTime(session.getEndTime())
+                .durationMinutes(durationMinutes)
+                .overusedTime(session.getOverusedTime())
+                .driverId(session.getDriver().getId())
+                .driverName(session.getDriver().getAccount().getFullName())
+                .vehicleId(session.getVehicle().getId())
+                .vehicleModel(session.getVehicle().getModel())
+                .licensePlate(session.getVehicle().getLicensePlate())
+                .chargingPointId(cp.getId())
+                .chargingPointName(cp.getPointName())
+                .connectorType(cp.getConnectorType())
+                .stationName(cp.getStation() != null ? cp.getStation().getStationName() : null)
+                .stationAddress(cp.getStation() != null ? cp.getStation().getFacility().getFullAddress() : null)
+                .startPercentage(session.getStartPercentage())
+                .endPercentage(session.getEndPercentage())
+                .chargedPercentage(chargedPercentage)
+                .kwhUsed(session.getKwhUsed())
+                .cost(session.getCost())
+                .build();
     }
 }
