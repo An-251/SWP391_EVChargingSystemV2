@@ -14,15 +14,21 @@ import StaffHome from "./Page/Staff/StaffHome/Home";
 import DriverPage from "./Page/DriverPage";
 import DriverProfile from "./Page/DriverPage/DriverProfile";
 import DriverVehicles from "./Page/DriverPage/DriverVehicles";
-import AdminPage from "./Page/AdminPage";
+import ActiveSession from "./Page/DriverPage/DriverSession/ActiveSession";
+import SessionHistory from "./Page/DriverPage/DriverSession/SessionHistory";
+import InvoicePayment from "./Page/DriverPage/DriverInvoice/InvoicePayment";
 import RoleBasedRoute from "./Components/RoleBasedRoute";
 import AdminLayout from "./Layout/Admin/AdminLayout";
-import AdminDashboard from "./Page/AdminPage/Dashboard/AdminDashboard";
-import AccountsManagement from "./Page/AdminPage/Accounts/AccountsManagement";
-import StationsManagement from "./Page/AdminPage/Stations/StationsManagement";
-import FacilitiesManagement from "./Page/AdminPage/Facilities/FacilitiesManagement";
-import ChargingPointsManagement from "./Page/AdminPage/ChargingPoints/ChargingPointsManagement";
-import SubscriptionsManagement from "./Page/AdminPage/Subscriptions/SubscriptionsManagement";
+import { 
+  Dashboard,
+  FacilityList, 
+  StationList, 
+  ChargingPointList, 
+  AccountList,
+  AdminRegistration, 
+  SubscriptionList,
+  Reports
+} from "./Page/AdminPage";
 import ErrorBoundary from "./Components/ErrorBoundary";
 
 // Error boundary component for Map
@@ -139,6 +145,66 @@ function App() {
             } 
           />
 
+          {/* Driver Active Session Route - Protected */}
+          <Route 
+            path="/driver/session" 
+            element={
+              <RoleBasedRoute allowedRoles={["Driver"]}>
+                <ErrorBoundary>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.5 }}
+                    style={{ minHeight: "100vh" }}
+                  >
+                    <ActiveSession />
+                  </motion.div>
+                </ErrorBoundary>
+              </RoleBasedRoute>
+            } 
+          />
+
+          {/* Driver Session History Route - Protected */}
+          <Route 
+            path="/driver/history" 
+            element={
+              <RoleBasedRoute allowedRoles={["Driver"]}>
+                <ErrorBoundary>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.5 }}
+                    style={{ minHeight: "100vh" }}
+                  >
+                    <SessionHistory />
+                  </motion.div>
+                </ErrorBoundary>
+              </RoleBasedRoute>
+            } 
+          />
+
+          {/* Driver Invoice Payment Route - Protected */}
+          <Route 
+            path="/driver/invoice/:invoiceId" 
+            element={
+              <RoleBasedRoute allowedRoles={["Driver"]}>
+                <ErrorBoundary>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.5 }}
+                    style={{ minHeight: "100vh" }}
+                  >
+                    <InvoicePayment />
+                  </motion.div>
+                </ErrorBoundary>
+              </RoleBasedRoute>
+            } 
+          />
+
           {/* Admin Routes - Protected */}
           <Route 
             path="/admin" 
@@ -148,13 +214,14 @@ function App() {
               </RoleBasedRoute>
             }
           >
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="accounts" element={<AccountsManagement />} />
-            <Route path="stations" element={<StationsManagement />} />
-            <Route path="facilities" element={<FacilitiesManagement />} />
-            <Route path="charging-points" element={<ChargingPointsManagement />} />
-            <Route path="subscriptions" element={<SubscriptionsManagement />} />
+            <Route index element={<Dashboard />} />
+            <Route path="facilities" element={<FacilityList />} />
+            <Route path="stations" element={<StationList />} />
+            <Route path="charging-points" element={<ChargingPointList />} />
+            <Route path="accounts" element={<AccountList />} />
+            <Route path="admin-registration" element={<AdminRegistration />} />
+            <Route path="subscriptions" element={<SubscriptionList />} />
+            <Route path="reports" element={<Reports />} />
           </Route>
 
           {/* Staff Routes - Protected */}
