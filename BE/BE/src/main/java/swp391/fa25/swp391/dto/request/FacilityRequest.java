@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 public class FacilityRequest {
 
     @NotBlank(message = "Facility name cannot be blank")
-    @Size(max = 255, message = "Facility name cannot exceed 255 characters") // Giả sử cột NAME có độ dài mặc định là 255
+    @Size(max = 255, message = "Facility name cannot exceed 255 characters")
     private String name;
 
     @NotBlank(message = "City cannot be blank")
@@ -27,7 +27,10 @@ public class FacilityRequest {
     private String ward;
 
     @NotBlank(message = "Street address cannot be blank")
-    @Size(max = 255, message = "Street address cannot exceed 255 characters") // Giả sử cột STREET_ADDRESS có độ dài 255
+    @Size(max = 255, message = "Street address cannot exceed 255 characters")
     private String streetAddress;
 
+    // ← THÊM FIELD NÀY
+    @Size(max = 50, message = "Status cannot exceed 50 characters")
+    private String status;
 }
