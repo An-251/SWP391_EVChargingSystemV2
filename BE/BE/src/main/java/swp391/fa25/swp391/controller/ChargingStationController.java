@@ -1,16 +1,16 @@
 package swp391.fa25.swp391.controller;
 
-import jakarta.validation.Valid; // Import cho @Valid
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import swp391.fa25.swp391.dto.request.ChargingStationRequest; // Import Request DTO
+import swp391.fa25.swp391.dto.request.ChargingStationRequest;
 import swp391.fa25.swp391.dto.response.ChargingPointResponse;
 import swp391.fa25.swp391.dto.response.ChargingStationResponse;
 import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.ChargingStation;
-import swp391.fa25.swp391.entity.Facility; // Cần import Facility Entity
+import swp391.fa25.swp391.entity.Facility;
 import swp391.fa25.swp391.service.IService.IChargingStationService;
 
 import java.util.List;
@@ -24,8 +24,6 @@ import java.util.stream.Collectors;
 public class ChargingStationController {
 
     private final IChargingStationService chargingStationService;
-    // GIẢ ĐỊNH: Bạn có một FacilityService để tìm Facility theo ID
-    // private final IFacilityService facilityService;
 
     // ==================== HELPER CONVERTER METHODS ====================
 
@@ -49,9 +47,10 @@ public class ChargingStationController {
 
     private ChargingStationResponse convertToDto(ChargingStation station) {
 
-        List<ChargingPointResponse> pointResponses = station.getChargingPoints().stream()
-                .map(this::convertToPointDto)
-                .collect(Collectors.toList());
+        List<ChargingPointResponse> pointResponses = station.getChargingPoints() != null ?
+                station.getChargingPoints().stream()
+                        .map(this::convertToPointDto)
+                        .collect(Collectors.toList()) : List.of();
 
         // Build facility info to avoid circular reference
         ChargingStationResponse.FacilityInfo facilityInfo = null;
@@ -73,7 +72,7 @@ public class ChargingStationController {
                     .ward(facility.getWard())
                     .district(facility.getDistrict())
                     .city(facility.getCity())
-                    .address(fullAddress) // Full address for backward compatibility
+                    .address(fullAddress)
                     .build();
         }
 
@@ -86,11 +85,11 @@ public class ChargingStationController {
                 .facilityId(station.getFacility() != null ? station.getFacility().getId() : null)
                 .facility(facilityInfo)
                 .chargingPoints(pointResponses)
+                .pointCount(station.getChargingPoints() != null ? station.getChargingPoints().size() : 0)
                 .build();
     }
 
     private ChargingPointResponse convertToPointDto(ChargingPoint point) {
-        // ... (logic không đổi so với lần sửa trước) ...
         return ChargingPointResponse.builder()
                 .id(point.getId())
                 .pointName(point.getPointName())
@@ -110,10 +109,8 @@ public class ChargingStationController {
         station.setLongitude(request.getLongitude());
         station.setStatus(request.getStatus());
 
-        // Xử lý quan hệ: Cần lấy Facility Entity từ ID
-        // GIẢ ĐỊNH: Facility đã tồn tại
-        Facility facility = new Facility(); // Thay bằng facilityService.findById(request.getFacilityId()).orElseThrow(...)
-        facility.setId(request.getFacilityId()); // Tạm thời set ID để Service xử lý
+        Facility facility = new Facility();
+        facility.setId(request.getFacilityId());
         station.setFacility(facility);
 
         return station;
@@ -125,24 +122,16 @@ public class ChargingStationController {
     @PostMapping("/charging-stations")
     public ResponseEntity<?> createChargingStation(@Valid @RequestBody ChargingStationRequest request) {
         try {
-            // 1. Convert Request DTO sang Entity
             ChargingStation newStation = convertToEntity(request);
-
-            // 2. Save Entity
             ChargingStation savedStation = chargingStationService.save(newStation);
-
-            // 3. Convert Entity sang Response DTO và trả về
             return ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(savedStation));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error creating charging station: " + e.getMessage());
         }
     }
 
-    // Các phương thức GET, DELETE (không đổi) ...
-
     @GetMapping("/charging-stations")
     public ResponseEntity<List<ChargingStationResponse>> getAllChargingStation() {
-        // ... (logic không đổi) ...
         List<ChargingStation> chargingStation = chargingStationService.findAll();
         List<ChargingStationResponse> responseList = chargingStation.stream()
                 .map(this::convertToDto)
@@ -152,7 +141,6 @@ public class ChargingStationController {
 
     @GetMapping("/charging-stations/{id}")
     public ResponseEntity<?> getChargingStationById(@PathVariable Integer id) {
-        // ... (logic không đổi) ...
         return chargingStationService.findById(id)
                 .<ResponseEntity<?>>map(station -> {
                     ChargingStationResponse response = convertToDto(station);
@@ -164,28 +152,20 @@ public class ChargingStationController {
                 );
     }
 
-
     @PutMapping("/charging-stations/{id}")
     public ResponseEntity<?> updateChargingStation(@PathVariable Integer id, @Valid @RequestBody ChargingStationRequest request) {
         return chargingStationService.findById(id)
                 .<ResponseEntity<?>>map(existingStation -> {
-                    // 1. Cập nhật Entity hiện có bằng dữ liệu từ Request DTO
-
-                    // Cập nhật các trường từ Request
                     existingStation.setStationName(request.getStationName());
                     existingStation.setLatitude(request.getLatitude());
                     existingStation.setLongitude(request.getLongitude());
                     existingStation.setStatus(request.getStatus());
 
-                    // Cập nhật Facility ID
                     Facility facility = existingStation.getFacility() != null ? existingStation.getFacility() : new Facility();
-                    facility.setId(request.getFacilityId()); // Tạm set ID, service cần tìm lại Entity Facility
+                    facility.setId(request.getFacilityId());
                     existingStation.setFacility(facility);
 
-                    // 2. Save Entity
                     ChargingStation savedStation = chargingStationService.updateChargingStation(existingStation);
-
-                    // 3. Convert Entity sang Response DTO và trả về
                     return ResponseEntity.ok(convertToDto(savedStation));
                 })
                 .orElseGet(() ->
@@ -197,7 +177,6 @@ public class ChargingStationController {
     @DeleteMapping("/charging-stations/{id}")
     public ResponseEntity<?> deleteChargingStation(@PathVariable Integer id) {
         try {
-            // Kiểm tra xem charging station có tồn tại không
             return chargingStationService.findById(id)
                     .<ResponseEntity<?>>map(station -> {
                         chargingStationService.deleteChargingStation(id);
