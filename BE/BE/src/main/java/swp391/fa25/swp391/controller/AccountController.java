@@ -11,9 +11,9 @@ import swp391.fa25.swp391.dto.request.UpdateProfileRequest;
 import swp391.fa25.swp391.dto.response.AccountResponse;
 import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.entity.Account;
-import swp391.fa25.swp391.entity.Driver; // Import Driver
+import swp391.fa25.swp391.entity.Driver;
 import swp391.fa25.swp391.service.IService.IAccountService;
-import swp391.fa25.swp391.service.IService.IDriverService; // Import IDriverService
+import swp391.fa25.swp391.service.IService.IDriverService;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,7 +28,7 @@ import java.util.Optional;
 public class AccountController {
 
     private final IAccountService accountService;
-    private final IDriverService driverService; // Inject IDriverService
+    private final IDriverService driverService;
 
     // ==================== PROFILE MANAGEMENT ====================
 
@@ -54,27 +54,7 @@ public class AccountController {
             }
 
             Account account = accounts.getFirst();
-
-            // Lấy DriverId
-            Integer driverId = null;
-            if ("Driver".equalsIgnoreCase(account.getAccountRole())) {
-                Optional<Driver> driverOpt = driverService.findByUsername(account.getUsername());
-                driverId = driverOpt.map(Driver::getId).orElse(null);
-            }
-
-            AccountResponse accountResponse = AccountResponse.builder()
-                    .id(account.getId())
-                    .username(account.getUsername())
-                    .fullName(account.getFullName())
-                    .email(account.getEmail())
-                    .phone(account.getPhone())
-                    .gender(account.getGender())
-                    .dob(account.getDob())
-                    .role(account.getAccountRole())
-                    .balance(account.getBalance())
-                    .status(account.getStatus())
-                    .driverId(driverId) // Thêm driverId vào AccountResponse
-                    .build();
+            AccountResponse accountResponse = buildFullAccountResponse(account);
 
             return ResponseEntity.ok(ApiResponse.success("Profile retrieved successfully", accountResponse));
 
@@ -120,29 +100,10 @@ public class AccountController {
 
             // Update account fields
             updateAccountFields(existingAccount, updateRequest);
-
             Account updatedAccount = accountService.updateAccount(existingAccount);
 
-            // Lấy DriverId (Giữ nguyên logic Profile hiện tại)
-            Integer driverId = null;
-            if ("Driver".equalsIgnoreCase(updatedAccount.getAccountRole())) {
-                Optional<Driver> driverOpt = driverService.findByUsername(updatedAccount.getUsername());
-                driverId = driverOpt.map(Driver::getId).orElse(null);
-            }
-
-
-            // Create response
-            AccountResponse accountResponse = AccountResponse.builder()
-                    .id(updatedAccount.getId())
-                    .username(updatedAccount.getUsername())
-                    .fullName(updatedAccount.getFullName())
-                    .email(updatedAccount.getEmail())
-                    .phone(updatedAccount.getPhone())
-                    .gender(updatedAccount.getGender())
-                    .dob(updatedAccount.getDob())
-                    .role(updatedAccount.getAccountRole())
-                    .driverId(driverId) // Thêm driverId vào AccountResponse
-                    .build();
+            // Build response
+            AccountResponse accountResponse = buildFullAccountResponse(updatedAccount);
 
             return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", accountResponse));
 
@@ -166,9 +127,6 @@ public class AccountController {
             }
 
             String username = userDetails.getUsername();
-            // Lưu ý: Việc xóa Account có thể không tự động xóa Driver liên quan (tùy thuộc vào cấu hình Cascade/Orphan Removal).
-            // Cần đảm bảo rằng Driver liên quan cũng được xử lý (xóa hoặc đặt trạng thái không hoạt động).
-
             boolean deleted = accountService.deleteAccount(username);
 
             if (deleted) {
@@ -201,23 +159,8 @@ public class AccountController {
             }
 
             Account account = accounts.getFirst();
-
-            // Lấy DriverId
-            Integer driverId = null;
-            if ("Driver".equalsIgnoreCase(account.getAccountRole())) {
-                Optional<Driver> driverOpt = driverService.findByUsername(account.getUsername());
-                driverId = driverOpt.map(Driver::getId).orElse(null);
-            }
-
-
             // Return limited information for public endpoint
-            AccountResponse accountResponse = AccountResponse.builder()
-                    .id(account.getId())
-                    .username(account.getUsername())
-                    .fullName(account.getFullName())
-                    .role(account.getAccountRole())
-                    .driverId(driverId) // Thêm driverId vào AccountResponse
-                    .build();
+            AccountResponse accountResponse = buildPublicAccountResponse(account);
 
             return ResponseEntity.ok(ApiResponse.success("Account found", accountResponse));
 
@@ -228,6 +171,53 @@ public class AccountController {
     }
 
     // ==================== HELPER METHODS ====================
+
+    /**
+     * Build full AccountResponse with all fields (for authenticated users)
+     */
+    private AccountResponse buildFullAccountResponse(Account account) {
+        Integer driverId = getDriverIdIfDriver(account);
+
+        return AccountResponse.builder()
+                .id(account.getId())
+                .username(account.getUsername())
+                .fullName(account.getFullName())
+                .email(account.getEmail())
+                .phone(account.getPhone())
+                .gender(account.getGender())
+                .dob(account.getDob())
+                .role(account.getAccountRole())
+                .balance(account.getBalance())
+                .status(account.getStatus())
+                .driverId(driverId)
+                .build();
+    }
+
+    /**
+     * Build limited AccountResponse for public endpoint
+     */
+    private AccountResponse buildPublicAccountResponse(Account account) {
+        Integer driverId = getDriverIdIfDriver(account);
+
+        return AccountResponse.builder()
+                .id(account.getId())
+                .username(account.getUsername())
+                .fullName(account.getFullName())
+                .role(account.getAccountRole())
+                .driverId(driverId)
+                .build();
+    }
+
+    /**
+     * Get DriverId if account is a Driver, otherwise return null
+     */
+    private Integer getDriverIdIfDriver(Account account) {
+        if ("Driver".equalsIgnoreCase(account.getAccountRole())) {
+            Optional<Driver> driverOpt = driverService.findByUsername(account.getUsername());
+            return driverOpt.map(Driver::getId).orElse(null);
+        }
+        return null;
+    }
 
     /**
      * Helper method to update account fields from request
