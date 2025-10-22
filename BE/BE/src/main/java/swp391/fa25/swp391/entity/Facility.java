@@ -40,6 +40,10 @@ public class Facility {
     @Column(name = "STREET_ADDRESS")
     private String streetAddress;
 
+    @Nationalized
+    @Column(name = "STATUS", length = 50)
+    private String status;
+
     @ManyToOne
     @JoinColumn(name = "ADMIN_ID")
     private Admin admin;
