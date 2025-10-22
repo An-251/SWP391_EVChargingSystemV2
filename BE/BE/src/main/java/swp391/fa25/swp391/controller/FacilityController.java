@@ -175,6 +175,8 @@ public class FacilityController {
         facility.setDistrict(request.getDistrict());
         facility.setWard(request.getWard());
         facility.setStreetAddress(request.getStreetAddress());
+        facility.setStatus(request.getStatus() != null ? request.getStatus() : "ONLINE");
+
         facility.setAdmin(admin);
         return facility;
     }
@@ -188,6 +190,10 @@ public class FacilityController {
         facility.setDistrict(request.getDistrict());
         facility.setWard(request.getWard());
         facility.setStreetAddress(request.getStreetAddress());
+
+        if (request.getStatus() != null) {
+            facility.setStatus(request.getStatus());
+        }
     }
 
     /**
@@ -205,7 +211,7 @@ public class FacilityController {
                 .adminId(facility.getAdmin() != null ? facility.getAdmin().getId() : null)
                 .stationCount(facility.getChargingStations() != null ?
                         facility.getChargingStations().size() : 0)
-                .status(facility.getStatus())
+                .status(facility.getStatus()) 
                 .build();
     }
 
