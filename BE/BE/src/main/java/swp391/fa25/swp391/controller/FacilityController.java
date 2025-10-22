@@ -205,6 +205,7 @@ public class FacilityController {
                 .adminId(facility.getAdmin() != null ? facility.getAdmin().getId() : null)
                 .stationCount(facility.getChargingStations() != null ?
                         facility.getChargingStations().size() : 0)
+                .status(facility.getStatus())
                 .build();
     }
 
