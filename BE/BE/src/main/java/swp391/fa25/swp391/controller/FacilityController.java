@@ -4,9 +4,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import swp391.fa25.swp391.dto.request.FacilityRequest;
+import swp391.fa25.swp391.dto.request.StatusUpdateRequest;
 import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.dto.response.FacilityResponse;
 import swp391.fa25.swp391.entity.Admin;
@@ -155,6 +157,42 @@ public class FacilityController {
         }
     }
 
+    /**
+     * Admin: Update facility status (active/inactive)
+     * PATCH /api/facilities/{id}/status
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<?> updateFacilityStatus(
+            @PathVariable Integer id,
+            @Valid @RequestBody StatusUpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            Facility facility = facilityService.findById(id);
+            Admin currentAdmin = getCurrentAdmin(userDetails);
+
+            // Check ownership
+            if (!hasPermission(facility, currentAdmin)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("You don't have permission to update this facility"));
+            }
+
+            // Update status through service
+            facilityService.updateFacilityStatus(id, request.getStatus());
+
+            return ResponseEntity.ok(
+                    ApiResponse.success("Facility status updated to " + request.getStatus())
+            );
+
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Facility not found with ID: " + id));
+        }
+    }
+
     // ==================== HELPER METHODS ====================
 
     /**
@@ -175,9 +213,8 @@ public class FacilityController {
         facility.setDistrict(request.getDistrict());
         facility.setWard(request.getWard());
         facility.setStreetAddress(request.getStreetAddress());
-        facility.setStatus(request.getStatus() != null ? request.getStatus() : "ONLINE");
-
         facility.setAdmin(admin);
+        facility.setStatus("active"); // Default status
         return facility;
     }
 
@@ -190,10 +227,6 @@ public class FacilityController {
         facility.setDistrict(request.getDistrict());
         facility.setWard(request.getWard());
         facility.setStreetAddress(request.getStreetAddress());
-
-        if (request.getStatus() != null) {
-            facility.setStatus(request.getStatus());
-        }
     }
 
     /**
@@ -208,10 +241,10 @@ public class FacilityController {
                 .ward(facility.getWard())
                 .streetAddress(facility.getStreetAddress())
                 .fullAddress(facility.getFullAddress())
+                .status(facility.getStatus()) // Add status to response
                 .adminId(facility.getAdmin() != null ? facility.getAdmin().getId() : null)
                 .stationCount(facility.getChargingStations() != null ?
                         facility.getChargingStations().size() : 0)
-                .status(facility.getStatus()) 
                 .build();
     }
 

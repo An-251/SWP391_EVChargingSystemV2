@@ -4,13 +4,18 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import swp391.fa25.swp391.dto.request.ChargingStationRequest;
+import swp391.fa25.swp391.dto.request.StatusUpdateRequest;
+import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.dto.response.ChargingPointResponse;
 import swp391.fa25.swp391.dto.response.ChargingStationResponse;
 import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.ChargingStation;
 import swp391.fa25.swp391.entity.Facility;
+import swp391.fa25.swp391.security.CustomUserDetails;
 import swp391.fa25.swp391.service.IService.IChargingStationService;
 
 import java.util.List;
@@ -107,7 +112,7 @@ public class ChargingStationController {
         station.setStationName(request.getStationName());
         station.setLatitude(request.getLatitude());
         station.setLongitude(request.getLongitude());
-        station.setStatus(request.getStatus());
+        station.setStatus("active"); // Default status
 
         Facility facility = new Facility();
         facility.setId(request.getFacilityId());
@@ -159,7 +164,7 @@ public class ChargingStationController {
                     existingStation.setStationName(request.getStationName());
                     existingStation.setLatitude(request.getLatitude());
                     existingStation.setLongitude(request.getLongitude());
-                    existingStation.setStatus(request.getStatus());
+                    // Don't update status here - use separate endpoint
 
                     Facility facility = existingStation.getFacility() != null ? existingStation.getFacility() : new Facility();
                     facility.setId(request.getFacilityId());
@@ -189,6 +194,31 @@ public class ChargingStationController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error deleting charging station: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Admin: Update station status (active/inactive)
+     * Cannot change to inactive if station or any point is "using"
+     * PATCH /api/charging-stations/{id}/status
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/charging-stations/{id}/status")
+    public ResponseEntity<?> updateStationStatus(
+            @PathVariable Integer id,
+            @Valid @RequestBody StatusUpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            chargingStationService.updateStationStatus(id, request.getStatus());
+            return ResponseEntity.ok(
+                    ApiResponse.success("Station status updated to " + request.getStatus())
+            );
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Station not found with ID: " + id));
         }
     }
 }

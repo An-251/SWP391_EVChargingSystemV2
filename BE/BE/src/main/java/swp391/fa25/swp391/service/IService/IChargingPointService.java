@@ -12,4 +12,7 @@ public interface IChargingPointService {
     ChargingPoint updateChargingPoint(ChargingPoint chargingPoint);
     List<ChargingPoint> findAll();
     ChargingPoint updateChargingPointStatus(ChargingPoint chargingPoint);
+    void updatePointStatus(Integer pointId, String newStatus);
+    void startUsingPoint(Integer pointId);
+    void stopUsingPoint(Integer pointId);
 }

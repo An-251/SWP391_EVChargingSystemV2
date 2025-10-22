@@ -1,13 +1,18 @@
 package swp391.fa25.swp391.controller;
 
-import jakarta.validation.Valid; // Import cho @Valid
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import swp391.fa25.swp391.dto.request.ChargingPointRequest; // Import Request DTO
+import swp391.fa25.swp391.dto.request.ChargingPointRequest;
+import swp391.fa25.swp391.dto.request.StatusUpdateRequest;
+import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.dto.response.ChargingPointResponse;
 import swp391.fa25.swp391.entity.ChargingPoint;
-import swp391.fa25.swp391.entity.ChargingStation; // Cần import ChargingStation Entity
+import swp391.fa25.swp391.entity.ChargingStation;
+import swp391.fa25.swp391.security.CustomUserDetails;
 import swp391.fa25.swp391.service.ChargingPointService;
 
 import java.util.List;
@@ -26,7 +31,6 @@ public class ChargingPointController {
     // ==================== HELPER CONVERTER METHODS ====================
 
     private ChargingPointResponse convertToDto(ChargingPoint point) {
-        // ... (logic không đổi so với lần sửa trước) ...
         return ChargingPointResponse.builder()
                 .id(point.getId())
                 .pointName(point.getPointName())
@@ -44,13 +48,11 @@ public class ChargingPointController {
         point.setPointName(request.getPointName());
         point.setConnectorType(request.getConnectorType());
         point.setMaxPower(request.getMaxPower());
-        point.setStatus(request.getStatus());
+        point.setStatus("active"); // Default status
         point.setPricePerKwh(request.getPricePerKwh());
 
-        // Xử lý quan hệ: Cần lấy ChargingStation Entity từ ID
-        // GIẢ ĐỊNH: ChargingStation đã tồn tại
-        ChargingStation station = new ChargingStation(); // Thay bằng stationService.findById(request.getStationId()).orElseThrow(...)
-        station.setId(request.getStationId()); // Tạm thời set ID để Service xử lý
+        ChargingStation station = new ChargingStation();
+        station.setId(request.getStationId());
         point.setStation(station);
 
         return point;
@@ -61,13 +63,8 @@ public class ChargingPointController {
     @PostMapping("/charging-points")
     public ResponseEntity<?> createChargingPoint(@Valid @RequestBody ChargingPointRequest request) {
         try {
-            // 1. Convert Request DTO sang Entity
             ChargingPoint newPoint = convertToEntity(request);
-
-            // 2. Save Entity
             ChargingPoint savedPoint = chargingPointService.save(newPoint);
-
-            // 3. Convert Entity sang Response DTO và trả về
             return ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(savedPoint));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -75,11 +72,8 @@ public class ChargingPointController {
         }
     }
 
-    // Các phương thức GET, DELETE (không đổi) ...
-
     @GetMapping("/charging-points")
     public ResponseEntity<List<ChargingPointResponse>> getAllChargingPoints() {
-        // ... (logic không đổi) ...
         List<ChargingPoint> chargingPoints = chargingPointService.findAll();
         List<ChargingPointResponse> responseList = chargingPoints.stream()
                 .map(this::convertToDto)
@@ -89,7 +83,6 @@ public class ChargingPointController {
 
     @GetMapping("/charging-points/{id}")
     public ResponseEntity<?> getChargingPointById(@PathVariable Integer id) {
-        // ... (logic không đổi) ...
         return chargingPointService.findById(id)
                 .<ResponseEntity<?>>map(point -> {
                     ChargingPointResponse response = convertToDto(point);
@@ -101,30 +94,22 @@ public class ChargingPointController {
                 );
     }
 
-
     @PutMapping("/charging-points/{id}")
     public ResponseEntity<?> updateChargingPoint(@PathVariable Integer id,
                                                  @Valid @RequestBody ChargingPointRequest request) {
         return chargingPointService.findById(id)
                 .<ResponseEntity<?>>map(existingPoint -> {
-                    // 1. Cập nhật Entity hiện có bằng dữ liệu từ Request DTO
-
-                    // Cập nhật các trường từ Request
                     existingPoint.setPointName(request.getPointName());
                     existingPoint.setConnectorType(request.getConnectorType());
                     existingPoint.setMaxPower(request.getMaxPower());
-                    existingPoint.setStatus(request.getStatus());
+                    // Don't update status here - use separate endpoint
                     existingPoint.setPricePerKwh(request.getPricePerKwh());
 
-                    // Cập nhật Station ID
                     ChargingStation station = existingPoint.getStation() != null ? existingPoint.getStation() : new ChargingStation();
-                    station.setId(request.getStationId()); // Tạm set ID, service cần tìm lại Entity ChargingStation
+                    station.setId(request.getStationId());
                     existingPoint.setStation(station);
 
-                    // 2. Save Entity
                     ChargingPoint savedPoint = chargingPointService.updateChargingPoint(existingPoint);
-
-                    // 3. Convert Entity sang Response DTO và trả về
                     return ResponseEntity.ok(convertToDto(savedPoint));
                 })
                 .orElseGet(() ->
@@ -136,7 +121,6 @@ public class ChargingPointController {
     @DeleteMapping("/charging-points/{id}")
     public ResponseEntity<?> deleteChargingPoint(@PathVariable Integer id) {
         try {
-            // Kiểm tra xem charging point có tồn tại không
             return chargingPointService.findById(id)
                     .<ResponseEntity<?>>map(point -> {
                         chargingPointService.deleteChargingPoint(id);
@@ -149,6 +133,77 @@ public class ChargingPointController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error deleting charging point: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Admin: Update point status (active/inactive)
+     * Cannot change to inactive if point is "using"
+     * PATCH /api/charging-points/{id}/status
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/charging-points/{id}/status")
+    public ResponseEntity<?> updatePointStatus(
+            @PathVariable Integer id,
+            @Valid @RequestBody StatusUpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            chargingPointService.updatePointStatus(id, request.getStatus());
+            return ResponseEntity.ok(
+                    ApiResponse.success("Charging point status updated to " + request.getStatus())
+            );
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Charging point not found with ID: " + id));
+        }
+    }
+
+    /**
+     * User: Start using a charging point (booking)
+     * Automatically sets point to "using" and propagates to station
+     * POST /api/charging-points/{id}/start
+     */
+    @PostMapping("/charging-points/{id}/start")
+    public ResponseEntity<?> startUsingPoint(
+            @PathVariable Integer id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            chargingPointService.startUsingPoint(id);
+            return ResponseEntity.ok(
+                    ApiResponse.success("Charging point is now in use")
+            );
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Charging point not found with ID: " + id));
+        }
+    }
+
+    /**
+     * User: Stop using a charging point (complete charging)
+     * Sets point back to "active" and updates station if no other points are using
+     * POST /api/charging-points/{id}/stop
+     */
+    @PostMapping("/charging-points/{id}/stop")
+    public ResponseEntity<?> stopUsingPoint(
+            @PathVariable Integer id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            chargingPointService.stopUsingPoint(id);
+            return ResponseEntity.ok(
+                    ApiResponse.success("Charging session completed")
+            );
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Charging point not found with ID: " + id));
         }
     }
 }
