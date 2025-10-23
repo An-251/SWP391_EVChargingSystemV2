@@ -18,7 +18,8 @@ public class ChargingStationResponse {
     private String status;
     private Integer facilityId; // Trả về ID thay vì Entity
     private FacilityInfo facility; // Add facility info for frontend
-    private List<ChargingPointResponse> chargingPoints; // Nếu muốn hiển thị danh sách các Point
+    private List<ChargingPointResponse> chargingPoints; // Danh sách các Point
+    private int pointCount; // Số lượng charging points tại station này
 
     // Nested class for Facility info (avoid circular reference)
     @Data

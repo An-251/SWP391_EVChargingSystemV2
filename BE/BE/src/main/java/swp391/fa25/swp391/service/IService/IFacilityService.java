@@ -14,4 +14,5 @@ public interface IFacilityService {
     List<Facility> findAll();
     List<Facility> findByFullAddress(String address);
     Facility save(Facility facility);
+    void updateFacilityStatus(Integer facilityId, String newStatus);
 }

@@ -14,12 +14,20 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ChargingStationService implements IChargingStationService {
+
     private final ChargingStationRepository chargingStationRepository;
+
+    // Status constants
+    private static final String STATUS_ACTIVE = "active";
+    private static final String STATUS_INACTIVE = "inactive";
+    private static final String STATUS_USING = "using";
 
     @Override
     @Transactional
     public ChargingStation register(ChargingStation chargingStation) {
-        // save là phương thức chuẩn của JpaRepository
+        if (chargingStation.getStatus() == null) {
+            chargingStation.setStatus(STATUS_ACTIVE);
+        }
         return chargingStationRepository.save(chargingStation);
     }
 
@@ -32,21 +40,16 @@ public class ChargingStationService implements IChargingStationService {
     @Override
     @Transactional
     public void deleteChargingStation(Integer id) {
-        // deleteById là phương thức chuẩn của JpaRepository
         chargingStationRepository.deleteById(id);
     }
 
     @Override
     public Optional<ChargingStation> findById(Integer id) {
-        // findById là phương thức chuẩn của JpaRepository
         return chargingStationRepository.findById(id);
     }
 
-
-
     @Override
     public List<ChargingStation> findAll() {
-        // Sử dụng findAll chuẩn của JpaRepository thay cho List.of()
         return chargingStationRepository.findAll();
     }
 
@@ -58,12 +61,76 @@ public class ChargingStationService implements IChargingStationService {
 
     @Override
     public boolean existsByStationName(String stationName) {
-        // Thay thế logic cũ (findByField("name",stationName)!=null)
-        // bằng phương thức tự sinh: existsByStationName(String stationName)
         return chargingStationRepository.existsByStationName(stationName);
     }
+
     @Override
+    @Transactional
     public ChargingStation save(ChargingStation chargingStation) {
+        if (chargingStation.getStatus() == null) {
+            chargingStation.setStatus(STATUS_ACTIVE);
+        }
         return chargingStationRepository.save(chargingStation);
+    }
+
+    /**
+     * Admin only: Update station status
+     * Validates that station can be set to inactive
+     */
+    @Transactional
+    public void updateStationStatus(Integer stationId, String newStatus) {
+        ChargingStation station = findById(stationId)
+                .orElseThrow(() -> new IllegalArgumentException("Station not found"));
+
+        // Validate status values for Station (admin can only set active/inactive)
+        if (!STATUS_ACTIVE.equals(newStatus) && !STATUS_INACTIVE.equals(newStatus)) {
+            throw new IllegalStateException("Admin can only set station to 'active' or 'inactive'");
+        }
+
+        // Cannot change to inactive if currently using or has points in use
+        if (STATUS_INACTIVE.equals(newStatus)) {
+            if (STATUS_USING.equals(station.getStatus())) {
+                throw new IllegalStateException("Cannot set station to inactive while it is in use");
+            }
+            if (hasAnyPointUsing(station)) {
+                throw new IllegalStateException("Cannot set station to inactive while charging points are in use");
+            }
+        }
+
+        station.setStatus(newStatus);
+        chargingStationRepository.save(station);
+    }
+
+    /**
+     * Update station status based on its charging points
+     * Called automatically when points change status
+     */
+    @Transactional
+    public void updateStationStatusBasedOnPoints(ChargingStation station) {
+        if (station == null || station.getChargingPoints() == null) {
+            return;
+        }
+
+        boolean anyPointUsing = hasAnyPointUsing(station);
+
+        if (anyPointUsing && !STATUS_USING.equals(station.getStatus())) {
+            station.setStatus(STATUS_USING);
+            chargingStationRepository.save(station);
+        } else if (!anyPointUsing && STATUS_USING.equals(station.getStatus())) {
+            // Revert to active if no points are using
+            station.setStatus(STATUS_ACTIVE);
+            chargingStationRepository.save(station);
+        }
+    }
+
+    /**
+     * Check if station has any point in "using" status
+     */
+    private boolean hasAnyPointUsing(ChargingStation station) {
+        if (station.getChargingPoints() == null) {
+            return false;
+        }
+        return station.getChargingPoints().stream()
+                .anyMatch(point -> STATUS_USING.equals(point.getStatus()));
     }
 }

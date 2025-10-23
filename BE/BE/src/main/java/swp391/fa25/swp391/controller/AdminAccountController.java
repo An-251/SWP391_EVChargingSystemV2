@@ -29,36 +29,11 @@ public class AdminAccountController {
     public ResponseEntity<List<AccountResponse>> getAllAccounts() {
         List<Account> accounts = accountService.findAll();
 
-        // Map the list of Account entities to your AccountResponse DTO
         List<AccountResponse> accountResponses = accounts.stream()
-                .map(this::mapToAccountResponse) // Using a helper method for clarity
+                .map(this::buildFullAccountResponse)
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(accountResponses);
-    }
-
-    // Helper method to convert an Account entity to an AccountResponse DTO
-    private AccountResponse mapToAccountResponse(Account account) {
-        AccountResponse.AccountResponseBuilder builder = AccountResponse.builder()
-                .id(account.getId())
-                .username(account.getUsername())
-                .fullName(account.getFullName())
-                .email(account.getEmail())
-                .role(account.getAccountRole())
-                .phone(account.getPhone())
-                .dob(account.getDob())
-                .gender(account.getGender())
-                .status(account.getStatus())
-                .balance(account.getBalance());
-
-        if (account.getDriver() != null) {
-            builder.driverId(account.getDriver().getId());
-        }
-        if (account.getAdmin() != null) {
-            builder.adminId(account.getAdmin().getId());
-        }
-
-        return builder.build();
     }
 
     @DeleteMapping("/{id}")
@@ -67,9 +42,11 @@ public class AdminAccountController {
         if (deleted) {
             return ResponseEntity.ok("Account with ID " + id + " deleted successfully.");
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Account not found or could not be deleted.");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Account not found or could not be deleted.");
         }
     }
+
     @PostMapping("/employees")
     public ResponseEntity<?> createEmployee(@Valid @RequestBody CreateEmployeeRequest request) {
         try {
@@ -83,5 +60,49 @@ public class AdminAccountController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Error creating employee: " + e.getMessage()));
         }
+    }
+
+    // ==================== HELPER METHODS ====================
+
+    /**
+     * Build full AccountResponse with all fields for admin view
+     */
+    private AccountResponse buildFullAccountResponse(Account account) {
+        AccountResponse.AccountResponseBuilder builder = AccountResponse.builder()
+                .id(account.getId())
+                .username(account.getUsername())
+                .fullName(account.getFullName())
+                .email(account.getEmail())
+                .role(account.getAccountRole())
+                .phone(account.getPhone())
+                .dob(account.getDob())
+                .gender(account.getGender())
+                .status(account.getStatus())
+                .balance(account.getBalance());
+
+        // Add driver ID if account is a driver
+        if (account.getDriver() != null) {
+            builder.driverId(account.getDriver().getId());
+        }
+
+        // Add admin ID if account is an admin
+        if (account.getAdmin() != null) {
+            builder.adminId(account.getAdmin().getId());
+        }
+
+        return builder.build();
+    }
+
+    /**
+     * Build AccountResponse with basic fields only (if needed for other endpoints)
+     */
+    private AccountResponse buildBasicAccountResponse(Account account) {
+        return AccountResponse.builder()
+                .id(account.getId())
+                .username(account.getUsername())
+                .fullName(account.getFullName())
+                .role(account.getAccountRole())
+                .status(account.getStatus())
+                .build();
     }
 }

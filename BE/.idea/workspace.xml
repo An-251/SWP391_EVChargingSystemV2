@@ -5,8 +5,27 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b035dc1f-a70f-47af-9cd3-7249037f0d5f" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/data_source_mapping.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/data_source_mapping.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/repository/FacilityRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/BE/src/main/java/swp391/fa25/swp391/repository/FacilityRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AdminAccountController.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AdminAccountController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AuthController.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/AuthController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/ChargingSessionController.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/ChargingSessionController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/ChargingStationController.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/ChargingStationController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/FacilityController.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/controller/FacilityController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/request/FacilityRequest.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/request/FacilityRequest.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/response/ChargingSessionResponse$ChargingSessionResponseBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/response/ChargingSessionResponse$ChargingSessionResponseBuilder.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/response/ChargingSessionResponse.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/response/ChargingSessionResponse.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/response/ChargingStationResponse$ChargingStationResponseBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/response/ChargingStationResponse$ChargingStationResponseBuilder.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/response/ChargingStationResponse.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/dto/response/ChargingStationResponse.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/entity/IncidentReport.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/entity/IncidentReport.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/entity/Invoice.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/entity/Invoice.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/entity/SubscriptionPlan.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/entity/SubscriptionPlan.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/CustomUserDetails.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/security/CustomUserDetails.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/AdminService.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/AdminService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/AuthService.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/AuthService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/ChargingSessionService.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/ChargingSessionService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/IService/IAdminService.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/IService/IAdminService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/IService/IChargingSessionService.class" beforeDir="false" afterPath="$PROJECT_DIR$/BE/target/classes/swp391/fa25/swp391/service/IService/IChargingSessionService.class" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,6 +55,9 @@
     &quot;accountId&quot;: &quot;43b23c7f-fb64-45f6-936b-4f9ff3876be1&quot;
   }
 }</component>
+  <component name="HttpClientOnboardingState">{
+  &quot;isOnboardingCommentShown&quot;: true
+}</component>
   <component name="KubernetesApiPersistence">{}</component>
   <component name="KubernetesApiProvider">{
   &quot;isMigrated&quot;: true
@@ -62,6 +84,7 @@
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;Spring Boot.Swp391Application.executor&quot;: &quot;Run&quot;,
     &quot;database.data.extractors.current.export.id&quot;: &quot;Comma-separated (CSV)_id&quot;,
+    &quot;extract.method.default.visibility&quot;: &quot;private&quot;,
     &quot;git-widget-placeholder&quot;: &quot;BE&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
@@ -137,6 +160,13 @@
       <workItem from="1760668215910" duration="978000" />
       <workItem from="1760670220862" duration="9772000" />
       <workItem from="1760695060186" duration="341000" />
+      <workItem from="1760775910681" duration="2638000" />
+      <workItem from="1760778752689" duration="1411000" />
+      <workItem from="1760799549407" duration="2428000" />
+      <workItem from="1760948779315" duration="10836000" />
+      <workItem from="1761016136480" duration="392000" />
+      <workItem from="1761027620545" duration="2847000" />
+      <workItem from="1761033584094" duration="4061000" />
     </task>
     <servers />
   </component>

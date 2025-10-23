@@ -15,4 +15,6 @@ public interface IChargingStationService {
     ChargingStation updateChargingStationStatus(ChargingStation chargingStation);
     boolean existsByStationName(String stationName);
     ChargingStation save(ChargingStation chargingStation);
+    void updateStationStatus(Integer stationId, String newStatus);
+    void updateStationStatusBasedOnPoints(ChargingStation station);
 }

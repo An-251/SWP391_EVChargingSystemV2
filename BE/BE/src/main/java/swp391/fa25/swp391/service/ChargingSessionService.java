@@ -40,8 +40,14 @@ public class ChargingSessionService implements IChargingSessionService {
     private static final BigDecimal KWH_PER_PERCENT = new BigDecimal("0.5"); // 0.5 kWh/1%
     private static final BigDecimal COST_PER_KWH = new BigDecimal("3000");   // 3,000 VND/kWh
 
+    // Status constants
+    private static final String STATUS_ACTIVE = "active";
+    private static final String STATUS_USING = "using";
+    private static final String STATUS_INACTIVE = "inactive";
+
     /**
      * Bắt đầu một phiên sạc mới
+     * Tự động chuyển point và station sang status "using"
      */
     @Override
     public ChargingSession startChargingSession(StartChargingSessionRequest request) {
@@ -62,8 +68,10 @@ public class ChargingSessionService implements IChargingSessionService {
 
         ChargingPoint chargingPoint = chargingPointService.findById(request.getChargingPointId())
                 .orElseThrow(() -> new RuntimeException("Charging point not found with ID: " + request.getChargingPointId()));
-        if (!"AVAILABLE".equalsIgnoreCase(chargingPoint.getStatus())) {
-            throw new RuntimeException("Charging point is not available");
+
+        // ✅ Kiểm tra status mới (active/using/inactive)
+        if (!STATUS_ACTIVE.equals(chargingPoint.getStatus())) {
+            throw new RuntimeException("Charging point must be 'active' to start charging. Current status: " + chargingPoint.getStatus());
         }
 
         // Kiểm tra trụ sạc có đang sử dụng
@@ -71,6 +79,12 @@ public class ChargingSessionService implements IChargingSessionService {
                 chargingSessionRepository.findActiveSessionByChargingPointId(request.getChargingPointId());
         if (pointSession.isPresent()) {
             throw new RuntimeException("Charging point is currently in use");
+        }
+
+        // Kiểm tra station status
+        ChargingStation station = chargingPoint.getStation();
+        if (station != null && STATUS_INACTIVE.equals(station.getStatus())) {
+            throw new RuntimeException("Charging station is inactive");
         }
 
         // Tạo session mới
@@ -87,15 +101,16 @@ public class ChargingSessionService implements IChargingSessionService {
 
         ChargingSession savedSession = chargingSessionRepository.save(session);
 
-        // Cập nhật trạng thái trụ sạc
-        chargingPoint.setStatus("IN_USE");
-        chargingPointService.save(chargingPoint);
+        // ✅ Sử dụng method mới để chuyển point sang "using"
+        // Method này tự động propagate sang station
+        chargingPointService.startUsingPoint(request.getChargingPointId());
 
-        return savedSession; // ⬅️ Trả về Entity
+        return savedSession;
     }
 
     /**
      * Kết thúc một phiên sạc → Tự động sinh hóa đơn
+     * Tự động chuyển point về "active" và cập nhật station
      */
     @Override
     public ChargingSession stopChargingSession(Integer sessionId, StopChargingSessionRequest request) {
@@ -128,12 +143,12 @@ public class ChargingSessionService implements IChargingSessionService {
 
         ChargingSession updatedSession = chargingSessionRepository.save(session);
 
-        // ✅ Giải phóng trụ sạc
+        // ✅ Sử dụng method mới để chuyển point về "active"
+        // Method này tự động cập nhật station nếu không còn point nào "using"
         ChargingPoint chargingPoint = session.getChargingPoint();
-        chargingPoint.setStatus("AVAILABLE");
-        chargingPointService.save(chargingPoint);
+        chargingPointService.stopUsingPoint(chargingPoint.getId());
 
-
+        // Tạo hóa đơn
         Invoice invoice = new Invoice();
         invoice.setIssueDate(Instant.now());
         invoice.setTotalCost(totalCost);
@@ -144,11 +159,12 @@ public class ChargingSessionService implements IChargingSessionService {
 
         invoiceService.save(invoice);
 
-        return updatedSession; // ⬅️ Trả về Entity
+        return updatedSession;
     }
 
     /**
      * Hủy session sạc
+     * Tự động giải phóng point và cập nhật station
      */
     @Override
     public void cancelChargingSession(Integer sessionId) {
@@ -163,9 +179,9 @@ public class ChargingSessionService implements IChargingSessionService {
         session.setEndTime(LocalDateTime.now());
         chargingSessionRepository.save(session);
 
+        // ✅ Sử dụng method mới để giải phóng point
         ChargingPoint chargingPoint = session.getChargingPoint();
-        chargingPoint.setStatus("AVAILABLE");
-        chargingPointService.save(chargingPoint);
+        chargingPointService.stopUsingPoint(chargingPoint.getId());
     }
 
     // ======= Các method hỗ trợ (CHỈ TRẢ VỀ ENTITY) =======
@@ -178,7 +194,6 @@ public class ChargingSessionService implements IChargingSessionService {
 
     @Override
     @Transactional(readOnly = true)
-    // Sửa kiểu trả về từ ChargingSessionResponse sang ChargingSession
     public ChargingSession getSessionById(Integer id) {
         return chargingSessionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Charging session not found with ID: " + id));
