@@ -84,12 +84,11 @@ const DriverReservations = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'ACTIVE':
+      case 'active':
+      case 'using':
         return 'green';
-      case 'COMPLETED':
+      case 'inactive':
         return 'blue';
-      case 'CANCELLED':
-        return 'red';
       default:
         return 'default';
     }
@@ -97,12 +96,11 @@ const DriverReservations = () => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'ACTIVE':
+      case 'active':
+      case 'using':
         return <Clock size={16} />;
-      case 'COMPLETED':
+      case 'inactive':
         return <CheckCircle size={16} />;
-      case 'CANCELLED':
-        return <XCircle size={16} />;
       default:
         return null;
     }
@@ -119,8 +117,8 @@ const DriverReservations = () => {
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
   };
 
-  const activeReservations = reservations.filter(r => r.status === 'ACTIVE');
-  const pastReservations = reservations.filter(r => r.status !== 'ACTIVE');
+  const activeReservations = reservations.filter(r => r.status === 'active');
+  const pastReservations = reservations.filter(r => r.status !== 'active');
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
