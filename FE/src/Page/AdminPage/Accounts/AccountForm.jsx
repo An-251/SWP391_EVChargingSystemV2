@@ -14,7 +14,7 @@ export default function AccountForm({ account, onSuccess, onCancel }) {
     phone: '',
     password: '',
     role: 'DRIVER',
-    status: 'ACTIVE',
+    status: 'active',
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -27,7 +27,7 @@ export default function AccountForm({ account, onSuccess, onCancel }) {
         phone: account.phone || '',
         password: '', // Don't populate password for security
         role: account.role || 'DRIVER',
-        status: account.status || 'ACTIVE',
+        status: account.status || 'active',
       });
     }
   }, [account]);
@@ -113,8 +113,8 @@ export default function AccountForm({ account, onSuccess, onCancel }) {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
           <select name="status" value={formData.status} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Locked</option>
+            <option value="active">Active</option>
+            <option value="inactive">Locked</option>
           </select>
         </div>
       </div>
