@@ -51,14 +51,17 @@ export default function AccountList() {
     {
       key: 'status',
       label: 'Status',
-      render: (value, row) => (
-        <button
-          onClick={(e) => { e.stopPropagation(); handleToggleStatus(row); }}
-          className={`px-3 py-1 rounded-full text-xs font-medium ${value === 'ACTIVE' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
-        >
-          {value === 'ACTIVE' ? 'Active' : 'Locked'}
-        </button>
-      ),
+      render: (value, row) => {
+        const statusLower = (value || '').toLowerCase();
+        return (
+          <button
+            onClick={(e) => { e.stopPropagation(); handleToggleStatus(row); }}
+            className={`px-3 py-1 rounded-full text-xs font-medium ${statusLower === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
+          >
+            {statusLower === 'active' ? 'Active' : 'Locked'}
+          </button>
+        );
+      },
     },
   ];
 
