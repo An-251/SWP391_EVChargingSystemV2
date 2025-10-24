@@ -110,38 +110,13 @@ const ActiveSession = () => {
           ).unwrap();
           console.log('✅ Session stopped successfully:', result);
           
-          // After stopping session, fetch invoice to redirect to payment page
-          try {
-            console.log('🔍 [INVOICE] Fetching invoice for session:', sessionId);
-            const invoiceResponse = await api.get(`/invoices/session/${sessionId}`);
-            console.log('📄 [INVOICE] Response:', invoiceResponse.data);
-            
-            const invoiceData = invoiceResponse.data?.data;
-            console.log('📄 [INVOICE] Extracted invoice data:', invoiceData);
-            
-            if (invoiceData?.id) {
-              console.log('✅ [INVOICE] Found invoice ID:', invoiceData.id);
-              console.log('💰 [INVOICE] Total cost:', invoiceData.totalCost, 'VNĐ');
-              console.log('📊 [INVOICE] Status:', invoiceData.status);
-              
-              message.success('Phiên sạc hoàn tất! Chuyển đến trang thanh toán...', 2);
-              
-              // Navigate to invoice payment page after 2 seconds
-              setTimeout(() => {
-                console.log('🚀 [NAVIGATE] Redirecting to /driver/invoice/' + invoiceData.id);
-                navigate(`/driver/invoice/${invoiceData.id}`);
-              }, 2000);
-            } else {
-              console.warn('⚠️ [INVOICE] No invoice ID found in response');
-              message.success('Đã dừng phiên sạc thành công! 🎉');
-              navigate('/driver/session');
-            }
-          } catch (invoiceError) {
-            console.error('❌ [INVOICE] Error fetching invoice:', invoiceError);
-            console.error('❌ [INVOICE] Error response:', invoiceError.response?.data);
-            message.warning('Đã dừng phiên sạc! Không tìm thấy hóa đơn.');
-            navigate('/driver/session');
-          }
+          // Navigate to session completed page (không cần fetch invoice vì dùng mô hình trả sau)
+          message.success('Phiên sạc hoàn tất! 🎉', 2);
+          
+          setTimeout(() => {
+            console.log('🚀 [NAVIGATE] Redirecting to session completed page');
+            navigate(`/driver/session/${sessionId}/completed`);
+          }, 1500);
         } catch (error) {
           console.error('❌ Failed to stop session:', error);
           const errorMsg = error?.message || error?.error || (typeof error === 'string' ? error : 'Không thể dừng phiên sạc!');
