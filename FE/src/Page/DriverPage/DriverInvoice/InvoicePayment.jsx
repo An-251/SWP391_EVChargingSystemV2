@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Button, Steps, Result, Spin, message, Statistic, Row, Col, Typography, QRCode as AntQRCode } from 'antd';
-import { DollarSign, Clock, CheckCircle, XCircle, CreditCard } from 'lucide-react';
+import { Card, Button, Result, Spin, message, Row, Col, Typography, Divider, Descriptions } from 'antd';
+import { DollarSign, CheckCircle, FileText, Clock, MapPin, Car, Battery, Zap } from 'lucide-react';
 import api from '../../../configs/config-axios';
 
 const { Title, Text } = Typography;
-const { Countdown } = Statistic;
 
 const InvoicePayment = () => {
   const { invoiceId } = useParams();
@@ -13,95 +12,44 @@ const InvoicePayment = () => {
   
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [paymentData, setPaymentData] = useState(null);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   // Fetch invoice details
   useEffect(() => {
     fetchInvoice();
   }, [invoiceId]);
 
-  // Auto-check payment status every 5 seconds when QR code is displayed
-  useEffect(() => {
-    if (currentStep === 1 && paymentData) {
-      const interval = setInterval(() => {
-        checkPaymentStatus();
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [currentStep, paymentData]);
-
   const fetchInvoice = async () => {
     try {
+      console.log('📄 [INVOICE] Fetching invoice ID:', invoiceId);
       const response = await api.get(`/invoices/${invoiceId}`);
-      const invoiceData = response.data?.data || response.data;
+      console.log('📄 [INVOICE] Response:', response.data);
+      
+      // Backend returns Invoice entity directly (not wrapped in {data: ...})
+      const invoiceData = response.data;
       setInvoice(invoiceData);
       
-      // If already paid, go to success step
-      if (invoiceData.status === 'PAID') {
-        setCurrentStep(2);
-      }
+      console.log('✅ [INVOICE] Invoice loaded:', invoiceData);
+      message.success('Hóa đơn đã được tạo thành công!');
     } catch (error) {
-      console.error('Error fetching invoice:', error);
+      console.error('❌ [INVOICE] Error fetching invoice:', error);
       message.error('Không thể tải thông tin hóa đơn');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleMoMoPayment = async () => {
-    try {
-      setPaymentLoading(true);
-      const response = await api.post(`/invoices/${invoiceId}/pay/momo`);
-      const data = response.data?.data;
-      
-      setPaymentData(data);
-      setCurrentStep(1);
-      message.success('Đã tạo yêu cầu thanh toán MoMo!');
-    } catch (error) {
-      console.error('Error creating MoMo payment:', error);
-      message.error('Không thể tạo thanh toán MoMo');
-    } finally {
-      setPaymentLoading(false);
-    }
-  };
-
-  const checkPaymentStatus = async () => {
-    if (checkingStatus) return;
+  const handleSaveInvoice = () => {
+    console.log('💾 [INVOICE] Saving invoice to system...');
+    message.success('Hóa đơn đã được lưu vào hệ thống! 📝');
+    setSaved(true);
     
-    try {
-      setCheckingStatus(true);
-      const response = await api.get(`/invoices/${invoiceId}/payment-status`);
-      const status = response.data?.data;
-      
-      if (status.isPaid) {
-        setCurrentStep(2);
-        setInvoice(prev => ({ ...prev, status: 'PAID' }));
-        message.success('Thanh toán thành công! 🎉');
-      }
-    } catch (error) {
-      console.error('Error checking payment status:', error);
-    } finally {
-      setCheckingStatus(false);
-    }
+    // Automatically redirect after 2 seconds
+    setTimeout(() => {
+      console.log('🚀 [NAVIGATE] Redirecting to driver home...');
+      navigate('/driver');
+    }, 2000);
   };
-
-  const steps = [
-    {
-      title: 'Xác nhận',
-      icon: <DollarSign size={24} />,
-    },
-    {
-      title: 'Thanh toán',
-      icon: <CreditCard size={24} />,
-    },
-    {
-      title: 'Hoàn tất',
-      icon: <CheckCircle size={24} />,
-    },
-  ];
 
   if (loading) {
     return (
@@ -119,7 +67,7 @@ const InvoicePayment = () => {
           title="Không tìm thấy hóa đơn"
           subTitle="Hóa đơn không tồn tại hoặc đã bị xóa"
           extra={
-            <Button type="primary" onClick={() => navigate('/driver/session')}>
+            <Button type="primary" onClick={() => navigate('/driver/history')}>
               Quay lại lịch sử
             </Button>
           }
@@ -128,152 +76,196 @@ const InvoicePayment = () => {
     );
   }
 
+  // Success state after saving
+  if (saved) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-6">
+        <Card className="max-w-2xl w-full shadow-2xl rounded-2xl">
+          <Result
+            status="success"
+            title="Hóa đơn đã được lưu thành công!"
+            subTitle={`Hóa đơn #${invoice.id} đã được lưu vào hệ thống. Cảm ơn bạn đã sử dụng dịch vụ!`}
+            extra={[
+              <Button
+                key="home"
+                type="primary"
+                size="large"
+                icon={<CheckCircle size={20} />}
+                onClick={() => navigate('/driver')}
+                className="bg-gradient-to-r from-green-500 to-blue-600"
+              >
+                Về trang chủ
+              </Button>,
+              <Button
+                key="history"
+                size="large"
+                onClick={() => navigate('/driver/history')}
+              >
+                Xem lịch sử sạc
+              </Button>,
+            ]}
+          />
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        <Card className="shadow-xl rounded-2xl">
-          <Title level={2} className="text-center mb-6">
-            💳 Thanh toán hóa đơn
-          </Title>
+      <div className="max-w-5xl mx-auto">
+        <Card className="shadow-2xl rounded-2xl">
+          <div className="text-center mb-8">
+            <FileText size={64} className="mx-auto mb-4 text-blue-600" />
+            <Title level={2} className="mb-2">
+              📄 Hóa Đơn Sạc Xe Điện
+            </Title>
+            <Text type="secondary" className="text-lg">
+              Thông tin chi tiết phiên sạc của bạn
+            </Text>
+          </div>
 
-          <Steps current={currentStep} items={steps} className="mb-8" />
+          <Divider />
 
-          {/* Step 0: Invoice Details & Confirm */}
-          {currentStep === 0 && (
-            <div className="space-y-6">
-              <Card className="bg-gradient-to-r from-blue-50 to-indigo-50">
-                <Row gutter={[16, 16]}>
-                  <Col xs={24} md={12}>
-                    <Text strong>Hóa đơn #</Text>
-                    <Title level={3}>{invoice.id}</Title>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Text strong>Ngày tạo</Text>
-                    <Title level={4}>
-                      {new Date(invoice.issueDate).toLocaleString('vi-VN')}
-                    </Title>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Text strong>Trạm sạc</Text>
-                    <Title level={4}>
-                      {invoice.session?.chargingPoint?.chargingStation?.name || 'N/A'}
-                    </Title>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Text strong>Xe</Text>
-                    <Title level={4}>
-                      {invoice.session?.vehicle?.model || 'N/A'}
-                    </Title>
-                  </Col>
-                  <Col xs={24}>
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg">
-                      <Text strong className="text-lg">Tổng tiền:</Text>
-                      <Title level={2} className="text-green-600 m-0">
-                        {invoice.totalCost?.toLocaleString('vi-VN')} VNĐ
-                      </Title>
-                    </div>
-                  </Col>
-                </Row>
-              </Card>
-
-              <div className="flex justify-center gap-4">
-                <Button
-                  size="large"
-                  onClick={() => navigate('/driver/session')}
-                >
-                  Hủy
-                </Button>
-                <Button
-                  type="primary"
-                  size="large"
-                  icon={<CreditCard size={20} />}
-                  onClick={handleMoMoPayment}
-                  loading={paymentLoading}
-                  className="bg-gradient-to-r from-pink-500 to-purple-600"
-                >
-                  Thanh toán bằng MoMo
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 1: QR Code Payment */}
-          {currentStep === 1 && paymentData && (
-            <div className="space-y-6">
-              <Card className="bg-gradient-to-r from-pink-50 to-purple-50">
-                <div className="text-center space-y-4">
-                  <Title level={3}>Quét mã QR để thanh toán</Title>
-                  <div className="flex justify-center">
-                    <AntQRCode
-                      value={paymentData.payment.qrCodeUrl || paymentData.payment.deeplink}
-                      size={300}
-                      status={checkingStatus ? 'loading' : 'active'}
-                    />
+          {/* Invoice Header */}
+          <div className="mb-6">
+            <Row gutter={[24, 24]}>
+              <Col xs={24} md={12}>
+                <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 h-full">
+                  <div className="flex items-center gap-3 mb-2">
+                    <FileText size={24} className="text-blue-600" />
+                    <Text strong className="text-lg">Mã hóa đơn</Text>
                   </div>
-                  
-                  <div className="flex flex-col items-center gap-2">
-                    <Text type="secondary">Mở ứng dụng MoMo và quét mã QR</Text>
-                    <Text strong className="text-2xl text-green-600">
-                      {invoice.totalCost?.toLocaleString('vi-VN')} VNĐ
-                    </Text>
+                  <Title level={3} className="m-0">#{invoice.id}</Title>
+                </Card>
+              </Col>
+              <Col xs={24} md={12}>
+                <Card className="bg-gradient-to-r from-purple-50 to-pink-50 h-full">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Clock size={24} className="text-purple-600" />
+                    <Text strong className="text-lg">Ngày tạo</Text>
                   </div>
+                  <Title level={4} className="m-0">
+                    {new Date(invoice.issueDate).toLocaleString('vi-VN')}
+                  </Title>
+                </Card>
+              </Col>
+            </Row>
+          </div>
 
-                  <Countdown
-                    title="Thời gian còn lại"
-                    value={Date.now() + 10 * 60 * 1000}
-                    format="mm:ss"
-                    className="mt-4"
-                  />
+          {/* Charging Session Details */}
+          <Card className="mb-6 bg-gradient-to-r from-green-50 to-teal-50">
+            <Title level={4} className="mb-4 flex items-center gap-2">
+              <Zap size={24} className="text-green-600" />
+              Thông tin phiên sạc
+            </Title>
+            <Descriptions bordered column={{ xs: 1, sm: 2 }}>
+              <Descriptions.Item label={
+                <span className="flex items-center gap-2">
+                  <MapPin size={16} />
+                  <strong>Trạm sạc</strong>
+                </span>
+              }>
+                {invoice.session?.chargingPoint?.station?.stationName || 'N/A'}
+              </Descriptions.Item>
+              <Descriptions.Item label={
+                <span className="flex items-center gap-2">
+                  <Zap size={16} />
+                  <strong>Cổng sạc</strong>
+                </span>
+              }>
+                {invoice.session?.chargingPoint?.pointName || 'N/A'}
+              </Descriptions.Item>
+              <Descriptions.Item label={<strong>Loại cổng</strong>}>
+                {invoice.session?.chargingPoint?.connectorType || 'N/A'}
+              </Descriptions.Item>
+              <Descriptions.Item label={<strong>Địa chỉ</strong>} span={2}>
+                {invoice.session?.chargingPoint?.station?.facility?.fullAddress || 'N/A'}
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
 
-                  {paymentData.payment.deeplink && (
-                    <Button
-                      type="primary"
-                      size="large"
-                      href={paymentData.payment.deeplink}
-                      target="_blank"
-                      className="bg-gradient-to-r from-pink-500 to-purple-600"
-                    >
-                      Mở ứng dụng MoMo
-                    </Button>
-                  )}
+          {/* Vehicle Details */}
+          <Card className="mb-6 bg-gradient-to-r from-yellow-50 to-orange-50">
+            <Title level={4} className="mb-4 flex items-center gap-2">
+              <Car size={24} className="text-orange-600" />
+              Thông tin xe
+            </Title>
+            <Descriptions bordered column={{ xs: 1, sm: 2 }}>
+              <Descriptions.Item label={<strong>Mẫu xe</strong>}>
+                {invoice.session?.vehicle?.model || 'N/A'}
+              </Descriptions.Item>
+              <Descriptions.Item label={<strong>Biển số</strong>}>
+                {invoice.session?.vehicle?.licensePlate || 'N/A'}
+              </Descriptions.Item>
+              <Descriptions.Item label={
+                <span className="flex items-center gap-2">
+                  <Battery size={16} />
+                  <strong>Pin lúc bắt đầu</strong>
+                </span>
+              }>
+                {invoice.session?.startPercentage || 0}%
+              </Descriptions.Item>
+              <Descriptions.Item label={
+                <span className="flex items-center gap-2">
+                  <Battery size={16} />
+                  <strong>Pin lúc kết thúc</strong>
+                </span>
+              }>
+                {invoice.session?.endPercentage || 0}%
+              </Descriptions.Item>
+              <Descriptions.Item label={<strong>Số kWh đã sử dụng</strong>}>
+                {invoice.session?.kwhUsed || 0} kWh
+              </Descriptions.Item>
+              <Descriptions.Item label={<strong>Trạng thái</strong>}>
+                <span className="text-green-600 font-semibold">
+                  {invoice.status === 'PAID' ? '✅ Đã thanh toán' : '📝 Mới tạo'}
+                </span>
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
 
-                  <Button
-                    onClick={checkPaymentStatus}
-                    loading={checkingStatus}
-                  >
-                    Kiểm tra trạng thái thanh toán
-                  </Button>
+          {/* Total Cost */}
+          <Card className="mb-6 bg-gradient-to-r from-green-100 to-blue-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <DollarSign size={32} className="text-green-600" />
+                <div>
+                  <Text className="text-lg">Tổng chi phí</Text>
+                  <Title level={4} className="m-0">Chi phí sạc xe</Title>
                 </div>
-              </Card>
+              </div>
+              <Title level={1} className="text-green-600 m-0">
+                {invoice.totalCost?.toLocaleString('vi-VN')} VNĐ
+              </Title>
             </div>
-          )}
+          </Card>
 
-          {/* Step 2: Success */}
-          {currentStep === 2 && (
-            <Result
-              status="success"
-              title="Thanh toán thành công!"
-              subTitle={`Hóa đơn #${invoice.id} đã được thanh toán. Cảm ơn bạn đã sử dụng dịch vụ!`}
-              extra={[
-                <Button
-                  key="home"
-                  type="primary"
-                  size="large"
-                  onClick={() => navigate('/driver')}
-                  className="bg-gradient-to-r from-green-500 to-teal-600"
-                >
-                  Về trang chủ
-                </Button>,
-                <Button
-                  key="history"
-                  size="large"
-                  onClick={() => navigate('/driver/session')}
-                >
-                  Xem lịch sử
-                </Button>,
-              ]}
-            />
-          )}
+          <Divider />
+
+          {/* Action Buttons */}
+          <div className="flex justify-center gap-4 mt-8">
+            <Button
+              size="large"
+              onClick={() => navigate('/driver/history')}
+            >
+              Xem lịch sử
+            </Button>
+            <Button
+              type="primary"
+              size="large"
+              icon={<CheckCircle size={20} />}
+              onClick={handleSaveInvoice}
+              className="bg-gradient-to-r from-green-500 to-blue-600 px-8"
+            >
+              Lưu hóa đơn & Hoàn tất
+            </Button>
+          </div>
+
+          <div className="text-center mt-6">
+            <Text type="secondary">
+              💡 Hóa đơn sẽ được lưu vào hệ thống và bạn có thể xem lại trong lịch sử sạc
+            </Text>
+          </div>
         </Card>
       </div>
     </div>
