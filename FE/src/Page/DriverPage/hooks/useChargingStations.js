@@ -50,7 +50,7 @@ export const useChargingStations = (rawStations, userLocation) => {
         // Count available slots from charging points
         const totalSlots = station.chargingPoints?.length || 0;
         const availableSlots = station.chargingPoints?.filter(
-          point => point.status === 'AVAILABLE' || point.status === 'available'
+          point => point.status === 'ACTIVE' 
         ).length || 0;
 
         return {
