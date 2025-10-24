@@ -70,19 +70,19 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
     // ============================================
 
     /**
-     * Tìm session ĐANG ACTIVE của driver
+     * Tìm session ĐANG ACTIVE của driver (status = using)
      * Business critical - phải đảm bảo chỉ có 1 session active
      */
     @Query("SELECT cs FROM ChargingSession cs " +
-            "WHERE cs.driver.id = :driverId AND cs.status = 'ACTIVE'")
+            "WHERE cs.driver.id = :driverId AND cs.status = 'using'")
     Optional<ChargingSession> findActiveSessionByDriverId(@Param("driverId") Integer driverId);
 
     /**
-     * Tìm session ĐANG ACTIVE tại charging point
+     * Tìm session ĐANG ACTIVE tại charging point (status = using)
      * Kiểm tra charging point có đang được sử dụng không
      */
     @Query("SELECT cs FROM ChargingSession cs " +
-            "WHERE cs.chargingPoint.id = :chargingPointId AND cs.status = 'ACTIVE'")
+            "WHERE cs.chargingPoint.id = :chargingPointId AND cs.status = 'using'")
     Optional<ChargingSession> findActiveSessionByChargingPointId(@Param("chargingPointId") Integer chargingPointId);
 
     /**
@@ -98,10 +98,10 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
 //            @Param("endDate") LocalDateTime endDate);
 
     /**
-     * Tính tổng doanh thu của driver
+     * Tính tổng doanh thu của driver (chỉ session đã kết thúc = inactive với cost > 0)
      */
     @Query("SELECT COALESCE(SUM(cs.cost), 0) FROM ChargingSession cs " +
-            "WHERE cs.driver.id = :driverId AND cs.status = 'COMPLETED'")
+            "WHERE cs.driver.id = :driverId AND cs.status = 'inactive'")
     BigDecimal calculateTotalCostByDriver(@Param("driverId") Integer driverId);
 
     /**

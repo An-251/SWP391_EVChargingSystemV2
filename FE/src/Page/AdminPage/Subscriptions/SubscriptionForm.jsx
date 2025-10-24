@@ -13,7 +13,7 @@ export default function SubscriptionForm({ subscription, onSuccess, onCancel }) 
     price: '',
     duration: '',
     benefits: '',
-    status: 'ACTIVE',
+    status: 'active',
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -25,7 +25,7 @@ export default function SubscriptionForm({ subscription, onSuccess, onCancel }) 
         price: subscription.price || '',
         duration: subscription.duration || '',
         benefits: subscription.benefits || '',
-        status: subscription.status || 'ACTIVE',
+        status: subscription.status || 'active',
       });
     }
   }, [subscription]);
@@ -147,8 +147,8 @@ export default function SubscriptionForm({ subscription, onSuccess, onCancel }) 
           onChange={handleChange}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg"
         >
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
         </select>
       </div>
 

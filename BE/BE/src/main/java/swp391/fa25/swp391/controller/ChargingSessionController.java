@@ -161,8 +161,8 @@ public class ChargingSessionController {
     @GetMapping("/active")
     public ResponseEntity<?> getAllActiveSessions() {
         try {
-            //  Service trả về List<Entity>
-            List<ChargingSession> sessions = chargingSessionService.findByStatus("ACTIVE");
+            //  Service trả về List<Entity> - Session đang sạc = using
+            List<ChargingSession> sessions = chargingSessionService.findByStatus("using");
 
             // Controller (hoặc Mapper) chuyển đổi Entity List sang DTO Response List
             List<ChargingSessionResponse> responses = sessions.stream()

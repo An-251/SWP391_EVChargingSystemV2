@@ -99,6 +99,68 @@ const stationSlice = createSlice({
         minRating: 0,
       };
     },
+    // Real-time update handlers
+    updateStationInList: (state, action) => {
+      const { stationId, newStatus, data, chargingPointUpdate } = action.payload;
+      
+      const stationIndex = state.stations.findIndex(s => s.id === stationId);
+      if (stationIndex !== -1) {
+        // Update station status if provided
+        if (newStatus) {
+          state.stations[stationIndex].status = newStatus;
+        }
+        
+        // Update charging point if provided
+        if (chargingPointUpdate) {
+          const { pointId, newStatus: pointStatus } = chargingPointUpdate;
+          const points = state.stations[stationIndex].chargingPoints || [];
+          const pointIndex = points.findIndex(p => p.id === pointId);
+          if (pointIndex !== -1) {
+            state.stations[stationIndex].chargingPoints[pointIndex].status = pointStatus;
+          }
+        }
+        
+        // Update with full data if provided
+        if (data) {
+          state.stations[stationIndex] = { ...state.stations[stationIndex], ...data };
+        }
+        
+        // Update selected station if it's the one being updated
+        if (state.selectedStation && state.selectedStation.id === stationId) {
+          state.selectedStation = state.stations[stationIndex];
+        }
+      }
+    },
+    updateFacilityInList: (state, action) => {
+      const { facilityId, newStatus, data } = action.payload;
+      
+      // Update all stations that belong to this facility
+      state.stations = state.stations.map(station => {
+        if (station.facility && station.facility.id === facilityId) {
+          return {
+            ...station,
+            facility: {
+              ...station.facility,
+              status: newStatus || station.facility.status,
+              ...(data || {})
+            }
+          };
+        }
+        return station;
+      });
+      
+      // Update selected station if its facility was updated
+      if (state.selectedStation && state.selectedStation.facility?.id === facilityId) {
+        state.selectedStation = {
+          ...state.selectedStation,
+          facility: {
+            ...state.selectedStation.facility,
+            status: newStatus || state.selectedStation.facility.status,
+            ...(data || {})
+          }
+        };
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -142,7 +204,9 @@ export const {
   clearSelectedStation, 
   clearError,
   setFilters,
-  resetFilters
+  resetFilters,
+  updateStationInList,
+  updateFacilityInList
 } = stationSlice.actions;
 
 export default stationSlice.reducer;

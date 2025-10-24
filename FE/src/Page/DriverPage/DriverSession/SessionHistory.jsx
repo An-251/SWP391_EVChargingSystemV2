@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Table, Card, Statistic, Button, Select, Tag, Empty } from 'antd';
-import { Clock, Zap, DollarSign, MapPin, Battery } from 'lucide-react';
+import { Clock, Zap, DollarSign, MapPin, Battery, CheckCircle, Eye } from 'lucide-react';
 import { fetchAllSessions, fetchTotalCost } from '../../../redux/session/sessionSlice';
 
 const { Option } = Select;
@@ -24,14 +24,32 @@ const SessionHistory = () => {
     }
   }, [user, dispatch]);
 
-  // Filter sessions by status
+  // Helper: Tính computed status từ session data
+  // Backend chỉ dùng 3 status: active, using, inactive
+  // - using = đang sạc
+  // - inactive + cost > 0 = hoàn thành (completed)
+  // - inactive + cost = 0 = đã hủy (cancelled)
+  const getComputedStatus = (session) => {
+    if (session.status === 'using') return 'using';
+    if (session.status === 'inactive') {
+      return (session.cost && parseFloat(session.cost) > 0) ? 'completed' : 'cancelled';
+    }
+    return session.status;
+  };
+
+  // Filter sessions by computed status
   const filteredSessions = statusFilter === 'ALL'
     ? sessions
-    : sessions.filter((s) => s.status === statusFilter);
+    : sessions.filter((s) => getComputedStatus(s) === statusFilter);
 
-  // Calculate statistics
-  const completedSessions = sessions.filter((s) => s.status === 'COMPLETED');
+  // Calculate statistics (chỉ session hoàn thành)
+  const completedSessions = sessions.filter((s) => getComputedStatus(s) === 'completed');
   const totalEnergy = completedSessions.reduce((sum, s) => sum + (parseFloat(s.kwhUsed) || 0), 0);
+
+  // Handle view session details
+  const handleViewDetails = (sessionId) => {
+    navigate(`/driver/session/${sessionId}/completed`);
+  };
 
   // Table columns
   const columns = [
@@ -102,19 +120,35 @@ const SessionHistory = () => {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => {
+      render: (_, record) => {
+        const computedStatus = getComputedStatus(record);
         const colors = {
-          COMPLETED: 'green',
-          ACTIVE: 'blue',
-          CANCELLED: 'red',
+          completed: 'green',
+          using: 'blue',
+          cancelled: 'red',
         };
         const labels = {
-          COMPLETED: 'Hoàn thành',
-          ACTIVE: 'Đang sạc',
-          CANCELLED: 'Đã hủy',
+          completed: 'Hoàn thành',
+          using: 'Đang sạc',
+          cancelled: 'Đã hủy',
         };
-        return <Tag color={colors[status] || 'default'}>{labels[status] || status}</Tag>;
+        return <Tag color={colors[computedStatus] || 'default'}>{labels[computedStatus] || computedStatus}</Tag>;
       },
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      render: (_, record) => (
+        <Button
+          type="primary"
+          size="small"
+          icon={<Eye size={16} />}
+          onClick={() => handleViewDetails(record.sessionId || record.id)}
+          className="bg-blue-500 hover:bg-blue-600"
+        >
+          Xem chi tiết
+        </Button>
+      ),
     },
   ];
 
@@ -178,9 +212,9 @@ const SessionHistory = () => {
               style={{ width: 200 }}
             >
               <Option value="ALL">Tất cả</Option>
-              <Option value="COMPLETED">Hoàn thành</Option>
-              <Option value="CANCELLED">Đã hủy</Option>
-              <Option value="ACTIVE">Đang sạc</Option>
+              <Option value="completed">Hoàn thành</Option>
+              <Option value="cancelled">Đã hủy</Option>
+              <Option value="using">Đang sạc</Option>
             </Select>
           </div>
 
@@ -216,12 +250,5 @@ const SessionHistory = () => {
     </div>
   );
 };
-
-// Add missing import
-const CheckCircle = ({ size, className }) => (
-  <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
 
 export default SessionHistory;

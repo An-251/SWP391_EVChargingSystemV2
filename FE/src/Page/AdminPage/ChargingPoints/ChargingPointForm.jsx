@@ -17,7 +17,7 @@ export default function ChargingPointForm({ chargingPoint, onSuccess, onCancel }
     connectorType: 'CCS',
     maxPower: '',
     pricePerKwh: '',
-    status: 'AVAILABLE',
+    status: 'active',
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -34,7 +34,7 @@ export default function ChargingPointForm({ chargingPoint, onSuccess, onCancel }
         connectorType: chargingPoint.connectorType || 'CCS',
         maxPower: chargingPoint.maxPower || chargingPoint.power || '',
         pricePerKwh: chargingPoint.pricePerKwh || '',
-        status: chargingPoint.status || 'AVAILABLE',
+        status: chargingPoint.status || 'active',
       });
     }
   }, [chargingPoint]);
@@ -70,7 +70,26 @@ export default function ChargingPointForm({ chargingPoint, onSuccess, onCancel }
         pricePerKwh: parseFloat(formData.pricePerKwh) 
       };
       if (chargingPoint) {
-        await dispatch(updateChargingPoint({ chargingPointId: chargingPoint.id, chargingPointData: submitData })).unwrap();
+        // Update charging point info (without status)
+        const { status, ...pointDataWithoutStatus } = submitData;
+        await dispatch(updateChargingPoint({ chargingPointId: chargingPoint.id, chargingPointData: pointDataWithoutStatus })).unwrap();
+        
+        // Update status separately if changed
+        if (status && status !== chargingPoint.status) {
+          try {
+            const api = (await import('../../../configs/config-axios')).default;
+            await api.post(`/status/point/${chargingPoint.id}`, { status });
+          } catch (statusError) {
+            // Extract error message from backend response
+            const errorMessage = statusError.response?.data?.message || 
+                                statusError.response?.data?.error || 
+                                'Cannot update status. This charging point may currently be in use.';
+            
+            // Show error notification
+            alert(`❌ Status Update Failed\n\n${errorMessage}`);
+            throw statusError; // Re-throw to prevent onSuccess
+          }
+        }
       } else {
         await dispatch(createChargingPoint(submitData)).unwrap();
       }
@@ -131,15 +150,27 @@ export default function ChargingPointForm({ chargingPoint, onSuccess, onCancel }
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-        <select name="status" value={formData.status} onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg">
-          <option value="AVAILABLE">Available</option>
-          <option value="IN_USE">In Use</option>
-          <option value="FAULTED">Error</option>
-          <option value="OFFLINE">Offline</option>
-        </select>
-      </div>
+      {/* Status (only for Edit mode) */}
+      {chargingPoint && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Status <span className="text-red-500">*</span>
+          </label>
+          <select
+            name="status"
+            value={formData.status}
+            onChange={handleChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="active">Active</option>
+            <option value="using">Using</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Note: Point auto-updates to "Using" when a session starts
+          </p>
+        </div>
+      )}
 
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
         <button type="button" onClick={onCancel} disabled={submitting} className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Cancel</button>

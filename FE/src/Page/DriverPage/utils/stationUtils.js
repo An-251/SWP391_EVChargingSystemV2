@@ -57,7 +57,7 @@ export const calculateSlots = (chargingPoints) => {
   }
   
   const available = chargingPoints.filter(
-    (cp) => cp.status === 'AVAILABLE'
+    (cp) => cp.status === 'ACTIVE'
   ).length;
   
   return {

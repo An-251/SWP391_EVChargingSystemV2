@@ -16,7 +16,7 @@ export default function FacilityForm({ facility, onSuccess, onCancel }) {
     district: '',
     city: '',
     description: '',
-    status: 'ACTIVE',
+    status: 'active',
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -30,7 +30,7 @@ export default function FacilityForm({ facility, onSuccess, onCancel }) {
         district: facility.district || '',
         city: facility.city || '',
         description: facility.description || '',
-        status: facility.status || 'ACTIVE',
+        status: facility.status || 'active',
       });
     }
   }, [facility]);
@@ -64,7 +64,26 @@ export default function FacilityForm({ facility, onSuccess, onCancel }) {
     setSubmitting(true);
     try {
       if (facility) {
-        await dispatch(updateFacility({ facilityId: facility.id, facilityData: formData })).unwrap();
+        // Update facility info (without status)
+        const { status, ...facilityDataWithoutStatus } = formData;
+        await dispatch(updateFacility({ facilityId: facility.id, facilityData: facilityDataWithoutStatus })).unwrap();
+        
+        // Update status separately if changed
+        if (status && status !== facility.status) {
+          try {
+            const api = (await import('../../../configs/config-axios')).default;
+            await api.post(`/status/facility/${facility.id}`, { status });
+          } catch (statusError) {
+            // Extract error message from backend response
+            const errorMessage = statusError.response?.data?.message || 
+                                statusError.response?.data?.error || 
+                                'Cannot update status. Please check if facility has active stations.';
+            
+            // Show error notification
+            alert(`❌ Status Update Failed\n\n${errorMessage}`);
+            throw statusError; // Re-throw to prevent onSuccess
+          }
+        }
       } else {
         await dispatch(createFacility(formData)).unwrap();
       }
@@ -200,36 +219,25 @@ export default function FacilityForm({ facility, onSuccess, onCancel }) {
             {errors.city && (
               <p className="mt-1 text-sm text-red-600">{errors.city}</p>
             )}
-          </div>      {/* Description */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Description
-        </label>
-        <textarea
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          rows={4}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          placeholder="Description about the facility..."
-        />
-      </div>
+          </div>      
 
-      {/* Status */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Status
-        </label>
-        <select
-          name="status"
-          value={formData.status}
-          onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        >
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-        </select>
-      </div>
+      {/* Status (only for Edit mode) */}
+      {facility && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Status <span className="text-red-500">*</span>
+          </label>
+          <select
+            name="status"
+            value={formData.status}
+            onChange={handleChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+      )}
 
       {/* Buttons */}
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">

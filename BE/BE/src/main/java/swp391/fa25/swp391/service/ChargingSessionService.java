@@ -40,7 +40,7 @@ public class ChargingSessionService implements IChargingSessionService {
     private static final BigDecimal KWH_PER_PERCENT = new BigDecimal("0.5"); // 0.5 kWh/1%
     private static final BigDecimal COST_PER_KWH = new BigDecimal("3000");   // 3,000 VND/kWh
 
-    // Status constants
+    // Status constants - CHỈ 3 TRẠNG THÁI: active, using, inactive
     private static final String STATUS_ACTIVE = "active";
     private static final String STATUS_USING = "using";
     private static final String STATUS_INACTIVE = "inactive";
@@ -54,8 +54,8 @@ public class ChargingSessionService implements IChargingSessionService {
         Driver driver = driverService.findById(request.getDriverId())
                 .orElseThrow(() -> new RuntimeException("Driver not found with ID: " + request.getDriverId()));
 
-        // Kiểm tra driver có session đang ACTIVE chưa
-        if (chargingSessionRepository.existsByDriverIdAndStatus(request.getDriverId(), "ACTIVE")) {
+        // Kiểm tra driver có session đang active chưa (session đang sạc = using)
+        if (chargingSessionRepository.existsByDriverIdAndStatus(request.getDriverId(), STATUS_USING)) {
             throw new RuntimeException("Driver already has an active charging session");
         }
 
@@ -94,7 +94,7 @@ public class ChargingSessionService implements IChargingSessionService {
         session.setChargingPoint(chargingPoint);
         session.setStartTime(LocalDateTime.now());
         session.setStartPercentage(request.getStartPercentage());
-        session.setStatus("ACTIVE");
+        session.setStatus(STATUS_USING); // Session đang sạc = using
         session.setKwhUsed(BigDecimal.ZERO);
         session.setCost(BigDecimal.ZERO);
         session.setOverusedTime(BigDecimal.ZERO);
@@ -117,7 +117,7 @@ public class ChargingSessionService implements IChargingSessionService {
         ChargingSession session = chargingSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Charging session not found with ID: " + sessionId));
 
-        if (!"ACTIVE".equalsIgnoreCase(session.getStatus())) {
+        if (!STATUS_USING.equalsIgnoreCase(session.getStatus())) {
             throw new RuntimeException("Can only stop active sessions");
         }
 
@@ -139,7 +139,7 @@ public class ChargingSessionService implements IChargingSessionService {
 
         session.setKwhUsed(kwhUsed);
         session.setCost(totalCost);
-        session.setStatus("COMPLETED");
+        session.setStatus(STATUS_INACTIVE); // Session kết thúc = inactive (có cost > 0)
 
         ChargingSession updatedSession = chargingSessionRepository.save(session);
 
@@ -171,11 +171,11 @@ public class ChargingSessionService implements IChargingSessionService {
         ChargingSession session = chargingSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Charging session not found with ID: " + sessionId));
 
-        if (!"ACTIVE".equalsIgnoreCase(session.getStatus())) {
+        if (!STATUS_USING.equalsIgnoreCase(session.getStatus())) {
             throw new RuntimeException("Can only cancel active sessions");
         }
 
-        session.setStatus("CANCELLED");
+        session.setStatus(STATUS_INACTIVE); // Session hủy = inactive (cost = 0)
         session.setEndTime(LocalDateTime.now());
         chargingSessionRepository.save(session);
 

@@ -10,7 +10,8 @@ import {
   clearError
 } from '../../../redux/admin/adminSlice';
 import { Zap, Plus, Edit, Trash2, X, Save } from 'lucide-react';
-import { message, Modal } from 'antd';
+import { message, Modal, Switch } from 'antd';
+import api from '../../../configs/config-axios';
 
 const ChargingPointsManagement = () => {
   const dispatch = useDispatch();
@@ -23,7 +24,6 @@ const ChargingPointsManagement = () => {
     connectorType: 'Type 2',
     maxPower: '',
     pricePerKwh: '',
-    status: 'AVAILABLE',
     station: null
   });
 
@@ -50,20 +50,18 @@ const ChargingPointsManagement = () => {
       setFormData({
         id: point.id,
         pointName: point.pointName || '',
-        connectorType: point.connectorType || 'Type 2',
+        connectorType: point.connectorType || '',
         maxPower: point.maxPower || '',
         pricePerKwh: point.pricePerKwh || '',
-        status: point.status || 'AVAILABLE',
         station: point.station?.id || null
       });
     } else {
       setEditMode(false);
       setFormData({
         pointName: '',
-        connectorType: 'Type 2',
+        connectorType: '',
         maxPower: '',
         pricePerKwh: '',
-        status: 'AVAILABLE',
         station: null
       });
     }
@@ -90,7 +88,6 @@ const ChargingPointsManagement = () => {
       connectorType: formData.connectorType,
       maxPower: parseFloat(formData.maxPower),  // Convert to BigDecimal
       pricePerKwh: parseFloat(formData.pricePerKwh),  // Convert to BigDecimal
-      status: formData.status,
       stationId: formData.station  // ✅ Flat stationId, not nested object
     };
 
@@ -113,12 +110,32 @@ const ChargingPointsManagement = () => {
     });
   };
 
+  const handleToggleStatus = async (pointId, currentStatus) => {
+    // Point can only be toggled between ACTIVE/INACTIVE by admin
+    // BE uses: ACTIVE, INACTIVE, USING
+    if (currentStatus === 'USING') {
+      message.error('Cannot change status while charging point is in use');
+      return;
+    }
+    
+    // Toggle between ACTIVE and INACTIVE
+    const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    
+    try {
+      await api.post(`/status/point/${pointId}`, { status: newStatus });
+      message.success(`Charging point status updated to ${newStatus}`);
+      dispatch(fetchChargingPoints({}));
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Failed to update charging point status';
+      message.error(errorMsg);
+    }
+  };
+
   const getStatusColor = (status) => {
     const colors = {
-      'AVAILABLE': 'bg-green-100 text-green-700',
-      'OCCUPIED': 'bg-yellow-100 text-yellow-700',
-      'MAINTENANCE': 'bg-red-100 text-red-700',
-      'OFFLINE': 'bg-gray-100 text-gray-700'
+      'ACTIVE': 'bg-green-100 text-green-700',
+      'INACTIVE': 'bg-gray-100 text-gray-700',
+      'USING': 'bg-blue-100 text-blue-700'
     };
     return colors[status] || 'bg-gray-100 text-gray-700';
   };
@@ -154,11 +171,14 @@ const ChargingPointsManagement = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-800">{point.pointName}</h3>
-                    <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(point.status)}`}>
-                      {point.status}
-                    </span>
                   </div>
                 </div>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(point.status)}`}>
+                  {point.status === 'ACTIVE' ? '● Active' : 
+                   point.status === 'INACTIVE' ? '● Inactive' :
+                   point.status === 'USING' ? '● Using' :
+                   point.status}
+                </span>
               </div>
 
               <div className="space-y-2 text-sm text-gray-600 mb-4">
@@ -168,21 +188,36 @@ const ChargingPointsManagement = () => {
                 <div><span className="font-medium">Station:</span> {point.station?.stationName || 'N/A'}</div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => handleOpenModal(point)}
-                  className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
-                >
-                  <Edit size={16} />
-                  <span>Edit</span>
-                </button>
-                <button
-                  onClick={() => handleDelete(point.id, point.pointName)}
-                  className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                >
-                  <Trash2 size={16} />
-                  <span>Delete</span>
-                </button>
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Status</span>
+                  <Switch
+                    checked={point.status === 'ACTIVE'}
+                    onChange={() => handleToggleStatus(point.id, point.status)}
+                    checkedChildren="Active"
+                    unCheckedChildren="Inactive"
+                    disabled={point.status === 'USING'}
+                  />
+                </div>
+                {point.status === 'USING' && (
+                  <p className="text-xs text-blue-600">⚠ Point is currently in use - cannot change status</p>
+                )}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleOpenModal(point)}
+                    className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                  >
+                    <Edit size={16} />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(point.id, point.pointName)}
+                    className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                    <span>Delete</span>
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -191,8 +226,8 @@ const ChargingPointsManagement = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
             <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-800">
                 {editMode ? 'Edit Charging Point' : 'Create New Charging Point'}
@@ -253,20 +288,6 @@ const ChargingPointsManagement = () => {
                     placeholder="e.g., 3500"
                     required
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="AVAILABLE">Available</option>
-                    <option value="OCCUPIED">Occupied</option>
-                    <option value="MAINTENANCE">Maintenance</option>
-                    <option value="OFFLINE">Offline</option>
-                  </select>
                 </div>
 
                 <div>

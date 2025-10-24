@@ -52,11 +52,14 @@ export default function SubscriptionList() {
     {
       key: 'status',
       label: 'Status',
-      render: (value) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${value === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-          {value === 'ACTIVE' ? 'Active' : 'Inactive'}
-        </span>
-      ),
+      render: (value) => {
+        const statusLower = (value || '').toLowerCase();
+        return (
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusLower === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+            {statusLower === 'active' ? 'Active' : 'Inactive'}
+          </span>
+        );
+      },
     },
   ];
 
