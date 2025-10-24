@@ -14,7 +14,8 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapPin, Plus, Edit, Trash2, X, Save, AlertCircle } from 'lucide-react';
-import { message, Modal } from 'antd';
+import { message, Modal, Switch } from 'antd';
+import api from '../../../configs/config-axios';
 
 // Custom marker icon
 const stationIcon = L.icon({
@@ -48,11 +49,12 @@ const StationsManagement = () => {
     stationName: '',
     latitude: null,
     longitude: null,
-    status: 'ACTIVE',
+    status: 'active',
     facility: null
   });
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [mapCenter, setMapCenter] = useState([10.7769, 106.7009]); // HCM City
+  const [hasChargingPointUsing, setHasChargingPointUsing] = useState(false);
 
   useEffect(() => {
     dispatch(fetchStations());
@@ -95,29 +97,46 @@ const StationsManagement = () => {
         setSelectedLocation({ lat: station.latitude, lng: station.longitude });
         setMapCenter([station.latitude, station.longitude]);
       }
+      
+      // Check if any charging point under this station is USING
+      const hasUsing = checkIfStationHasChargingPointUsing(station);
+      setHasChargingPointUsing(hasUsing);
     } else {
       setEditMode(false);
       setFormData({
         stationName: '',
         latitude: null,
         longitude: null,
-        status: 'ACTIVE',
+        status: 'active',
         facility: null
       });
       setSelectedLocation(null);
       setMapCenter([10.7769, 106.7009]);
+      setHasChargingPointUsing(false);
     }
     setShowModal(true);
+  };
+
+  const checkIfStationHasChargingPointUsing = (station) => {
+    // Check if station has any charging point in using status (Backend uses lowercase)
+    if (!station.chargingPoints || station.chargingPoints.length === 0) {
+      return false;
+    }
+    
+    return station.chargingPoints.some(point => 
+      point.status && point.status.toLowerCase() === 'using'
+    );
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
     setEditMode(false);
+    setHasChargingPointUsing(false);
     setFormData({
       stationName: '',
       latitude: null,
       longitude: null,
-      status: 'ACTIVE',
+      status: 'active',
       facility: null
     });
     setSelectedLocation(null);
@@ -159,6 +178,36 @@ const StationsManagement = () => {
     });
   };
 
+  const handleToggleStatus = async (stationId, currentStatus, station) => {
+    // Station can only be toggled between ACTIVE/INACTIVE by admin
+    // BE uses: ACTIVE, INACTIVE, USING
+    if (currentStatus === 'USING') {
+      message.warning('Cannot change status while station is in use');
+      return;
+    }
+    
+    // Check if any charging point is in use (USING status)
+    const hasPointInUse = station.chargingPoints?.some(point => 
+      point.status === 'USING'
+    );
+    if (hasPointInUse) {
+      message.error('Cannot change station status while charging points are in use');
+      return;
+    }
+    
+    // Toggle between ACTIVE and INACTIVE
+    const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    
+    try {
+      await api.post(`/status/station/${stationId}`, { status: newStatus });
+      message.success(`Station status updated to ${newStatus}`);
+      dispatch(fetchStations({}));
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Failed to update station status';
+      message.error(errorMsg);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -190,18 +239,22 @@ const StationsManagement = () => {
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <MapPin className="text-green-600" size={24} />
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Battery className="text-blue-600" size={24} />
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-800">{station.stationName}</h3>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      station.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {station.status}
-                    </span>
                   </div>
                 </div>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  station.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 
+                  station.status === 'USING' ? 'bg-blue-100 text-blue-700' : 
+                  'bg-gray-100 text-gray-700'
+                }`}>
+                  {station.status === 'ACTIVE' ? '● Active' : 
+                   station.status === 'USING' ? '● Using' : 
+                   '● Inactive'}
+                </span>
               </div>
 
               <div className="space-y-2 text-sm text-gray-600 mb-4">
@@ -219,21 +272,42 @@ const StationsManagement = () => {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => handleOpenModal(station)}
-                  className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
-                >
-                  <Edit size={16} />
-                  <span>Edit</span>
-                </button>
-                <button
-                  onClick={() => handleDelete(station.id)}
-                  className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                >
-                  <Trash2 size={16} />
-                  <span>Delete</span>
-                </button>
+              <div className="space-y-2 pt-2 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Status</span>
+                  <Switch
+                    checked={station.status === 'ACTIVE'}
+                    onChange={() => handleToggleStatus(station.id, station.status, station)}
+                    checkedChildren="Active"
+                    unCheckedChildren="Inactive"
+                    disabled={
+                      station.status === 'USING' || 
+                      station.chargingPoints?.some(point => point.status === 'USING')
+                    }
+                  />
+                </div>
+                {station.status === 'USING' && (
+                  <p className="text-xs text-blue-600">● Station is currently in use</p>
+                )}
+                {station.chargingPoints?.some(point => point.status === 'IN_USE' || point.status === 'OCCUPIED') && station.status !== 'USING' && (
+                  <p className="text-xs text-orange-600">⚠ Some charging points are in use - cannot change status</p>
+                )}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleOpenModal(station)}
+                    className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                  >
+                    <Edit size={16} />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(station.id)}
+                    className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                    <span>Delete</span>
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -250,8 +324,8 @@ const StationsManagement = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-800">
                 {editMode ? 'Edit Station' : 'Create New Station'}
@@ -287,12 +361,21 @@ const StationsManagement = () => {
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    disabled={editMode && hasChargingPointUsing}
+                    className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                      editMode && hasChargingPointUsing ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+                    }`}
                   >
-                    <option value="ACTIVE">Active</option>
-                    <option value="INACTIVE">Inactive</option>
-                    <option value="MAINTENANCE">Maintenance</option>
+                    <option value="active">Active</option>
+                    <option value="using">Using</option>
+                    <option value="inactive">Inactive</option>
                   </select>
+                  {editMode && hasChargingPointUsing && (
+                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                      <AlertCircle size={14} />
+                      Cannot change status while charging points are in use
+                    </p>
+                  )}
                 </div>
 
                 <div>
