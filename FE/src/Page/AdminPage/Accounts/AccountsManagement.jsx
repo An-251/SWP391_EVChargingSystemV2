@@ -74,7 +74,16 @@ const AccountsManagement = () => {
 
   const handleSubmitEdit = (e) => {
     e.preventDefault();
-    dispatch(updateAccount({ id: editFormData.id, data: editFormData }));
+    dispatch(updateAccount({ accountId: editFormData.id, accountData: editFormData }))
+      .unwrap()
+      .then(() => {
+        setShowEditModal(false);
+        message.success('Account updated successfully!');
+        dispatch(fetchAccounts({ page: currentPage, size: pageSize, search: searchQuery, role: filterRole }));
+      })
+      .catch((error) => {
+        message.error(error || 'Failed to update account');
+      });
   };
 
   const getRoleBadgeColor = (role) => {
@@ -223,7 +232,7 @@ const AccountsManagement = () => {
       {/* Edit Modal */}
       {showEditModal && editFormData && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-800">Edit Account</h2>
               <button
@@ -298,9 +307,8 @@ const AccountsManagement = () => {
                     onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
-                    <option value="ACTIVE">Active</option>
-                    <option value="INACTIVE">Inactive</option>
-                    <option value="SUSPENDED">Suspended</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
                   </select>
                 </div>
 

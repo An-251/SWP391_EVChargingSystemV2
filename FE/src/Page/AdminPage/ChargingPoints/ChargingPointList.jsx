@@ -36,11 +36,11 @@ export default function ChargingPointList() {
 
   const columns = [
     { key: 'id', label: 'ID', sortable: true },
-    { key: 'name', label: 'Charging Point Name', sortable: true },
+    { key: 'pointName', label: 'Charging Point Name', sortable: true },
     {
       key: 'stationName',
       label: 'Station',
-      render: (_, row) => row.station?.name || 'N/A',
+      sortable: true
     },
     {
       key: 'connectorType',
@@ -48,7 +48,7 @@ export default function ChargingPointList() {
       render: (value) => <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">{value}</span>,
     },
     {
-      key: 'power',
+      key: 'maxPower',
       label: 'Power',
       render: (value) => `${value} kW`,
     },
@@ -60,11 +60,22 @@ export default function ChargingPointList() {
     {
       key: 'status',
       label: 'Status',
-      render: (value) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${value === 'AVAILABLE' ? 'bg-green-100 text-green-700' : value === 'IN_USE' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
-          {value === 'AVAILABLE' ? 'Available' : value === 'IN_USE' ? 'In Use' : 'Error'}
-        </span>
-      ),
+      render: (value) => {
+        const statusLower = (value || '').toLowerCase();
+        return (
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-medium ${
+              statusLower === 'active'
+                ? 'bg-green-100 text-green-700'
+                : statusLower === 'using'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-red-100 text-red-700'
+            }`}
+          >
+            {statusLower === 'active' ? 'Active' : statusLower === 'using' ? 'Using' : 'Inactive'}
+          </span>
+        );
+      },
     },
   ];
 

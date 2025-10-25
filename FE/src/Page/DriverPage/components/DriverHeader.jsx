@@ -5,7 +5,9 @@ import {
   RefreshCw, 
   User, 
   LogOut,
-  Car 
+  Car,
+  History,
+  Home
 } from 'lucide-react';
 
 const DriverHeader = ({ 
@@ -19,8 +21,16 @@ const DriverHeader = ({
   onNavigateToVehicles,
   onLogout 
 }) => {
+  
+  const handleNavigateToHistory = () => {
+    window.location.href = '/driver/history';
+  };
+  
+  const handleNavigateToHome = () => {
+    window.location.href = '/driver';
+  };
   return (
-    <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+    <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-[1000]">
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -33,36 +43,80 @@ const DriverHeader = ({
             </div>
           </div>
           
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            {/* Home Icon */}
+            <button
+              onClick={handleNavigateToHome}
+              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors group relative"
+              title="Trang chủ"
+            >
+              <Home className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
+              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                Trang chủ
+              </span>
+            </button>
+            
+            {/* Refresh Button */}
             <button
               onClick={onRefreshStations}
               disabled={stationLoading}
-              className="flex items-center space-x-1 bg-gray-100 px-3 py-2 rounded-full hover:bg-gray-200 transition-colors disabled:opacity-50"
+              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 group relative"
+              title="Cập nhật trạm sạc"
             >
-              <RefreshCw className={`w-4 h-4 text-gray-600 ${stationLoading ? 'animate-spin' : ''}`} />
-              <span className="text-sm font-medium text-gray-700">Cập nhật</span>
+              <RefreshCw className={`w-5 h-5 text-gray-600 group-hover:text-gray-900 ${stationLoading ? 'animate-spin' : ''}`} />
+              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                Cập nhật
+              </span>
             </button>
             
-            <div className="flex items-center space-x-1 bg-green-100 px-3 py-1 rounded-full">
-              <Battery className="w-4 h-4 text-green-600" />
-              <span className="text-sm font-medium text-green-700">85%</span>
-            </div>
+            {/* History Icon */}
+            <button
+              onClick={handleNavigateToHistory}
+              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors group relative"
+              title="Lịch sử sạc"
+            >
+              <History className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
+              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                Lịch sử
+              </span>
+            </button>
+            
+            {/* Vehicles Icon */}
+            <button
+              onClick={onNavigateToVehicles}
+              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors group relative"
+              title="Phương tiện của tôi"
+            >
+              <Car className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
+              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                Phương tiện
+              </span>
+            </button>
+              
             
             {/* Profile Menu */}
-            <div className="relative profile-menu">
+            <div className="relative profile-menu ml-2">
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center space-x-2 p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors group relative"
+                title="Tài khoản"
               >
-                <User className="w-5 h-5 text-gray-600" />
+                <User className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
+                <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                  Tài khoản
+                </span>
               </button>
               
               {showProfileMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 z-[9999]">
                   <div className="p-3 border-b border-gray-200">
                     <p className="text-sm font-medium text-gray-900">{user?.fullName || user?.username}</p>
                     <p className="text-xs text-gray-500">{user?.email}</p>
-                    <p className="text-xs text-green-600 font-medium">{user?.role}</p>
+                    <p className="text-xs text-green-600 font-medium mt-1">
+                      <span className="inline-block px-2 py-0.5 bg-green-100 rounded">
+                        {user?.role || 'DRIVER'}
+                      </span>
+                    </p>
                   </div>
                   <div className="p-1">
                     <button
@@ -71,13 +125,6 @@ const DriverHeader = ({
                     >
                       <User className="w-4 h-4" />
                       <span>Thông tin cá nhân</span>
-                    </button>
-                    <button
-                      onClick={onNavigateToVehicles}
-                      className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                    >
-                      <Car className="w-4 h-4" />
-                      <span>Phương tiện của tôi</span>
                     </button>
                     <button
                       onClick={onLogout}

@@ -107,15 +107,15 @@ function DriverMap() {
       if (!hasRequiredPower) return false;
     }
 
-    // Filter by availability
+    // Filter by availability (Backend uses lowercase status)
     if (filters.availability === 'available') {
       const hasAvailable = station.chargingPoints?.some(
-        (cp) => cp.status === 'AVAILABLE'
+        (cp) => cp.status === 'active'
       );
       if (!hasAvailable) return false;
     } else if (filters.availability === 'busy') {
       const allBusy = station.chargingPoints?.every(
-        (cp) => cp.status !== 'AVAILABLE'
+        (cp) => cp.status !== 'active'
       );
       if (!allBusy) return false;
     }
@@ -295,7 +295,7 @@ function DriverMap() {
         {/* Charging station markers */}
         {filteredStations.map((station) => {
           const availableCount = station.chargingPoints?.filter(
-            (cp) => cp.status === 'AVAILABLE'
+            (cp) => cp.status === 'active'
           ).length || 0;
 
           return (

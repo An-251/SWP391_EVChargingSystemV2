@@ -101,10 +101,10 @@ const StationCard = ({ station, isSelected, onSelect, onBook, userLocation }) =>
       status: cp.status
     })));
     
-    // Check multiple status formats
+    // Check multiple status formats (Backend uses lowercase)
     const available = station.chargingPoints.filter(cp => {
-      const status = (cp.status || '').toUpperCase();
-      return status === 'AVAILABLE' || status === 'ONLINE';
+      const status = (cp.status || '').toLowerCase();
+      return status === 'active' ;
     }).length;
     
     console.log('✅ [getSlots] Result:', { available, total: station.chargingPoints.length });

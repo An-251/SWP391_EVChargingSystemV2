@@ -8,8 +8,9 @@ import {
   clearSuccess,
   clearError
 } from '../../../redux/admin/adminSlice';
-import { Building2, Plus, Edit, Trash2, X, Save, MapPin } from 'lucide-react';
-import { message, Modal } from 'antd';
+import { Building2, Plus, Edit, Trash2, X, Save, MapPin, Power, PowerOff, AlertCircle } from 'lucide-react';
+import { message, Modal, Switch } from 'antd';
+import api from '../../../configs/config-axios';
 
 const FacilitiesManagement = () => {
   const dispatch = useDispatch();
@@ -22,9 +23,11 @@ const FacilitiesManagement = () => {
     city: '',
     district: '',
     ward: '',
-    streetAddress: ''
+    streetAddress: '',
+    status: 'active'
   });
   const [currentFacilityId, setCurrentFacilityId] = useState(null);
+  const [hasChargingPointUsing, setHasChargingPointUsing] = useState(false);
 
   // Fetch facilities on mount
   useEffect(() => {
@@ -52,8 +55,13 @@ const FacilitiesManagement = () => {
         city: facility.city || '',
         district: facility.district || '',
         ward: facility.ward || '',
-        streetAddress: facility.streetAddress || ''
+        streetAddress: facility.streetAddress || '',
+        status: facility.status || 'ACTIVE'
       });
+      
+      // Check if any charging point under this facility is USING
+      const hasUsing = checkIfFacilityHasChargingPointUsing(facility);
+      setHasChargingPointUsing(hasUsing);
     } else {
       setEditMode(false);
       setCurrentFacilityId(null);
@@ -62,22 +70,42 @@ const FacilitiesManagement = () => {
         city: '',
         district: '',
         ward: '',
-        streetAddress: ''
+        streetAddress: '',
+        status: 'active'
       });
+      setHasChargingPointUsing(false);
     }
     setShowModal(true);
+  };
+
+  const checkIfFacilityHasChargingPointUsing = (facility) => {
+    // Check if facility has any station with charging points in using status (Backend uses lowercase)
+    if (!facility.chargingStations || facility.chargingStations.length === 0) {
+      return false;
+    }
+    
+    return facility.chargingStations.some(station => {
+      if (!station.chargingPoints || station.chargingPoints.length === 0) {
+        return false;
+      }
+      return station.chargingPoints.some(point => 
+        point.status && point.status.toLowerCase() === 'using'
+      );
+    });
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
     setEditMode(false);
     setCurrentFacilityId(null);
+    setHasChargingPointUsing(false);
     setFormData({
       name: '',
       city: '',
       district: '',
       ward: '',
-      streetAddress: ''
+      streetAddress: '',
+      status: 'active'
     });
   };
 
@@ -140,6 +168,23 @@ const FacilitiesManagement = () => {
     });
   };
 
+  const handleToggleStatus = async (facilityId, currentStatus, facility) => {
+    // Facility uses ACTIVE/INACTIVE status
+    const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    
+    // Note: BE will validate if any station/point is USING before allowing status change
+    // Frontend shows the error message returned from BE
+    
+    try {
+      await api.post(`/status/facility/${facilityId}`, { status: newStatus });
+      message.success(`Facility status updated to ${newStatus}`);
+      dispatch(fetchFacilities());
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Failed to update facility status';
+      message.error(errorMsg);
+    }
+  };
+
   // Ensure facilities is array
   const facilitiesList = Array.isArray(facilities) ? facilities : [];
 
@@ -185,6 +230,11 @@ const FacilitiesManagement = () => {
                     </div>
                   </div>
                 </div>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  facility.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                }`}>
+                  {facility.status === 'ACTIVE' ? '● Active' : '● Inactive'}
+                </span>
               </div>
 
               <div className="space-y-3 mb-4">
@@ -201,21 +251,32 @@ const FacilitiesManagement = () => {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2 pt-4 border-t border-gray-100">
-                <button
-                  onClick={() => handleOpenModal(facility)}
-                  className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
-                >
-                  <Edit size={16} />
-                  <span>Edit</span>
-                </button>
-                <button
-                  onClick={() => handleDelete(facility.id)}
-                  className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                >
-                  <Trash2 size={16} />
-                  <span>Delete</span>
-                </button>
+              <div className="space-y-2 pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Status</span>
+                  <Switch
+                    checked={facility.status === 'ACTIVE'}
+                    onChange={() => handleToggleStatus(facility.id, facility.status, facility)}
+                    checkedChildren="Active"
+                    unCheckedChildren="Inactive"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleOpenModal(facility)}
+                    className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                  >
+                    <Edit size={16} />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(facility.id)}
+                    className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                    <span>Delete</span>
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -239,8 +300,8 @@ const FacilitiesManagement = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-800">
                 {editMode ? 'Edit Facility' : 'Create New Facility'}
@@ -331,6 +392,33 @@ const FacilitiesManagement = () => {
                   Complete address format: Street, Ward, District, City
                 </p>
               </div>
+
+              {/* Status - Only in Edit Mode */}
+              {editMode && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status *
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    disabled={hasChargingPointUsing}
+                    className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      hasChargingPointUsing ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+                    }`}
+                  >
+                    <option value="active">Active</option>
+                    <option value="using">Using</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                  {hasChargingPointUsing && (
+                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                      <AlertCircle size={14} />
+                      Cannot change status while charging points are in use
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">

@@ -136,9 +136,9 @@ const BookingModal = ({ visible, onClose, station, userLocation }) => {
     return station.address || facility?.address || facility?.fullAddress || 'Chưa có địa chỉ';
   };
 
-  // Get available charging points (status = AVAILABLE)
+  // Get available charging points (status = active, Backend uses lowercase)
   const availablePoints = station?.chargingPoints?.filter(
-    (point) => point.status === 'AVAILABLE'
+    (point) => point.status === 'active'
   ) || [];
 
   if (!station) return null;

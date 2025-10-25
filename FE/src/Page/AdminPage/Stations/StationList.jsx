@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchStations, deleteStation, fetchFacilities, clearNotification } from '../../../redux/admin/adminSlice';
 import { AdminTable, AdminModal, AdminSearchBar, AdminLoader } from '../../../Components/Admin';
 import StationForm from './StationForm';
+import { s } from 'framer-motion/client';
 
 export default function StationList() {
   const dispatch = useDispatch();
@@ -84,7 +85,7 @@ export default function StationList() {
       sortable: true,
     },
     {
-      key: 'name',
+      key: 'stationName',
       label: 'Station Name',
       sortable: true,
     },
@@ -96,24 +97,31 @@ export default function StationList() {
     {
       key: 'address',
       label: 'Address',
+      render: (value, row) => row.facility?.address || 'N/A',
     },
     {
       key: 'status',
       label: 'Status',
-      render: (value) => (
-        <span
-          className={`px-2 py-1 rounded-full text-xs font-medium ${
-            value === 'ONLINE'
-              ? 'bg-green-100 text-green-700'
-              : 'bg-gray-100 text-gray-700'
-          }`}
-        >
-          {value === 'ONLINE' ? 'Online' : 'Offline'}
-        </span>
-      ),
+      render: (value) => {
+        const statusLower = (value || '').toLowerCase();
+        return (
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-medium ${
+              statusLower === 'active'
+                ? 'bg-green-100 text-green-700'
+                : statusLower === 'using'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-red-100 text-red-700'
+            }`}
+          >
+            {statusLower === 'active' ? 'Active' : statusLower === 'using' ? 'Using' : 'Inactive'}
+          </span>
+        );
+      },
     },
+
     {
-      key: 'chargingPointCount',
+      key: 'pointCount',
       label: 'Charging Points',
       render: (value) => <span className="font-medium text-blue-600">{value || 0}</span>,
     },

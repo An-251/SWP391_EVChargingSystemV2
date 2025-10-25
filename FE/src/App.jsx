@@ -16,6 +16,7 @@ import DriverProfile from "./Page/DriverPage/DriverProfile";
 import DriverVehicles from "./Page/DriverPage/DriverVehicles";
 import ActiveSession from "./Page/DriverPage/DriverSession/ActiveSession";
 import SessionHistory from "./Page/DriverPage/DriverSession/SessionHistory";
+import SessionCompleted from "./Page/DriverPage/DriverSession/SessionCompleted";
 import InvoicePayment from "./Page/DriverPage/DriverInvoice/InvoicePayment";
 import RoleBasedRoute from "./Components/RoleBasedRoute";
 import AdminLayout from "./Layout/Admin/AdminLayout";
@@ -179,6 +180,26 @@ function App() {
                     style={{ minHeight: "100vh" }}
                   >
                     <SessionHistory />
+                  </motion.div>
+                </ErrorBoundary>
+              </RoleBasedRoute>
+            } 
+          />
+
+          {/* Driver Session Completed Route - Protected */}
+          <Route 
+            path="/driver/session/:sessionId/completed" 
+            element={
+              <RoleBasedRoute allowedRoles={["Driver"]}>
+                <ErrorBoundary>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.5 }}
+                    style={{ minHeight: "100vh" }}
+                  >
+                    <SessionCompleted />
                   </motion.div>
                 </ErrorBoundary>
               </RoleBasedRoute>

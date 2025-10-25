@@ -17,7 +17,7 @@ export default function StationForm({ station, onSuccess, onCancel }) {
     facilityId: '',
     latitude: '',
     longitude: '',
-    status: 'ONLINE',
+    status: 'active',
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -33,7 +33,7 @@ export default function StationForm({ station, onSuccess, onCancel }) {
         facilityId: station.facilityId || station.facility?.id || '',
         latitude: station.latitude || '',
         longitude: station.longitude || '',
-        status: station.status || 'ONLINE',
+        status: station.status || 'active',
       });
     }
   }, [station]);
@@ -87,7 +87,26 @@ export default function StationForm({ station, onSuccess, onCancel }) {
       };
 
       if (station) {
-        await dispatch(updateStation({ stationId: station.id, stationData: submitData })).unwrap();
+        // Update station info (without status)
+        const { status, ...stationDataWithoutStatus } = submitData;
+        await dispatch(updateStation({ stationId: station.id, stationData: stationDataWithoutStatus })).unwrap();
+        
+        // Update status separately if changed
+        if (status && status !== station.status) {
+          try {
+            const api = (await import('../../../configs/config-axios')).default;
+            await api.post(`/status/station/${station.id}`, { status });
+          } catch (statusError) {
+            // Extract error message from backend response
+            const errorMessage = statusError.response?.data?.message || 
+                                statusError.response?.data?.error || 
+                                'Cannot update status. The station or its charging points may be in use.';
+            
+            // Show error notification
+            alert(`❌ Status Update Failed\n\n${errorMessage}`);
+            throw statusError; // Re-throw to prevent onSuccess
+          }
+        }
       } else {
         await dispatch(createStation(submitData)).unwrap();
       }
@@ -179,16 +198,22 @@ export default function StationForm({ station, onSuccess, onCancel }) {
 
       {/* Status */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Status <span className="text-red-500">*</span>
+        </label>
         <select
           name="status"
           value={formData.status}
           onChange={handleChange}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         >
-          <option value="ONLINE">Online</option>
-          <option value="OFFLINE">Offline</option>
+          <option value="active">Active</option>
+          <option value="using">Using</option>
+          <option value="inactive">Inactive</option>
         </select>
+        <p className="text-xs text-gray-500 mt-1">
+          Note: Station auto-updates to "Using" when all points are in use
+        </p>
       </div>
 
       {/* Buttons */}

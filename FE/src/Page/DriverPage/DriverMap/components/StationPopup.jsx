@@ -10,9 +10,7 @@ const StationPopup = ({ station, onBook, onGetDirections, onToggleFavorite, isFa
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'active':
-        return 'text-green-600 bg-green-100';
-      case 'maintenance':
-        return 'text-yellow-600 bg-yellow-100';
+        return 'text-green-600 bg-green-100'; 
       case 'inactive':
         return 'text-gray-600 bg-gray-100';
       default:
@@ -20,9 +18,9 @@ const StationPopup = ({ station, onBook, onGetDirections, onToggleFavorite, isFa
     }
   };
 
-  // Get available slots count
+  // Get available slots count (Backend uses lowercase status)
   const availableSlots = station.chargingPoints?.filter(
-    point => point.status === 'AVAILABLE'
+    point => point.status === 'active'
   ).length || 0;
   
   const totalSlots = station.chargingPoints?.length || 0;
