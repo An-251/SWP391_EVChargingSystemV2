@@ -77,8 +77,8 @@ public class AdminAccountController {
                 .phone(account.getPhone())
                 .dob(account.getDob())
                 .gender(account.getGender())
-                .status(account.getStatus())
-                .balance(account.getBalance());
+                .status(account.getStatus());
+
 
         // Add driver ID if account is a driver
         if (account.getDriver() != null) {

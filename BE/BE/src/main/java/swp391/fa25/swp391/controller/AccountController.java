@@ -187,7 +187,7 @@ public class AccountController {
                 .gender(account.getGender())
                 .dob(account.getDob())
                 .role(account.getAccountRole())
-                .balance(account.getBalance())
+
                 .status(account.getStatus())
                 .driverId(driverId)
                 .build();
