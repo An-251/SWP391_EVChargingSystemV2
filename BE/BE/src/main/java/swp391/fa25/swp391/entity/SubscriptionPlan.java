@@ -39,6 +39,14 @@ public class SubscriptionPlan {
     @Column(name = "DESCRIPTION", columnDefinition = "nvarchar(max)")
     private String description;
 
+
+    @Column(name = "IS_DEFAULT")
+    private Boolean isDefault = false;
+
+
+    @Column(name = "DISCOUNT_RATE", precision = 5, scale = 2)
+    private BigDecimal discountRate; // VD: 10.00 = 10% discount
+
     @OneToMany(mappedBy = "plan")
     private List<PlanRegistration> planRegistrations = new ArrayList<>();
 
