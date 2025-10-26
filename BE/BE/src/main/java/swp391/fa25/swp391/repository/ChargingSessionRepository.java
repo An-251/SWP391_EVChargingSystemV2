@@ -21,9 +21,7 @@ import java.util.Optional;
 @Repository
 public interface ChargingSessionRepository extends JpaRepository<ChargingSession, Integer> {
 
-    // ============================================
-    // SIMPLE QUERIES - Spring tự động generate
-    // ============================================
+
 
     /**
      * Tìm tất cả sessions của driver, sắp xếp theo thời gian mới nhất
@@ -35,15 +33,7 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
      */
     List<ChargingSession> findByStatus(String status);
 
-    /**
-     * Tìm sessions theo charging point
-     */
-    List<ChargingSession> findByChargingPointId(Integer chargingPointId);
 
-    /**
-     * Tìm sessions theo vehicle
-     */
-    List<ChargingSession> findByVehicleId(Integer vehicleId);
 
     /**
      * Đếm số sessions theo status
@@ -56,19 +46,11 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
     Boolean existsByDriverIdAndStatus(Integer driverId, String status);
 
     /**
-     * Pagination theo status
-     */
-    Page<ChargingSession> findByStatus(String status, Pageable pageable);
-
-    /**
      * Pagination theo driver
      */
     Page<ChargingSession> findByDriverIdOrderByStartTimeDesc(Integer driverId, Pageable pageable);
 
 
-    // ============================================
-    // CUSTOM QUERIES - Viết bằng JPQL
-    // ============================================
 
     /**
      * Tìm session ĐANG ACTIVE của driver (status = using)
@@ -86,17 +68,6 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
             "WHERE cs.chargingPoint.id = :chargingPointId AND cs.status = 'using'")
     Optional<ChargingSession> findActiveSessionByChargingPointId(@Param("chargingPointId") Integer chargingPointId);
 
-    /**
-     * Tìm sessions hoàn thành trong khoảng thời gian
-     * Dùng cho báo cáo, thống kê
-     */
-//    @Query("SELECT cs FROM ChargingSession cs " +
-//            "WHERE cs.status = 'COMPLETED' " +
-//            "AND cs.startTime BETWEEN :startDate AND :endDate " +
-//            "ORDER BY cs.startTime DESC")
-//    List<ChargingSession> findCompletedSessionsBetween(
-//            @Param("startDate") LocalDateTime startDate,
-//            @Param("endDate") LocalDateTime endDate);
 
     /**
      * Tính tổng doanh thu của driver (chỉ session đã kết thúc = inactive với cost > 0)
@@ -105,40 +76,15 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
             "WHERE cs.driver.id = :driverId AND cs.status = 'inactive'")
     BigDecimal calculateTotalCostByDriver(@Param("driverId") Integer driverId);
 
-    /**
-     * Tính tổng kWh đã sử dụng tại charging point
-     */
-//    @Query("SELECT COALESCE(SUM(cs.kwhUsed), 0) FROM ChargingSession cs " +
-//            "WHERE cs.chargingPoint.id = :chargingPointId AND cs.status = 'COMPLETED'")
-//    BigDecimal calculateTotalKwhByChargingPoint(@Param("chargingPointId") Integer chargingPointId);
+// Thêm vào interface ChargingSessionRepository
 
-    /**
-     * Thống kê theo charging point trong khoảng thời gian
-     * Trả về: [pointId, pointName, sessionCount, totalKwh, totalRevenue]
-     */
-//    @Query("SELECT cs.chargingPoint.id, cs.chargingPoint.pointName, " +
-//            "COUNT(cs), COALESCE(SUM(cs.kwhUsed), 0), COALESCE(SUM(cs.cost), 0) " +
-//            "FROM ChargingSession cs " +
-//            "WHERE cs.status = 'COMPLETED' " +
-//            "AND cs.startTime BETWEEN :startDate AND :endDate " +
-//            "GROUP BY cs.chargingPoint.id, cs.chargingPoint.pointName " +
-//            "ORDER BY COUNT(cs) DESC")
-//    List<Object[]> getChargingPointStatistics(
-//            @Param("startDate") LocalDateTime startDate,
-//            @Param("endDate") LocalDateTime endDate);
 
-    /**
-     * Lấy sessions gần đây với eager loading để tránh N+1 query
-     * Fetch join các entity liên quan
-     */
-//    @Query("SELECT cs FROM ChargingSession cs " +
-//            "LEFT JOIN FETCH cs.driver " +
-//            "LEFT JOIN FETCH cs.vehicle " +
-//            "LEFT JOIN FETCH cs.chargingPoint cp " +
-//            "LEFT JOIN FETCH cp.station " +
-//            "WHERE cs.driver.id = :driverId " +
-//            "ORDER BY cs.startTime DESC")
-//    List<ChargingSession> findRecentSessionsWithDetails(
-//            @Param("driverId") Integer driverId,
-//            Pageable pageable);
+    @Query("SELECT cs FROM ChargingSession cs WHERE cs.driver.id = :driverId " +
+            "AND cs.startTime >= :startDate AND cs.startTime <= :endDate " +
+            "AND cs.status = 'inactive' AND cs.cost > 0")
+    List<ChargingSession> findCompletedSessionsByDriverAndDateRange(
+            @Param("driverId") Integer driverId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
 }
