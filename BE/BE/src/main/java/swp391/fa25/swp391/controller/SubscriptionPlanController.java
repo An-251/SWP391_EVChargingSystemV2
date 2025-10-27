@@ -48,6 +48,8 @@ public class SubscriptionPlanController {
         plan.setPrice(request.getPrice());
         plan.setValidityDays(request.getValidityDays());
         plan.setDescription(request.getDescription());
+        plan.setDiscountRate(request.getDiscountRate());
+        plan.setIsDefault(request.getIsDefault());
         return plan;
     }
 
@@ -60,6 +62,8 @@ public class SubscriptionPlanController {
         plan.setPrice(request.getPrice());
         plan.setValidityDays(request.getValidityDays());
         plan.setDescription(request.getDescription());
+        plan.setDiscountRate(request.getDiscountRate());
+        plan.setIsDefault(request.getIsDefault());
     }
 
     // ==================== CONTROLLER ENDPOINTS ====================
