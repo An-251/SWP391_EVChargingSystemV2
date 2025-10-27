@@ -27,8 +27,14 @@ public class SubscriptionPlanRequest {
 
     @NotBlank(message = "Validity days is required")
     @Size(max = 100, message = "Validity days description cannot exceed 100 characters")
-    private String validityDays; // Lưu ý: Entity của bạn là String, nên giữ nguyên String cho DTO
+    private String validityDays;
 
-    @Size(max = 4000, message = "Description cannot exceed 4000 characters") // Giả sử nvarchar(max) là 4000
+    @Size(max = 4000, message = "Description cannot exceed 4000 characters")
     private String description;
+
+    // ⭐ THÊM 2 FIELDS mới
+    private Boolean isDefault; // Admin đánh dấu gói Basic
+
+    @PositiveOrZero(message = "Discount rate must be non-negative")
+    private BigDecimal discountRate; // Admin nhập % discount (VD: 10 = 10%)
 }
