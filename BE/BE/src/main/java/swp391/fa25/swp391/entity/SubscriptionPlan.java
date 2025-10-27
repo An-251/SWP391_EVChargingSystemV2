@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.Nationalized;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -14,6 +15,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Slf4j
 public class SubscriptionPlan {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -52,4 +54,15 @@ public class SubscriptionPlan {
 
     @OneToMany(mappedBy = "subscriptionPlan", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<PlanBenefit> benefits = new ArrayList<>();
+
+    public int getDurationDays() {
+        try {
+            // Lấy trường "validityDays" (là String) và chuyển nó thành int
+            return Integer.parseInt(this.validityDays);
+        } catch (NumberFormatException e) {
+            // Xử lý nếu dữ liệu trong DB không phải là số (VD: "30 ngay")
+            log.error("Invalid validityDays format for plan {}: {}", this.id, this.validityDays);
+            return 0; // Trả về 0 nếu lỗi
+        }
+    }
 }
