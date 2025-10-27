@@ -34,6 +34,8 @@ public class SubscriptionPlanController {
                 .price(plan.getPrice())
                 .validityDays(plan.getValidityDays())
                 .description(plan.getDescription())
+                .isDefault(plan.getIsDefault()) // ⭐ THÊM
+                .discountRate(plan.getDiscountRate()) // ⭐ THÊM
                 .totalRegistrations(plan.getPlanRegistrations() != null ? plan.getPlanRegistrations().size() : 0)
                 .build();
     }
