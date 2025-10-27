@@ -18,7 +18,9 @@ import ActiveSession from "./Page/DriverPage/DriverSession/ActiveSession";
 import SessionHistory from "./Page/DriverPage/DriverSession/SessionHistory";
 import SessionCompleted from "./Page/DriverPage/DriverSession/SessionCompleted";
 import InvoicePayment from "./Page/DriverPage/DriverInvoice/InvoicePayment";
+import SubscriptionSelectionPage from "./Page/DriverPage/SubscriptionSelection/SubscriptionSelectionPage";
 import RoleBasedRoute from "./Components/RoleBasedRoute";
+import SubscriptionGuard from "./Components/SubscriptionGuard";
 import AdminLayout from "./Layout/Admin/AdminLayout";
 import { 
   Dashboard,
@@ -86,142 +88,176 @@ function App() {
             }
           />
 
-          {/* Driver Routes - Protected */}
+          {/* Subscription Selection Route - Protected but not guarded */}
+          <Route 
+            path="/driver/select-subscription" 
+            element={
+              <RoleBasedRoute allowedRoles={["Driver"]}>
+                <ErrorBoundary>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.5 }}
+                    style={{ minHeight: "100vh" }}
+                  >
+                    <SubscriptionSelectionPage />
+                  </motion.div>
+                </ErrorBoundary>
+              </RoleBasedRoute>
+            } 
+          />
+
+          {/* Driver Routes - Protected and Subscription Guarded */}
           <Route 
             path="/driver" 
             element={
               <RoleBasedRoute allowedRoles={["Driver"]}>
-                <ErrorBoundary>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.5 }}
-                    style={{ minHeight: "100vh" }}
-                  >
-                    <DriverPage />
-                  </motion.div>
-                </ErrorBoundary>
+                <SubscriptionGuard>
+                  <ErrorBoundary>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.5 }}
+                      style={{ minHeight: "100vh" }}
+                    >
+                      <DriverPage />
+                    </motion.div>
+                  </ErrorBoundary>
+                </SubscriptionGuard>
               </RoleBasedRoute>
             } 
           />
 
-          {/* Driver Profile Route - Protected */}
+          {/* Driver Profile Route - Protected and Subscription Guarded */}
           <Route 
             path="/driver/profile" 
             element={
               <RoleBasedRoute allowedRoles={["Driver"]}>
-                <ErrorBoundary>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.5 }}
-                    style={{ minHeight: "100vh" }}
-                  >
-                    <DriverProfile />
-                  </motion.div>
-                </ErrorBoundary>
+                <SubscriptionGuard>
+                  <ErrorBoundary>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.5 }}
+                      style={{ minHeight: "100vh" }}
+                    >
+                      <DriverProfile />
+                    </motion.div>
+                  </ErrorBoundary>
+                </SubscriptionGuard>
               </RoleBasedRoute>
             } 
           />
 
-          {/* Driver Vehicles Route - Protected */}
+          {/* Driver Vehicles Route - Protected and Subscription Guarded */}
           <Route 
             path="/driver/vehicles" 
             element={
               <RoleBasedRoute allowedRoles={["Driver"]}>
-                <ErrorBoundary>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.5 }}
-                    style={{ minHeight: "100vh" }}
-                  >
-                    <DriverVehicles />
-                  </motion.div>
-                </ErrorBoundary>
+                <SubscriptionGuard>
+                  <ErrorBoundary>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.5 }}
+                      style={{ minHeight: "100vh" }}
+                    >
+                      <DriverVehicles />
+                    </motion.div>
+                  </ErrorBoundary>
+                </SubscriptionGuard>
               </RoleBasedRoute>
             } 
           />
 
-          {/* Driver Active Session Route - Protected */}
+          {/* Driver Active Session Route - Protected and Subscription Guarded */}
           <Route 
             path="/driver/session" 
             element={
               <RoleBasedRoute allowedRoles={["Driver"]}>
-                <ErrorBoundary>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.5 }}
-                    style={{ minHeight: "100vh" }}
-                  >
-                    <ActiveSession />
-                  </motion.div>
-                </ErrorBoundary>
+                <SubscriptionGuard>
+                  <ErrorBoundary>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.5 }}
+                      style={{ minHeight: "100vh" }}
+                    >
+                      <ActiveSession />
+                    </motion.div>
+                  </ErrorBoundary>
+                </SubscriptionGuard>
               </RoleBasedRoute>
             } 
           />
 
-          {/* Driver Session History Route - Protected */}
+          {/* Driver Session History Route - Protected and Subscription Guarded */}
           <Route 
             path="/driver/history" 
             element={
               <RoleBasedRoute allowedRoles={["Driver"]}>
-                <ErrorBoundary>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.5 }}
-                    style={{ minHeight: "100vh" }}
-                  >
-                    <SessionHistory />
-                  </motion.div>
-                </ErrorBoundary>
+                <SubscriptionGuard>
+                  <ErrorBoundary>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.5 }}
+                      style={{ minHeight: "100vh" }}
+                    >
+                      <SessionHistory />
+                    </motion.div>
+                  </ErrorBoundary>
+                </SubscriptionGuard>
               </RoleBasedRoute>
             } 
           />
 
-          {/* Driver Session Completed Route - Protected */}
+          {/* Driver Session Completed Route - Protected and Subscription Guarded */}
           <Route 
             path="/driver/session/:sessionId/completed" 
             element={
               <RoleBasedRoute allowedRoles={["Driver"]}>
-                <ErrorBoundary>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.5 }}
-                    style={{ minHeight: "100vh" }}
-                  >
-                    <SessionCompleted />
-                  </motion.div>
-                </ErrorBoundary>
+                <SubscriptionGuard>
+                  <ErrorBoundary>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.5 }}
+                      style={{ minHeight: "100vh" }}
+                    >
+                      <SessionCompleted />
+                    </motion.div>
+                  </ErrorBoundary>
+                </SubscriptionGuard>
               </RoleBasedRoute>
             } 
           />
 
-          {/* Driver Invoice Payment Route - Protected */}
+          {/* Driver Invoice Payment Route - Protected and Subscription Guarded */}
           <Route 
             path="/driver/invoice/:invoiceId" 
             element={
               <RoleBasedRoute allowedRoles={["Driver"]}>
-                <ErrorBoundary>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.5 }}
-                    style={{ minHeight: "100vh" }}
-                  >
-                    <InvoicePayment />
-                  </motion.div>
-                </ErrorBoundary>
+                <SubscriptionGuard>
+                  <ErrorBoundary>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.5 }}
+                      style={{ minHeight: "100vh" }}
+                    >
+                      <InvoicePayment />
+                    </motion.div>
+                  </ErrorBoundary>
+                </SubscriptionGuard>
               </RoleBasedRoute>
             } 
           />
