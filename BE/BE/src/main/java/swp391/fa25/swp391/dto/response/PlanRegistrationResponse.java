@@ -4,25 +4,78 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import swp391.fa25.swp391.entity.PlanRegistration; // <-- Phải import entity
+
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
 
 /**
- * DTO (Data Transfer Object) này dùng để trả về thông tin chi tiết
- * của một lượt đăng ký gói dịch vụ cho client.
+ * DTO trả về thông tin chi tiết của một PlanRegistration
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class PlanRegistrationResponse {
-    private Integer registrationId;
-    private String planName;
-    private String startDate; // Trả về dạng String đã định dạng (dd/MM/yyyy)
-    private String endDate;   // Trả về dạng String đã định dạng (dd/MM/yyyy)
-    private String status;    // ACTIVE, CANCELLED, EXPIRED
-    private BigDecimal totalPaid;
-    private String message;   // Thông báo cho người dùng (VD: "Đăng ký thành công!")
+    // Registration Info
+    private Integer id;
+    private String status;
+    private LocalDate startDate;
+    private LocalDate endDate;
 
-    // Tùy chọn: URL để chuyển hướng người dùng đến trang thanh toán
-    private String paymentUrl;
+    // Driver Info
+    private Integer driverId;
+    private String driverName;
+
+    // Plan Info
+    private Integer planId;
+    private String planName;
+
+    // Payment Info
+    private String paymentStatus;
+    private String paymentMethod;
+    private BigDecimal totalAmount;
+    private Instant paidDate;
+    private Instant createdAt;
+
+    // QR Info
+    private String qrCode;
+    private Integer qrScanCount;
+
+    /**
+     * ⭐ [PHẦN QUAN TRỌNG NHẤT]
+     * Helper factory method để convert từ Entity sang DTO
+     * Đây là hàm mà PlanRegistrationService đang gọi
+     */
+    public static PlanRegistrationResponse fromEntity(PlanRegistration registration) {
+        if (registration == null) {
+            return null;
+        }
+
+        // Lỗi "báo đỏ" trước đó là do các hàm get() ở đây:
+        return PlanRegistrationResponse.builder()
+                .id(registration.getId())
+                .status(registration.getStatus())
+                .startDate(registration.getStartDate())
+                .endDate(registration.getEndDate())
+
+                .driverId(registration.getDriver() != null ? registration.getDriver().getId() : null)
+                .driverName(registration.getDriver() != null && registration.getDriver().getAccount() != null
+                        ? registration.getDriver().getAccount().getFullName() : null)
+
+                .planId(registration.getPlan() != null ? registration.getPlan().getId() : null)
+                .planName(registration.getPlan() != null ? registration.getPlan().getPlanName() : null)
+
+                .paymentStatus(registration.getPaymentStatus())
+                .paymentMethod(registration.getPaymentMethod())
+                .totalAmount(registration.getTotalAmount())
+                .paidDate(registration.getPaidDate())
+                .createdAt(registration.getCreatedAt())
+
+                .qrCode(registration.getQrCode())
+                .qrScanCount(registration.getQrScanCount())
+
+                .build();
+    }
 }
