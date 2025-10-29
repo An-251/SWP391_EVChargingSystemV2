@@ -39,7 +39,15 @@ public class ChargingSessionService implements IChargingSessionService {
     private static final BigDecimal KWH_PER_PERCENT = new BigDecimal("0.5");
     private static final BigDecimal COST_PER_KWH = new BigDecimal("3000");
 
-    // Status constants
+    // Session Status Constants
+    private static final String STATUS_CHARGING = "charging";      // Đang sạc
+    private static final String STATUS_COMPLETED = "completed";    // Hoàn thành
+    private static final String STATUS_CANCELLED = "cancelled";    // Đã hủy
+    private static final String STATUS_FAILED = "failed";          // Lỗi hệ thống
+    private static final String STATUS_INTERRUPTED = "interrupted"; // Bị gián đoạn
+    // private static final String STATUS_TIMEOUT = "timeout";        // Đã loại bỏ
+
+    // Legacy status (backward compatibility - cho charging point/station)
     private static final String STATUS_ACTIVE = "active";
     private static final String STATUS_USING = "using";
     private static final String STATUS_INACTIVE = "inactive";
@@ -51,7 +59,7 @@ public class ChargingSessionService implements IChargingSessionService {
         Driver driver = driverService.findById(request.getDriverId())
                 .orElseThrow(() -> new RuntimeException("Driver not found with ID: " + request.getDriverId()));
 
-        // ⭐ VALIDATION: Check có active plan không
+        // Validation: Check có active plan không
         Optional<PlanRegistration> activePlan = planRegistrationRepository
                 .findActiveByDriverId(request.getDriverId(), LocalDate.now());
 
@@ -59,8 +67,8 @@ public class ChargingSessionService implements IChargingSessionService {
             throw new RuntimeException("Bạn chưa có gói đăng ký. Vui lòng đăng ký gói trước khi sử dụng.");
         }
 
-        // Kiểm tra driver có session đang active chưa
-        if (chargingSessionRepository.existsByDriverIdAndStatus(request.getDriverId(), STATUS_USING)) {
+        // Kiểm tra driver có session đang charging chưa
+        if (chargingSessionRepository.existsByDriverIdAndStatus(request.getDriverId(), STATUS_CHARGING)) {
             throw new RuntimeException("Driver already has an active charging session");
         }
 
@@ -89,14 +97,14 @@ public class ChargingSessionService implements IChargingSessionService {
             throw new RuntimeException("Charging station is inactive");
         }
 
-        // Tạo session mới
+        // Tạo session mới với status CHARGING
         ChargingSession session = new ChargingSession();
         session.setDriver(driver);
         session.setVehicle(vehicle);
         session.setChargingPoint(chargingPoint);
         session.setStartTime(LocalDateTime.now());
         session.setStartPercentage(request.getStartPercentage());
-        session.setStatus(STATUS_USING);
+        session.setStatus(STATUS_CHARGING);
         session.setKwhUsed(BigDecimal.ZERO);
         session.setCost(BigDecimal.ZERO);
         session.setOverusedTime(BigDecimal.ZERO);
@@ -104,14 +112,11 @@ public class ChargingSessionService implements IChargingSessionService {
         ChargingSession savedSession = chargingSessionRepository.save(session);
         chargingPointService.startUsingPoint(request.getChargingPointId());
 
-        log.info("Created charging session {} for driver {}", savedSession.getId(), driver.getId());
+        log.info("Created charging session {} with status '{}' for driver {}",
+                savedSession.getId(), STATUS_CHARGING, driver.getId());
         return savedSession;
     }
 
-    /**
-     * ⭐ Kết thúc session - ÁP DỤNG DISCOUNT TỪ PLAN
-     * KHÔNG TẠO INVOICE NGAY - CHỜ CUỐI THÁNG
-     */
     @Override
     public ChargingSession stopChargingSession(Integer sessionId, StopChargingSessionRequest request) {
         log.info("Stopping charging session {}", sessionId);
@@ -119,8 +124,9 @@ public class ChargingSessionService implements IChargingSessionService {
         ChargingSession session = chargingSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Charging session not found"));
 
-        if (!STATUS_USING.equalsIgnoreCase(session.getStatus())) {
-            throw new RuntimeException("Can only stop active sessions");
+        // Kiểm tra status phải là CHARGING
+        if (!STATUS_CHARGING.equalsIgnoreCase(session.getStatus())) {
+            throw new RuntimeException("Can only stop sessions with status 'charging'. Current status: " + session.getStatus());
         }
 
         if (request.getEndPercentage() < session.getStartPercentage()) {
@@ -136,29 +142,92 @@ public class ChargingSessionService implements IChargingSessionService {
         BigDecimal kwhUsed = KWH_PER_PERCENT.multiply(new BigDecimal(percentageCharged))
                 .setScale(2, RoundingMode.HALF_UP);
 
-
         BigDecimal baseCost = kwhUsed.multiply(COST_PER_KWH)
                 .setScale(0, RoundingMode.HALF_UP);
-
 
         BigDecimal finalCost = applyPlanDiscount(session.getDriver().getId(), baseCost);
 
         session.setKwhUsed(kwhUsed);
         session.setCost(finalCost);
-        session.setStatus(STATUS_INACTIVE);
+        session.setStatus(STATUS_COMPLETED);
 
         ChargingSession updatedSession = chargingSessionRepository.save(session);
 
         // Giải phóng charging point
         chargingPointService.stopUsingPoint(session.getChargingPoint().getId());
 
-        log.info("Session {} completed. Base cost: {}, Final cost (with discount): {}",
-                sessionId, baseCost, finalCost);
-
+        log.info("Session {} '{}'. Base cost: {}, Final cost (with discount): {}",
+                sessionId, STATUS_COMPLETED, baseCost, finalCost);
 
         return updatedSession;
     }
 
+    @Override
+    public void cancelChargingSession(Integer sessionId) {
+        log.info("Cancelling charging session {}", sessionId);
+
+        ChargingSession session = chargingSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Charging session not found"));
+
+        // Kiểm tra status phải là CHARGING
+        if (!STATUS_CHARGING.equalsIgnoreCase(session.getStatus())) {
+            throw new RuntimeException("Can only cancel sessions with status 'charging'");
+        }
+
+        session.setStatus(STATUS_CANCELLED);
+        session.setEndTime(LocalDateTime.now());
+        chargingSessionRepository.save(session);
+
+        chargingPointService.stopUsingPoint(session.getChargingPoint().getId());
+
+        log.info("Session {} marked as '{}'", sessionId, STATUS_CANCELLED);
+    }
+
+    /**
+     * Đánh dấu session bị lỗi (system error)
+     */
+    public void failChargingSession(Integer sessionId, String reason) {
+        log.warn("Marking charging session {} as '{}'. Reason: {}", sessionId, STATUS_FAILED, reason);
+
+        ChargingSession session = chargingSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Charging session not found"));
+
+        if (!STATUS_CHARGING.equalsIgnoreCase(session.getStatus())) {
+            throw new RuntimeException("Can only fail active charging sessions");
+        }
+
+        session.setStatus(STATUS_FAILED);
+        session.setEndTime(LocalDateTime.now());
+        chargingSessionRepository.save(session);
+
+        chargingPointService.stopUsingPoint(session.getChargingPoint().getId());
+
+        log.error("Session {} marked as '{}': {}", sessionId, STATUS_FAILED, reason);
+    }
+
+    /**
+     * Đánh dấu session bị gián đoạn (connection lost)
+     */
+    public void interruptChargingSession(Integer sessionId) {
+        log.warn("Marking charging session {} as '{}'", sessionId, STATUS_INTERRUPTED);
+
+        ChargingSession session = chargingSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Charging session not found"));
+
+        if (!STATUS_CHARGING.equalsIgnoreCase(session.getStatus())) {
+            throw new RuntimeException("Session is not active");
+        }
+
+        session.setStatus(STATUS_INTERRUPTED);
+        session.setEndTime(LocalDateTime.now());
+        chargingSessionRepository.save(session);
+
+        chargingPointService.stopUsingPoint(session.getChargingPoint().getId());
+
+        log.warn("Session {} marked as '{}'", sessionId, STATUS_INTERRUPTED);
+    }
+
+    // Phương thức timeoutChargingSession đã bị loại bỏ
 
     private BigDecimal applyPlanDiscount(Integer driverId, BigDecimal baseCost) {
         Optional<PlanRegistration> activePlan = planRegistrationRepository
@@ -171,13 +240,11 @@ public class ChargingSessionService implements IChargingSessionService {
 
         SubscriptionPlan plan = activePlan.get().getPlan();
 
-        // Nếu không có discount rate hoặc = 0
         if (plan.getDiscountRate() == null || plan.getDiscountRate().compareTo(BigDecimal.ZERO) == 0) {
             log.info("Driver {} using plan {} with no discount", driverId, plan.getPlanName());
             return baseCost;
         }
 
-        // Tính discount
         BigDecimal discountAmount = baseCost
                 .multiply(plan.getDiscountRate())
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
@@ -191,27 +258,7 @@ public class ChargingSessionService implements IChargingSessionService {
         return finalCost;
     }
 
-    @Override
-    public void cancelChargingSession(Integer sessionId) {
-        log.info("Cancelling charging session {}", sessionId);
-
-        ChargingSession session = chargingSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new RuntimeException("Charging session not found"));
-
-        if (!STATUS_USING.equalsIgnoreCase(session.getStatus())) {
-            throw new RuntimeException("Can only cancel active sessions");
-        }
-
-        session.setStatus(STATUS_INACTIVE);
-        session.setEndTime(LocalDateTime.now());
-        chargingSessionRepository.save(session);
-
-        chargingPointService.stopUsingPoint(session.getChargingPoint().getId());
-
-        log.info("Session {} cancelled", sessionId);
-    }
-
-    // ======= Các method hỗ trợ (giữ nguyên) =======
+    // ======= Các method hỗ trợ =======
 
     @Override
     @Transactional(readOnly = true)
@@ -267,4 +314,5 @@ public class ChargingSessionService implements IChargingSessionService {
     public Page<ChargingSession> findByDriverId(Integer driverId, Pageable pageable) {
         return chargingSessionRepository.findByDriverIdOrderByStartTimeDesc(driverId, pageable);
     }
+
 }

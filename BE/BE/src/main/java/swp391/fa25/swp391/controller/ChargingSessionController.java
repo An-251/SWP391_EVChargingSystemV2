@@ -16,11 +16,11 @@ import swp391.fa25.swp391.dto.response.ChargingSessionListResponse;
 import swp391.fa25.swp391.dto.response.ChargingSessionResponse;
 import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.ChargingSession;
+import swp391.fa25.swp391.service.ChargingSessionService;
 import swp391.fa25.swp391.service.IService.IChargingSessionService;
 
 import java.time.Duration;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 @CrossOrigin(origins = "*")
 public class ChargingSessionController {
 
-    private final IChargingSessionService chargingSessionService;
+    private final ChargingSessionService chargingSessionService;
 
     // ============================================
     // SESSION MANAGEMENT APIs
@@ -302,7 +302,96 @@ public class ChargingSessionController {
                     .body(ApiResponse.error("Error counting sessions: " + e.getMessage()));
         }
     }
+    //=========
+    @PostMapping("/{sessionId}/fail")
+    public ResponseEntity<?> failChargingSession(
+            @PathVariable Integer sessionId,
+            @RequestParam(required = false) String reason) {
+        try {
+            chargingSessionService.failChargingSession(sessionId, reason);
+            return ResponseEntity.ok(
+                    ApiResponse.success("Session marked as FAILED: " + (reason != null ? reason : "Unknown")));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error marking session as failed: " + e.getMessage()));
+        }
+    }
 
+    /**
+     * Đánh dấu session bị gián đoạn (dùng khi mất kết nối đột ngột)
+     */
+    @PostMapping("/{sessionId}/interrupt")
+    public ResponseEntity<?> interruptChargingSession(@PathVariable Integer sessionId) {
+        try {
+            chargingSessionService.interruptChargingSession(sessionId);
+            return ResponseEntity.ok(
+                    ApiResponse.success("Session marked as INTERRUPTED"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error marking session as interrupted: " + e.getMessage()));
+        }
+    }
+
+    // API timeoutChargingSession đã bị loại bỏ
+
+    /**
+     * Lấy thống kê sessions theo status
+     */
+    @GetMapping("/statistics/by-status")
+    public ResponseEntity<?> getSessionStatisticsByStatus() {
+        try {
+            Map<String, Long> statistics = new HashMap<>();
+
+            statistics.put("charging", chargingSessionService.countByStatus("charging"));
+            statistics.put("completed", chargingSessionService.countByStatus("completed"));
+            statistics.put("cancelled", chargingSessionService.countByStatus("cancelled"));
+            statistics.put("failed", chargingSessionService.countByStatus("failed"));
+            statistics.put("interrupted", chargingSessionService.countByStatus("interrupted"));
+
+            return ResponseEntity.ok(ApiResponse.success("Statistics retrieved", statistics));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error retrieving statistics: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Lấy danh sách sessions có vấn đề (failed, interrupted)
+     */
+    @GetMapping("/problematic")
+    public ResponseEntity<?> getProblematicSessions() {
+        try {
+            List<ChargingSession> problematicSessions = new ArrayList<>();
+
+            problematicSessions.addAll(chargingSessionService.findByStatus("failed"));
+            problematicSessions.addAll(chargingSessionService.findByStatus("interrupted"));
+
+            // Sort by start time descending
+            problematicSessions.sort((s1, s2) ->
+                    s2.getStartTime().compareTo(s1.getStartTime()));
+
+            List<ChargingSessionResponse> responses = problematicSessions.stream()
+                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+
+            ChargingSessionListResponse listResponse = ChargingSessionListResponse.builder()
+                    .sessions(responses)
+                    .totalSessions(responses.size())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Problematic sessions retrieved", listResponse));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error retrieving problematic sessions: " + e.getMessage()));
+        }
+    }
     // ============================================
     // HEALTH CHECK
     // ============================================

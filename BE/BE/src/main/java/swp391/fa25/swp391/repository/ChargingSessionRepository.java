@@ -87,4 +87,5 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+
 }
