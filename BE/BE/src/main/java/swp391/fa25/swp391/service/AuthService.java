@@ -58,7 +58,7 @@ public class AuthService {
         account.setPassword(passwordEncoder.encode(request.getPassword()));
         account.setAccountRole("Driver");
         account.setStatus("ACTIVE");
-        account.setBalance(0.0);
+
         account.setCreatedDate(Instant.now());
 
         Account savedAccount = accountRepository.save(account);
@@ -116,7 +116,7 @@ public class AuthService {
         account.setPassword(passwordEncoder.encode(request.getPassword()));
         account.setAccountRole("Admin");
         account.setStatus("ACTIVE");
-        account.setBalance(0.0);
+
         account.setCreatedDate(Instant.now());
 
         Account savedAccount = accountRepository.save(account);
@@ -179,7 +179,7 @@ public class AuthService {
         account.setPassword(passwordEncoder.encode(request.getPassword()));
         account.setAccountRole("Admin");
         account.setStatus("ACTIVE");
-        account.setBalance(0.0);
+
         account.setCreatedDate(Instant.now());
 
         Account savedAccount = accountRepository.save(account);
@@ -239,7 +239,7 @@ public class AuthService {
         account.setPhone(request.getPhone());
         account.setAccountRole("StationEmployee");
         account.setStatus("ACTIVE");
-        account.setBalance(0.0);
+
         account.setCreatedDate(Instant.now());
 
         Account savedAccount = accountRepository.save(account);

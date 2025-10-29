@@ -28,4 +28,18 @@ public interface PlanRegistrationRepository extends JpaRepository<PlanRegistrati
      * Tìm tất cả subscription của driver
      */
     List<PlanRegistration> findByDriverId(Integer driverId);
+
+
+    @Query("SELECT pr FROM PlanRegistration pr WHERE pr.driver.id = :driverId " +
+            "AND pr.status = 'ACTIVE' " +
+            "AND pr.startDate <= :date AND pr.endDate >= :date")
+    Optional<PlanRegistration> findActivePlanAtDate(
+            @Param("driverId") Integer driverId,
+            @Param("date") LocalDate date
+    );
+
+
+    @Query("SELECT pr FROM PlanRegistration pr WHERE pr.endDate < :today " +
+            "AND pr.status = 'ACTIVE'")
+    List<PlanRegistration> findExpiredPlans(@Param("today") LocalDate today);
 }

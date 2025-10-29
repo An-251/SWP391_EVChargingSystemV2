@@ -62,12 +62,11 @@ public class Account {
 
     @Nationalized
     @Column(name = "ACCOUNT_ROLE", length = 50)
+    @ColumnDefault("'ACTIVE'")
+
     private String accountRole;
 
 
-    @Nationalized
-    @Column(name = "BALANCE")
-    private Double balance;
 
 
     @OneToOne(mappedBy = "account", fetch = FetchType.LAZY)

@@ -31,4 +31,7 @@ public class Driver {
 
     @OneToMany(mappedBy = "driver")
     private List<Vehicle> vehicles = new ArrayList<>();
+
+    @OneToMany(mappedBy = "driver")
+    private List<PlanRegistration> planRegistrations = new ArrayList<>();
 }

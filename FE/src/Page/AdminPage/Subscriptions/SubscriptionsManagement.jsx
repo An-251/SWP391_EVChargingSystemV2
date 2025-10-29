@@ -24,7 +24,9 @@ const SubscriptionsManagement = () => {
     planType: 'BASIC',
     price: 0,
     validityDays: '30',
-    description: ''
+    description: '',
+    isDefault: false,
+    discountRate: 0
   });
 
   useEffect(() => {
@@ -62,7 +64,9 @@ const SubscriptionsManagement = () => {
         planType: subscription.planType || 'BASIC',
         price: subscription.price || 0,
         validityDays: subscription.validityDays || '30',
-        description: subscription.description || ''
+        description: subscription.description || '',
+        isDefault: subscription.isDefault || false,
+        discountRate: subscription.discountRate || 0
       });
     } else {
       setEditMode(false);
@@ -71,7 +75,9 @@ const SubscriptionsManagement = () => {
         planType: 'BASIC',
         price: 0,
         validityDays: '30',
-        description: ''
+        description: '',
+        isDefault: false,
+        discountRate: 0
       });
     }
     setShowModal(true);
@@ -85,13 +91,41 @@ const SubscriptionsManagement = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
+    // Validation
+    if (!formData.planName.trim()) {
+      message.error('Plan name is required');
+      return;
+    }
+    
+    if (formData.price < 0) {
+      message.error('Price must be greater than or equal to 0');
+      return;
+    }
+    
+    if (formData.discountRate < 0 || formData.discountRate > 100) {
+      message.error('Discount rate must be between 0-100%');
+      return;
+    }
+    
+    if (!formData.validityDays.trim()) {
+      message.error('Validity days is required');
+      return;
+    }
+    
+    if (!formData.description.trim()) {
+      message.error('Benefits description is required');
+      return;
+    }
+    
     // Build request matching SubscriptionPlanRequest.java
     const submitData = {
-      planName: formData.planName,
+      planName: formData.planName.trim(),
       planType: formData.planType,
-      price: parseFloat(formData.price),
-      validityDays: formData.validityDays.toString(),  // BE expects String
-      description: formData.description || ''
+      price: parseFloat(formData.price) || 0,
+      validityDays: formData.validityDays.toString().trim(),
+      description: formData.description.trim(),
+      isDefault: formData.isDefault || false,
+      discountRate: parseFloat(formData.discountRate) || 0
     };
 
     if (editMode) {
@@ -166,10 +200,39 @@ const SubscriptionsManagement = () => {
               </div>
 
               <div className="space-y-2 text-sm text-gray-600 mb-4">
-                <div className="text-2xl font-bold text-green-600">{sub.price?.toLocaleString()} VNĐ</div>
-                <div><span className="font-medium">Type:</span> {sub.planType}</div>
-                <div><span className="font-medium">Validity:</span> {sub.validityDays} days</div>
-                <div className="text-xs">{sub.description}</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {parseFloat(sub.price || 0).toLocaleString('vi-VN')} VNĐ
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 font-medium">
+                    {sub.planType}
+                  </span>
+                  <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+                    {sub.validityDays} ngày
+                  </span>
+                  {sub.discountRate > 0 && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-orange-100 text-orange-700 font-medium">
+                      -{sub.discountRate}% giảm giá
+                    </span>
+                  )}
+                  {sub.isDefault && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 font-medium">
+                      ⭐ Mặc định
+                    </span>
+                  )}
+                </div>
+                {sub.totalRegistrations !== undefined && (
+                  <div className="text-xs">
+                    <span className="font-medium text-gray-700">Đã đăng ký:</span> {sub.totalRegistrations} người
+                  </div>
+                )}
+                {sub.description && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-xs text-gray-600 whitespace-pre-line line-clamp-3">
+                      {sub.description}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center space-x-2">
@@ -195,9 +258,9 @@ const SubscriptionsManagement = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full my-8 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
               <h2 className="text-xl font-bold text-gray-800">
                 {editMode ? 'Edit Subscription' : 'Create New Subscription'}
               </h2>
@@ -208,23 +271,30 @@ const SubscriptionsManagement = () => {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Row 1: Package Name - Full width */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Plan Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Package Name <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     value={formData.planName}
                     onChange={(e) => setFormData({ ...formData, planName: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="E.g., Premium Package"
                     required
                   />
                 </div>
 
+                {/* Row 2: Plan Type */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Plan Type *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Plan Type <span className="text-red-500">*</span>
+                  </label>
                   <select
                     value={formData.planType}
                     onChange={(e) => setFormData({ ...formData, planType: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
                     required
                   >
                     <option value="BASIC">Basic</option>
@@ -234,39 +304,98 @@ const SubscriptionsManagement = () => {
                   </select>
                 </div>
 
+                {/* Row 2: Set as Default */}
+                <div className="flex items-end pb-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isDefault}
+                      onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
+                      className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Set as Default Plan</span>
+                  </label>
+                </div>
+
+                {/* Row 3: Price */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Price (VNĐ) *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Price (VNĐ) <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="number"
                     value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value) || 0;
+                      setFormData({ ...formData, price: value >= 0 ? value : 0 });
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    min="0"
+                    step="1000"
+                    placeholder="E.g., 500000"
                     required
                   />
                 </div>
 
+                {/* Row 3: Duration */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Validity (days) *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Duration (days) <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     value={formData.validityDays}
                     onChange={(e) => setFormData({ ...formData, validityDays: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                    placeholder="e.g., 30, 90, 365"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="E.g., 30"
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-1">Number of days this plan is valid</p>
                 </div>
 
+                {/* Row 4: Discount Rate */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Discount Rate (%)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.discountRate}
+                    onChange={(e) => {
+                      let value = parseFloat(e.target.value) || 0;
+                      if (value < 0) value = 0;
+                      if (value > 100) value = 100;
+                      setFormData({ ...formData, discountRate: value });
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    placeholder="E.g., 10, 15, 20 (0-100%)"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Enter discount percentage for this plan (0-100%)</p>
+                </div>
+
+                {/* Row 5: Benefits - Full width */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Benefits <span className="text-red-500">*</span>
+                  </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                    rows="3"
-                    placeholder="Describe the plan benefits, features, etc..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none"
+                    rows="6"
+                    placeholder="Describe package benefits...
+E.g.:
+• 10% discount on charging fees
+• 5 free reservations per month
+• Priority customer support
+• Unlimited charging sessions"
+                    required
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Describe all benefits and features of this package. Use bullet points (•, -, *) or numbers for better formatting.
+                  </p>
                 </div>
               </div>
 
@@ -274,17 +403,26 @@ const SubscriptionsManagement = () => {
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 shadow-md disabled:opacity-50"
+                  className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 shadow-md disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
-                  <Save size={20} />
-                  <span>{editMode ? 'Update' : 'Create'}</span>
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={20} />
+                      <span>{editMode ? 'Update' : 'Create'}</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

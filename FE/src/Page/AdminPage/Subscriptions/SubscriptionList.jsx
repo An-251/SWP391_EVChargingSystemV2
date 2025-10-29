@@ -29,37 +29,56 @@ export default function SubscriptionList() {
 
   const columns = [
     { key: 'id', label: 'ID', sortable: true },
-    { key: 'name', label: 'Package Name', sortable: true },
+    { key: 'planName', label: 'Package Name', sortable: true },
+    {
+      key: 'planType',
+      label: 'Plan Type',
+      render: (value) => (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+          {value || 'BASIC'}
+        </span>
+      ),
+    },
     {
       key: 'price',
       label: 'Price',
-      render: (value) => <span className="font-bold text-green-600">{value?.toLocaleString('vi-VN')} VND</span>,
+      render: (value) => <span className="font-bold text-green-600">{value?.toLocaleString('vi-VN')} VNĐ</span>,
     },
     {
-      key: 'duration',
+      key: 'validityDays',
       label: 'Duration',
       render: (value) => `${value} days`,
     },
     {
-      key: 'benefits',
+      key: 'discountRate',
+      label: 'Discount',
+      render: (value) => value > 0 ? (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+          -{value}%
+        </span>
+      ) : (
+        <span className="text-gray-400">No discount</span>
+      ),
+    },
+    {
+      key: 'isDefault',
+      label: 'Default',
+      render: (value) => value ? (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
+          ⭐ Default
+        </span>
+      ) : (
+        <span className="text-gray-400">-</span>
+      ),
+    },
+    {
+      key: 'description',
       label: 'Benefits',
       render: (value) => (
         <div className="text-sm">
           {value?.slice(0, 50)}{value?.length > 50 ? '...' : ''}
         </div>
       ),
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (value) => {
-        const statusLower = (value || '').toLowerCase();
-        return (
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusLower === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-            {statusLower === 'active' ? 'Active' : 'Inactive'}
-          </span>
-        );
-      },
     },
   ];
 

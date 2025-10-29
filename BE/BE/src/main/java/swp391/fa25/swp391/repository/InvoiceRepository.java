@@ -18,10 +18,9 @@ import java.util.Optional;
 public interface InvoiceRepository extends JpaRepository<Invoice, Integer> {
 
     /**
-     * Tìm tất cả Invoice theo Driver
+     * ⭐ Tìm invoice quá hạn chưa thanh toán
      */
-    List<Invoice> findByDriver(Driver driver);
-
+    List<Invoice> findByStatusAndDueDateBefore(String status, Instant dueDate);
     /**
      * Tìm tất cả Invoice theo Driver ID
      */
@@ -38,30 +37,6 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Integer> {
      */
     List<Invoice> findByDriver_IdAndStatus(Integer driverId, String status);
 
-    /**
-     * Tìm Invoice trong khoảng thời gian (issue_date)
-     */
-    List<Invoice> findByIssueDateBetween(Instant startDate, Instant endDate);
-
-    /**
-     * Tìm Invoice có tổng tiền trong khoảng
-     */
-    List<Invoice> findByTotalCostBetween(BigDecimal minAmount, BigDecimal maxAmount);
-
-    /**
-     * Tìm Invoice theo payment method
-     */
-    List<Invoice> findByPaymentMethod(String paymentMethod);
-
-    /**
-     * Tìm Invoice theo Charging Session
-     */
-    Optional<Invoice> findBySession(ChargingSession session);
-
-    /**
-     * Tìm Invoice theo Session ID
-     */
-    Optional<Invoice> findBySession_Id(Integer sessionId);
 
     /**
      * Custom query: Tính tổng doanh thu theo status
@@ -86,20 +61,6 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Integer> {
      */
     boolean existsByDriver_IdAndStatus(Integer driverId, String status);
 
-    /**
-     * Đếm số lượng invoice theo status
-     */
-    Long countByStatus(String status);
-
-    /**
-     * Đếm số lượng invoice của driver
-     */
-    Long countByDriver_Id(Integer driverId);
-
-    /**
-     * Tìm các invoice chưa có session (session_id is null)
-     */
-    List<Invoice> findBySessionIsNull();
 
     /**
      * Custom query: Tính tổng doanh thu của driver
@@ -110,9 +71,5 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Integer> {
             @Param("status") String status
     );
 
-    /**
-     * Tìm invoice theo driver và payment method
-     */
-    List<Invoice> findByDriver_IdAndPaymentMethod(Integer driverId, String paymentMethod);
 
 }

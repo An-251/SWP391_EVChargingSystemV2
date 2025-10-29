@@ -7,6 +7,7 @@ import org.hibernate.annotations.Nationalized;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -21,6 +22,19 @@ public class Invoice {
     @Column(name = "ISSUE_DATE", nullable = false)
     private Instant issueDate;
 
+    // ⭐ THÊM MỚI - Billing period
+    @Column(name = "BILLING_START_DATE")
+    private LocalDate billingStartDate;
+
+    @Column(name = "BILLING_END_DATE")
+    private LocalDate billingEndDate;
+
+    @Column(name = "DUE_DATE")
+    private Instant dueDate;
+
+    @Column(name = "PAID_DATE")
+    private Instant paidDate;
+
     @Column(name = "TOTAL_COST", precision = 15, scale = 2)
     private BigDecimal totalCost;
 
@@ -30,7 +44,16 @@ public class Invoice {
 
     @Nationalized
     @Column(name = "STATUS", length = 50)
-    private String status;
+    private String status; // UNPAID, PAID, OVERDUE
+
+
+    @Nationalized
+    @Column(name = "QR_CODE", length = 500)
+    private String qrCode;
+
+    @Nationalized
+    @Column(name = "PAYMENT_REFERENCE", length = 100)
+    private String paymentReference;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "DRIVER_ID", nullable = false)
@@ -38,6 +61,10 @@ public class Invoice {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "SESSION_ID")
-    private ChargingSession session;
+    private ChargingSession session; // Nullable vì invoice có thể là monthly invoice
 
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "PLAN_ID")
+    private SubscriptionPlan planAtBilling;
 }
