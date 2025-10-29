@@ -15,6 +15,8 @@ public class SubscriptionPlanResponse {
     private BigDecimal price;
     private String validityDays;
     private String description;
+    private Boolean isDefault; // ⭐ THÊM
+    private BigDecimal discountRate; // ⭐ THÊM
 
     private int totalRegistrations; // Số lượng đăng ký liên quan
 }

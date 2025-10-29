@@ -14,6 +14,13 @@ import java.util.Optional;
 public interface PlanRegistrationRepository extends JpaRepository<PlanRegistration, Integer> {
 
     /**
+     * ⭐ [PHƯƠNG THỨC BỊ THIẾU ĐÃ ĐƯỢC THÊM VÀO]
+     * Dùng cho [Phase 1] registerPlan
+     * Kiểm tra xem driver có gói PENDING hoặc ACTIVE không
+     */
+    boolean existsByDriverIdAndStatusIn(Integer driverId, List<String> statuses);
+
+    /**
      * Tìm active subscription của driver
      */
     @Query("SELECT pr FROM PlanRegistration pr " +
@@ -29,7 +36,9 @@ public interface PlanRegistrationRepository extends JpaRepository<PlanRegistrati
      */
     List<PlanRegistration> findByDriverId(Integer driverId);
 
-
+    /**
+     * (Giữ lại từ file của bạn)
+     */
     @Query("SELECT pr FROM PlanRegistration pr WHERE pr.driver.id = :driverId " +
             "AND pr.status = 'ACTIVE' " +
             "AND pr.startDate <= :date AND pr.endDate >= :date")
@@ -38,7 +47,9 @@ public interface PlanRegistrationRepository extends JpaRepository<PlanRegistrati
             @Param("date") LocalDate date
     );
 
-
+    /**
+     * (Giữ lại từ file của bạn)
+     */
     @Query("SELECT pr FROM PlanRegistration pr WHERE pr.endDate < :today " +
             "AND pr.status = 'ACTIVE'")
     List<PlanRegistration> findExpiredPlans(@Param("today") LocalDate today);

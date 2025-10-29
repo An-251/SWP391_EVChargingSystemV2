@@ -396,9 +396,9 @@ export const createSubscription = createAsyncThunk(
 
 export const updateSubscription = createAsyncThunk(
   'admin/updateSubscription',
-  async ({ subscriptionId, subscriptionData }, { rejectWithValue }) => {
+  async ({ id, data }, { rejectWithValue }) => {
     try {
-      const response = await api.put(`/subscriptions/${subscriptionId}`, subscriptionData);
+      const response = await api.put(`/subscriptions/${id}`, data);
       return response.data.data || response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Cannot update subscription');
@@ -408,10 +408,10 @@ export const updateSubscription = createAsyncThunk(
 
 export const deleteSubscription = createAsyncThunk(
   'admin/deleteSubscription',
-  async (subscriptionId, { rejectWithValue }) => {
+  async (id, { rejectWithValue }) => {
     try {
-      await api.delete(`/subscriptions/${subscriptionId}`);
-      return subscriptionId;
+      await api.delete(`/subscriptions/${id}`);
+      return id;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Cannot delete subscription');
     }
