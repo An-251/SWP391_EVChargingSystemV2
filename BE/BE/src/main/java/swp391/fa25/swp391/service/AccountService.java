@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-
 public class AccountService implements IAccountService {
 
     private final AccountRepository accountRepository;
