@@ -6,17 +6,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import swp391.fa25.swp391.dto.request.PlanRegistrationRequest;
 import swp391.fa25.swp391.dto.response.PlanRegistrationResponse;
-import swp391.fa25.swp391.dto.response.VerifyQRCodeResponse;
 import swp391.fa25.swp391.entity.Driver;
 import swp391.fa25.swp391.entity.PlanRegistration;
 import swp391.fa25.swp391.entity.SubscriptionPlan;
-import swp391.fa25.swp391.repository.DriverRepository;
 import swp391.fa25.swp391.repository.PlanRegistrationRepository;
 import swp391.fa25.swp391.repository.SubscriptionPlanRepository;
-import swp391.fa25.swp391.dto.response.PlanRegistrationResponse;
+import swp391.fa25.swp391.repository.DriverRepository;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -27,181 +27,185 @@ public class PlanRegistrationService {
     private final PlanRegistrationRepository registrationRepository;
     private final SubscriptionPlanRepository planRepository;
     private final DriverRepository driverRepository;
-    private final SubscriptionQRCodeService qrCodeService; // Inject service mới
+    private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     /**
-     * ⭐ [PHASE 1] Đăng ký gói (Tạo PENDING record)
+     * ⭐ STEP 1: AUTO ASSIGN BASIC PLAN khi driver đăng ký
+     * Gọi method này từ DriverService sau khi tạo driver
      */
     @Transactional
-    public PlanRegistrationResponse registerPlan(PlanRegistrationRequest request) {
-        log.info("📝 [Phase 1] Registering plan {} for driver {}", request.getPlanId(), request.getDriverId());
+    public PlanRegistration assignBasicPlanToNewDriver(Driver driver) {
+        log.info("Auto-assigning Basic plan to new driver {}", driver.getId());
 
-        Driver driver = driverRepository.findById(request.getDriverId())
-                .orElseThrow(() -> new RuntimeException("Driver not found: " + request.getDriverId()));
-
-        SubscriptionPlan plan = planRepository.findById(request.getPlanId())
-                .orElseThrow(() -> new RuntimeException("Plan not found: " + request.getPlanId()));
-
-        // Check nếu driver đã có gói PENDING hoặc ACTIVE (dùng hàm trong Repo bạn đã viết)
-        if (registrationRepository.existsByDriverIdAndStatusIn(
-                request.getDriverId(), List.of("PENDING", "ACTIVE"))) {
-            throw new RuntimeException("Driver already has an active or pending subscription.");
-        }
+        SubscriptionPlan basicPlan = planRepository.findByIsDefault(true)
+                .orElseThrow(() -> new RuntimeException("Basic plan not found. Please create one first."));
 
         PlanRegistration registration = new PlanRegistration();
         registration.setDriver(driver);
-        registration.setPlan(plan);
-        registration.setPaymentMethod(request.getPaymentMethod());
-        registration.setTotalAmount(plan.getPrice()); // Lấy giá từ Plan
-
-        // @PrePersist trong Entity sẽ tự set status = PENDING, paymentStatus = PENDING
+        registration.setPlan(basicPlan);
+        registration.setStartDate(LocalDate.now());
+        registration.setEndDate(LocalDate.now().plusYears(100)); // Permanent
+        registration.setStatus("ACTIVE");
 
         PlanRegistration saved = registrationRepository.save(registration);
-        log.info("✅ [Phase 1] Created registration {} with status PENDING", saved.getId());
+        log.info("Assigned Basic plan to driver {}", driver.getId());
 
-        // TODO: Chỗ này gọi PaymentService (VNPAY/MoMo) để tạo link thanh toán
-        // và trả link đó về cho frontend
-
-        return PlanRegistrationResponse.fromEntity(saved); // Dùng DTO Response bạn đã viết
+        return saved;
     }
 
     /**
-     * ⭐ [PHASE 2] Kích hoạt subscription (Sau khi callback thanh toán thành công)
+     * ⭐ STEP 2: Driver đăng ký gói Premium/Gold/VIP
      */
     @Transactional
-    public PlanRegistration activateSubscription(Integer registrationId, String transactionId, String paymentMethod) {
-        log.info("🔓 [Phase 2] Activating subscription {}", registrationId);
+    public PlanRegistrationResponse registerPlan(PlanRegistrationRequest request) {
+        log.info("Driver {} registering plan {}", request.getDriverId(), request.getPlanId());
 
-        PlanRegistration registration = registrationRepository.findById(registrationId)
-                .orElseThrow(() -> new RuntimeException("Registration not found: " + registrationId));
+        // 1. Validate driver & plan
+        Driver driver = driverRepository.findById(request.getDriverId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài xế với ID: " + request.getDriverId()));
 
-        if (registration.isPaid()) {
-            log.warn("Subscription {} is already paid/activated.", registrationId);
-            return registration;
+        SubscriptionPlan plan = planRepository.findById(request.getPlanId())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy gói dịch vụ với ID: " + request.getPlanId()));
+
+        // 2. Check current active plan
+        Optional<PlanRegistration> existingActive = registrationRepository
+                .findActiveByDriverId(request.getDriverId(), LocalDate.now());
+
+        if (existingActive.isPresent()) {
+            PlanRegistration current = existingActive.get();
+
+            // Nếu đang ở Basic → cho phép upgrade
+            if (Boolean.TRUE.equals(current.getPlan().getIsDefault())) {
+                current.setStatus("CANCELLED");
+                current.setEndDate(LocalDate.now());
+                registrationRepository.save(current);
+                log.info("Cancelled Basic plan for driver {}", driver.getId());
+            } else {
+                throw new RuntimeException("Bạn đang có gói " + current.getPlan().getPlanName() +
+                        " đang hoạt động. Vui lòng hủy trước khi đăng ký gói mới.");
+            }
         }
 
-        // Kích hoạt (dùng helper method trong entity bạn đã viết)
-        registration.activate();
-        registration.setPaymentTransactionId(transactionId);
-        registration.setPaymentMethod(paymentMethod);
+        // 3. Tính ngày bắt đầu và kết thúc
+        LocalDate startDate = LocalDate.now();
+        int validityDays = Integer.parseInt(plan.getValidityDays());
+        LocalDate endDate = startDate.plusDays(validityDays);
 
-        // ⭐ TẠO QR CODE
-        String qrCode = qrCodeService.generateQRCodeForSubscription(registration);
-        registration.setQrCode(qrCode);
-        registration.setQrGeneratedAt(java.time.Instant.now());
+        // 4. Tạo registration mới
+        PlanRegistration registration = new PlanRegistration();
+        registration.setDriver(driver);
+        registration.setPlan(plan);
+        registration.setStartDate(startDate);
+        registration.setEndDate(endDate);
+        registration.setStatus("ACTIVE");
 
-        PlanRegistration activated = registrationRepository.save(registration);
-        log.info("✅ [Phase 2] Activated subscription {} with QR: {}", registrationId, qrCode);
+        PlanRegistration savedRegistration = registrationRepository.save(registration);
+        log.info("Driver {} successfully registered plan {}", driver.getId(), plan.getPlanName());
 
-        return activated;
+        // 5. Return response
+        return PlanRegistrationResponse.builder()
+                .registrationId(savedRegistration.getId())
+                .planName(plan.getPlanName())
+                .startDate(startDate.format(dateFormatter))
+                .endDate(endDate.format(dateFormatter))
+                .status("ACTIVE")
+                .totalPaid(plan.getPrice())
+                .message("Đăng ký gói " + plan.getPlanName() + " thành công!")
+                .build();
     }
 
     /**
-     * ⭐ [PHASE 3] Xác thực QR Code khi sạc
+     * ⭐ STEP 3: Hủy gói → TỰ ĐỘNG về Basic
      */
-    @Transactional
-    public VerifyQRCodeResponse verifySubscriptionByQRCode(String qrCode) {
-        log.info("🔍 [Phase 3] Verifying QR code: {}", qrCode);
-
-        SubscriptionQRCodeService.QRCodeInfo qrInfo;
-        try {
-            // 1. Parse QR để lấy registrationId
-            qrInfo = qrCodeService.parseSubscriptionQRCode(qrCode);
-        } catch (Exception e) {
-            log.warn("Invalid QR format: {}", e.getMessage());
-            return VerifyQRCodeResponse.invalid("Mã QR không hợp lệ");
-        }
-
-        // 2. Lấy registration từ DB
-        Integer regId = Integer.parseInt(qrInfo.getRegistrationId());
-        PlanRegistration registration = registrationRepository.findById(regId)
-                .orElse(null);
-
-        // 3. Kiểm tra DB record
-        if (registration == null) {
-            log.warn("Registration not found for ID: {}", regId);
-            return VerifyQRCodeResponse.invalid("Đăng ký không tồn tại");
-        }
-
-        // 4. Kiểm tra status
-        if (!"ACTIVE".equals(registration.getStatus())) {
-            log.warn("Subscription {} is not ACTIVE (status: {})", regId, registration.getStatus());
-            return VerifyQRCodeResponse.invalid("Gói đăng ký không hoạt động");
-        }
-
-        // 5. Kiểm tra hết hạn (dùng helper method trong entity bạn đã viết)
-        if (registration.isExpired()) {
-            log.warn("Subscription {} is expired (End date: {})", regId, registration.getEndDate());
-            return VerifyQRCodeResponse.invalid("Gói đăng ký đã hết hạn");
-        }
-
-        // 6. Xác thực chữ ký (Quan trọng nhất!)
-        String driverId = registration.getDriver().getId().toString();
-        boolean isSignatureValid = qrCodeService.verifySubscriptionQRCode(
-                qrCode,
-                qrInfo.getRegistrationId(),
-                driverId
-        );
-
-        if (!isSignatureValid) {
-            log.error("CRITICAL: Invalid QR Signature for registration {}", regId);
-            return VerifyQRCodeResponse.invalid("Mã QR không hợp lệ (Chữ ký sai)");
-        }
-
-        // 7. Ghi nhận lượt quét (dùng helper method trong entity)
-        registration.incrementScanCount();
-        registrationRepository.save(registration);
-
-        log.info("✅ [Phase 3] QR Verified. RegID: {}, Driver: {}, Plan: {}",
-                regId, driverId, registration.getPlan().getPlanName());
-
-        // Trả về thông tin thành công
-        return VerifyQRCodeResponse.valid(
-                registration.getId(),
-                registration.getDriver().getId(),
-                registration.getDriver().getAccount().getFullName(),
-                registration.getPlan().getPlanName(),
-                registration.getEndDate()
-        );
-    }
-
-    // =================================================================
-    // CÁC HÀM API MÀ CONTROLLER CỦA BẠN CẦN
-    // =================================================================
-
-    @Transactional(readOnly = true)
-    public PlanRegistrationResponse getCurrentSubscription(Integer driverId) {
-        log.info("🔍 Getting current subscription for driver {}", driverId);
-
-        PlanRegistration registration = registrationRepository
-                .findActiveByDriverId(driverId, LocalDate.now()) // Dùng hàm repo bạn đã viết
-                .orElseThrow(() -> new RuntimeException("No active subscription found for driver"));
-
-        return PlanRegistrationResponse.fromEntity(registration);
-    }
-
     @Transactional
     public PlanRegistrationResponse cancelSubscription(Integer driverId) {
-        log.info("❌ Cancelling subscription for driver {}", driverId);
+        log.info("Cancelling subscription for driver {}", driverId);
 
-        PlanRegistration registration = registrationRepository
-                .findActiveByDriverId(driverId, LocalDate.now())
-                .orElseThrow(() -> new RuntimeException("No active subscription to cancel"));
+        Optional<PlanRegistration> activeOpt = registrationRepository
+                .findActiveByDriverId(driverId, LocalDate.now());
 
-        registration.setStatus("CANCELLED");
-        PlanRegistration cancelled = registrationRepository.save(registration);
+        if (activeOpt.isEmpty()) {
+            throw new RuntimeException("Không tìm thấy gói nào đang hoạt động.");
+        }
 
-        log.info("✅ Cancelled subscription {}", registration.getId());
-        return PlanRegistrationResponse.fromEntity(cancelled);
+        PlanRegistration active = activeOpt.get();
+
+        // Không cho hủy Basic
+        if (Boolean.TRUE.equals(active.getPlan().getIsDefault())) {
+            throw new RuntimeException("Không thể hủy gói Basic");
+        }
+
+        // Expire current plan
+        active.setStatus("CANCELLED");
+        active.setEndDate(LocalDate.now());
+        registrationRepository.save(active);
+
+        // Auto assign Basic plan trở lại
+        Driver driver = driverRepository.findById(driverId)
+                .orElseThrow(() -> new RuntimeException("Driver not found"));
+
+        assignBasicPlanToNewDriver(driver);
+
+        log.info("Cancelled plan and reverted driver {} to Basic", driverId);
+
+        return PlanRegistrationResponse.builder()
+                .registrationId(active.getId())
+                .planName(active.getPlan().getPlanName())
+                .status("CANCELLED")
+                .message("Đã hủy gói dịch vụ. Tài khoản của bạn đã được chuyển về gói Basic.")
+                .build();
     }
 
+    /**
+     * ⭐ STEP 4: Xem gói hiện tại
+     */
+    @Transactional(readOnly = true)
+    public PlanRegistrationResponse getCurrentSubscription(Integer driverId) {
+        Optional<PlanRegistration> activeOpt = registrationRepository
+                .findActiveByDriverId(driverId, LocalDate.now());
+
+        if (activeOpt.isEmpty()) {
+            return PlanRegistrationResponse.builder()
+                    .message("Bạn chưa đăng ký gói dịch vụ nào đang hoạt động.")
+                    .build();
+        }
+
+        PlanRegistration active = activeOpt.get();
+        return PlanRegistrationResponse.builder()
+                .registrationId(active.getId())
+                .planName(active.getPlan().getPlanName())
+                .startDate(active.getStartDate().format(dateFormatter))
+                .endDate(active.getEndDate().format(dateFormatter))
+                .status(active.getStatus())
+                .totalPaid(active.getPlan().getPrice())
+                .message("Thông tin gói đang hoạt động.")
+                .build();
+    }
+
+    /**
+     * ⭐ STEP 5: Xem lịch sử
+     */
     @Transactional(readOnly = true)
     public List<PlanRegistrationResponse> getRegistrationHistory(Integer driverId) {
-        log.info("📜 Getting registration history for driver {}", driverId);
+        List<PlanRegistration> history = registrationRepository.findByDriverId(driverId);
 
-        List<PlanRegistration> registrations = registrationRepository.findByDriverId(driverId);
-        return registrations.stream()
-                .map(PlanRegistrationResponse::fromEntity) // Dùng hàm static bạn đã viết
+        return history.stream()
+                .map(reg -> PlanRegistrationResponse.builder()
+                        .registrationId(reg.getId())
+                        .planName(reg.getPlan().getPlanName())
+                        .startDate(reg.getStartDate().format(dateFormatter))
+                        .endDate(reg.getEndDate().format(dateFormatter))
+                        .status(reg.getStatus())
+                        .totalPaid(reg.getPlan().getPrice())
+                        .build())
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * ⭐ HELPER: Lấy active plan của driver (dùng cho session/invoice)
+     */
+    @Transactional(readOnly = true)
+    public Optional<PlanRegistration> getActiveRegistration(Integer driverId) {
+        return registrationRepository.findActiveByDriverId(driverId, LocalDate.now());
     }
 }
