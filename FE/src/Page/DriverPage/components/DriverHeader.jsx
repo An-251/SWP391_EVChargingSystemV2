@@ -7,7 +7,9 @@ import {
   LogOut,
   Car,
   History,
-  Home
+  Home,
+  Calendar,
+  CreditCard
 } from 'lucide-react';
 
 const DriverHeader = ({ 
@@ -26,8 +28,16 @@ const DriverHeader = ({
     window.location.href = '/driver/history';
   };
   
+  const handleNavigateToReservations = () => {
+    window.location.href = '/driver/reservations';
+  };
+  
   const handleNavigateToHome = () => {
     window.location.href = '/driver';
+  };
+
+  const handleNavigateToSubscription = () => {
+    window.location.href = '/driver/select-subscription';
   };
   return (
     <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-[1000]">
@@ -81,6 +91,18 @@ const DriverHeader = ({
               </span>
             </button>
             
+            {/* Reservations Icon */}
+            <button
+              onClick={handleNavigateToReservations}
+              className="p-2 rounded-full bg-green-100 hover:bg-green-200 transition-colors group relative"
+              title="Đặt chỗ của tôi"
+            >
+              <Calendar className="w-5 h-5 text-green-600 group-hover:text-green-900" />
+              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                Đặt chỗ
+              </span>
+            </button>
+            
             {/* Vehicles Icon */}
             <button
               onClick={onNavigateToVehicles}
@@ -90,6 +112,18 @@ const DriverHeader = ({
               <Car className="w-5 h-5 text-gray-600 group-hover:text-gray-900" />
               <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
                 Phương tiện
+              </span>
+            </button>
+
+            {/* Subscription Icon */}
+            <button
+              onClick={handleNavigateToSubscription}
+              className="p-2 rounded-full bg-blue-100 hover:bg-blue-200 transition-colors group relative"
+              title="Gói dịch vụ của tôi"
+            >
+              <CreditCard className="w-5 h-5 text-blue-600 group-hover:text-blue-900" />
+              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                Subscription
               </span>
             </button>
               
