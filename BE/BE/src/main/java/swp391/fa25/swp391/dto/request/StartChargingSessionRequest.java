@@ -30,4 +30,7 @@ public class StartChargingSessionRequest {
     @Min(value = 0, message = "Start percentage must be between 0 and 100")
     @Max(value = 100, message = "Start percentage must be between 0 and 100")
     private Integer startPercentage;
+
+    // Optional - nếu có reservation trước
+    private Long reservationId;
 }

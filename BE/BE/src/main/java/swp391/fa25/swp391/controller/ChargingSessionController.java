@@ -16,10 +16,12 @@ import swp391.fa25.swp391.dto.response.ChargingSessionListResponse;
 import swp391.fa25.swp391.dto.response.ChargingSessionResponse;
 import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.ChargingSession;
+import swp391.fa25.swp391.entity.Reservation;
 import swp391.fa25.swp391.service.ChargingSessionService;
 import swp391.fa25.swp391.service.IService.IChargingSessionService;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -424,9 +426,21 @@ public class ChargingSessionController {
             chargedPercentage = session.getEndPercentage() - session.getStartPercentage();
         }
 
-        // Đảm bảo các Entity liên quan (ChargingPoint, Driver, Vehicle) đã được fetch
-        // (Đây là lý do logic này thường được đặt trong Mapper độc lập hoặc Controller)
         ChargingPoint cp = session.getChargingPoint();
+
+        // ✅ LẤY THÔNG TIN RESERVATION (NẾU CÓ)
+        Reservation reservation = session.getReservation();
+        Long reservationId = null;
+        String chargingType = "WALK-IN"; // Mặc định là sạc trực tiếp
+        LocalDateTime reservationStartTime = null;
+        LocalDateTime reservationEndTime = null;
+
+        if (reservation != null) {
+            reservationId = reservation.getId();
+            chargingType = "RESERVATION"; // Sạc qua đặt chỗ
+            reservationStartTime = reservation.getStartTime();
+            reservationEndTime = reservation.getEndTime();
+        }
 
         return ChargingSessionResponse.builder()
                 .sessionId(session.getId())
@@ -450,6 +464,11 @@ public class ChargingSessionController {
                 .chargedPercentage(chargedPercentage)
                 .kwhUsed(session.getKwhUsed())
                 .cost(session.getCost())
+
+                .reservationId(reservationId)
+                .chargingType(chargingType)
+                .reservationStartTime(reservationStartTime)
+                .reservationEndTime(reservationEndTime)
                 .build();
     }
 }

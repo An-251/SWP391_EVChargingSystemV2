@@ -34,6 +34,7 @@ public class ChargingSessionService implements IChargingSessionService {
     private final IDriverService driverService;
     private final IVehicleService vehicleService;
     private final IChargingPointService chargingPointService;
+    private final ReservationService reservationService;
 
     // Hằng số cấu hình
     private static final BigDecimal KWH_PER_PERCENT = new BigDecimal("0.5");
@@ -50,52 +51,88 @@ public class ChargingSessionService implements IChargingSessionService {
     public ChargingSession startChargingSession(StartChargingSessionRequest request) {
         log.info("Starting charging session for driver {}", request.getDriverId());
 
+        // 1. Validate Driver
         Driver driver = driverService.findById(request.getDriverId())
                 .orElseThrow(() -> new RuntimeException("Driver not found with ID: " + request.getDriverId()));
 
-        // Validation: Check có active plan không
+        // 2. Validate Active Plan
         Optional<PlanRegistration> activePlan = planRegistrationRepository
                 .findActiveByDriverId(request.getDriverId(), LocalDate.now());
-
         if (activePlan.isEmpty()) {
             throw new RuntimeException("Bạn chưa có gói đăng ký. Vui lòng đăng ký gói trước khi sử dụng.");
         }
 
-        // Kiểm tra driver có session đang charging chưa
+        // 3. Kiểm tra driver có session đang charging chưa
         if (chargingSessionRepository.existsByDriverIdAndStatus(request.getDriverId(), STATUS_CHARGING)) {
             throw new RuntimeException("Driver already has an active charging session");
         }
 
+        // 4. Validate Vehicle
         Vehicle vehicle = vehicleService.findById(request.getVehicleId())
                 .orElseThrow(() -> new RuntimeException("Vehicle not found with ID: " + request.getVehicleId()));
-
         if (!vehicle.getDriver().getId().equals(request.getDriverId())) {
             throw new RuntimeException("Vehicle does not belong to this driver");
         }
 
+        // 5. Validate Charging Point
         ChargingPoint chargingPoint = chargingPointService.findById(request.getChargingPointId())
                 .orElseThrow(() -> new RuntimeException("Charging point not found with ID: " + request.getChargingPointId()));
 
-        if (!"active".equals(chargingPoint.getStatus())) {
-            throw new RuntimeException("Charging point must be 'active' to start charging");
+        //  6. XỬ LÝ 2 TRƯỜNG HỢP: SẠC QUA ĐẶT CHỖ HOẶC SẠC TRỰC TIẾP
+        Reservation reservation = null;
+        String pointStatus = chargingPoint.getStatus();
+
+        if (request.getReservationId() != null) {
+            //  CASE 1: SẠC QUA ĐẶT CHỖ (reservation-based charging)
+            log.info("Processing reservation-based charging with reservation ID: {}", request.getReservationId());
+
+            if (!"booked".equalsIgnoreCase(pointStatus)) {
+                throw new RuntimeException("Charging point must be in 'booked' status for reservation-based charging");
+            }
+
+            // Validate và lấy reservation
+            reservation = validateAndGetReservation(
+                    request.getReservationId(),
+                    driver.getId(),
+                    chargingPoint.getId()
+            );
+
+        } else {
+            //  CASE 2: SẠC TRỰC TIẾP - WALK-IN (direct charging without reservation)
+            log.info("Processing direct walk-in charging (no reservation)");
+
+            if (!"active".equalsIgnoreCase(pointStatus)) {
+                if ("booked".equalsIgnoreCase(pointStatus)) {
+                    throw new RuntimeException("This charging point is currently reserved. Please use your reservation ID or choose another point.");
+                } else if ("using".equalsIgnoreCase(pointStatus)) {
+                    throw new RuntimeException("Charging point is currently in use");
+                } else if ("maintenance".equalsIgnoreCase(pointStatus)) {
+                    throw new RuntimeException("Charging point is under maintenance");
+                } else {
+                    throw new RuntimeException("Charging point must be 'active' for direct charging");
+                }
+            }
         }
 
+        // 7. Kiểm tra charging point có đang được sử dụng không
         Optional<ChargingSession> pointSession =
                 chargingSessionRepository.findActiveSessionByChargingPointId(request.getChargingPointId());
         if (pointSession.isPresent()) {
             throw new RuntimeException("Charging point is currently in use");
         }
 
+        // 8. Kiểm tra station status
         ChargingStation station = chargingPoint.getStation();
         if (station != null && "inactive".equals(station.getStatus())) {
             throw new RuntimeException("Charging station is inactive");
         }
 
-        // Tạo session mới với status CHARGING
+        //  9. TẠO SESSION VỚI HOẶC KHÔNG CÓ RESERVATION
         ChargingSession session = new ChargingSession();
         session.setDriver(driver);
         session.setVehicle(vehicle);
         session.setChargingPoint(chargingPoint);
+        session.setReservation(reservation); //  Có thể là null (walk-in) hoặc có giá trị (reservation)
         session.setStartTime(LocalDateTime.now());
         session.setStartPercentage(request.getStartPercentage());
         session.setStatus(STATUS_CHARGING);
@@ -104,10 +141,22 @@ public class ChargingSessionService implements IChargingSessionService {
         session.setOverusedTime(BigDecimal.ZERO);
 
         ChargingSession savedSession = chargingSessionRepository.save(session);
+
+        //  10. CẬP NHẬT TRẠNG THÁI
+        // Nếu có reservation, cập nhật status thành FULFILLED
+        if (reservation != null) {
+            reservation.setStatus("FULFILLED");
+            reservationService.register(reservation);
+            log.info("Reservation {} marked as FULFILLED", reservation.getId());
+        }
+
+        // Cập nhật charging point status
         chargingPointService.startUsingPoint(request.getChargingPointId());
 
-        log.info("Created charging session {} with status '{}' for driver {}",
-                savedSession.getId(), STATUS_CHARGING, driver.getId());
+        log.info("Created charging session {} with status '{}' for driver {} (reservation: {})",
+                savedSession.getId(), STATUS_CHARGING, driver.getId(),
+                reservation != null ? reservation.getId() : "none");
+
         return savedSession;
     }
 
@@ -256,6 +305,44 @@ public class ChargingSessionService implements IChargingSessionService {
     @Transactional(readOnly = true)
     public Optional<ChargingSession> findById(Integer id) {
         return chargingSessionRepository.findById(id);
+    }
+
+    /**
+     * Validate reservation when starting charging session
+     */
+    private Reservation validateAndGetReservation(Long reservationId, Integer driverId, Integer chargingPointId) {
+        Reservation reservation = reservationService.findById(reservationId.intValue());
+
+        if (reservation == null) {
+            throw new RuntimeException("Reservation not found");
+        }
+
+        // Kiểm tra reservation có phải của driver này không
+        if (!reservation.getDriver().getId().equals(driverId)) {
+            throw new RuntimeException("This reservation belongs to another driver");
+        }
+
+        // Kiểm tra reservation có phải cho charging point này không
+        if (!reservation.getChargingPoint().getId().equals(chargingPointId)) {
+            throw new RuntimeException("This reservation is for another charging point");
+        }
+
+        // Kiểm tra trạng thái reservation
+        String reservationStatus = reservation.getStatus();
+        if (!"ACTIVE".equalsIgnoreCase(reservationStatus)) {
+            throw new RuntimeException("Invalid reservation status: " + reservationStatus + ". Only ACTIVE reservations can be used.");
+        }
+
+        // Kiểm tra thời gian
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(reservation.getStartTime())) {
+            throw new RuntimeException("Too early! Reservation starts at: " + reservation.getStartTime());
+        }
+        if (now.isAfter(reservation.getEndTime())) {
+            throw new RuntimeException("Reservation has expired at: " + reservation.getEndTime());
+        }
+
+        return reservation;
     }
 
     @Override
