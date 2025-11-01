@@ -11,13 +11,15 @@ import {
   DollarSign,
   XCircle,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  QrCode
 } from 'lucide-react';
 import { 
   fetchActiveSession, 
   stopSession, 
   cancelSession 
 } from '../../../redux/session/sessionSlice';
+import QRScanner from '../components/QRScanner';
 import api from '../../../configs/config-axios';
 
 const { confirm } = Modal;
@@ -34,13 +36,19 @@ const ActiveSession = () => {
   const [endPercentage, setEndPercentage] = useState(80);
   const [elapsedTime, setElapsedTime] = useState(0);
 
-  // Fetch active session on mount
+  // Fetch active session on mount (only if not already in Redux store)
   useEffect(() => {
     if (user?.driverId) {
+      // Check if we already have active session in Redux store
+      if (hasActiveSession && activeSession) {
+        console.log('✅ [ActiveSession] Using existing session from Redux store:', activeSession.sessionId);
+        return; // Don't fetch if we already have one
+      }
+      
       console.log('🔍 [ActiveSession] Fetching active session for driver:', user.driverId);
       dispatch(fetchActiveSession(user.driverId));
     }
-  }, [user, dispatch]);
+  }, [user?.driverId, dispatch]); // Remove activeSession and hasActiveSession from deps to avoid re-fetch
 
   // Log session data for debugging
   useEffect(() => {
