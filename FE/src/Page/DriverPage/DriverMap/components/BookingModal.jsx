@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Modal, Select, Slider, Button, message, Spin } from 'antd';
-import { X, MapPin, Zap, Battery, Clock, Navigation, Car } from 'lucide-react';
-import { startSession } from '../../../../redux/session/sessionSlice';
+import { X, MapPin, Zap, Battery, Clock, Navigation, Car, Calendar } from 'lucide-react';
 import { fetchDriverVehicles } from '../../../../redux/vehicle/vehicleSlice';
 import { fetchRoute, formatDistance, formatDuration } from '../../../../utils/routingService';
+import api from '../../../../configs/config-axios';
 
 const { Option } = Select;
 
@@ -82,7 +82,8 @@ const BookingModal = ({ visible, onClose, station, userLocation }) => {
     fetchRealRoute();
   }, [station, userLocation]);
 
-  const handleStartCharging = async () => {
+  // Handle create reservation (ĐẶT CHỖ - KHÔNG START SESSION)
+  const handleCreateReservation = async () => {
     if (!selectedVehicle) {
       message.warning('Vui lòng chọn xe!');
       return;
@@ -92,24 +93,68 @@ const BookingModal = ({ visible, onClose, station, userLocation }) => {
       return;
     }
 
+    // Find the actual charging point object to get more details
+    const selectedPointObject = availablePoints.find(
+      p => (p.id || p.pointId) === selectedChargingPoint
+    );
+    
+    console.log('🔍 [RESERVATION] Selected point object:', selectedPointObject);
+    console.log('🔍 [RESERVATION] Selected point ID:', selectedChargingPoint);
+    console.log('🔍 [RESERVATION] Point details:', {
+      id: selectedPointObject?.id,
+      pointId: selectedPointObject?.pointId,
+      pointName: selectedPointObject?.pointName,
+      status: selectedPointObject?.status
+    });
+
+    // Tạo reservation với thời gian mặc định 60 phút
     const requestData = {
-      driverId: user?.driverId,
       chargingPointId: selectedChargingPoint,
-      vehicleId: selectedVehicle,
-      startPercentage: startPercentage,
+      durationMinutes: 60 // Default duration
     };
 
-    console.log('🚀 [BOOKING] Request data:', requestData);
+    console.log('📝 [RESERVATION] Creating reservation with data:', requestData);
+    console.log('👤 [RESERVATION] Driver ID:', user?.driverId);
+    console.log('📍 [RESERVATION] Full URL:', `/drivers/${user?.driverId}/reservations`);
 
     try {
       setSubmitting(true);
-      await dispatch(startSession(requestData)).unwrap();
-      message.success('Đã bắt đầu phiên sạc! 🎉');
+      
+      // Call API to create reservation
+      const response = await api.post(`/drivers/${user?.driverId}/reservations`, requestData);
+      
+      console.log('✅ [RESERVATION] Success! Full response:', response);
+      console.log('✅ [RESERVATION] Response data:', response.data);
+      
+      // Save chargingPointId AND vehicleId mapping for later use when starting session
+      if (response.data?.reservationId) {
+        const mapping = JSON.parse(localStorage.getItem('reservationMapping') || '{}');
+        mapping[response.data.reservationId] = {
+          chargingPointId: selectedChargingPoint,
+          vehicleId: selectedVehicle, // 🆕 Lưu vehicleId đã chọn
+        };
+        localStorage.setItem('reservationMapping', JSON.stringify(mapping));
+        console.log('💾 [RESERVATION] Saved reservation data:', {
+          reservationId: response.data.reservationId,
+          chargingPointId: selectedChargingPoint,
+          vehicleId: selectedVehicle,
+        });
+      }
+      
+      message.success('Đặt chỗ thành công! Vui lòng đến trạm và quét QR để bắt đầu sạc. 🎉');
       onClose();
-      navigate('/driver/session');
+      
+      // Navigate to reservations page
+      navigate('/driver/reservations');
     } catch (error) {
-      console.error('❌ [BOOKING] Error:', error);
-      message.error(error || 'Không thể bắt đầu phiên sạc!');
+      console.error('❌ [RESERVATION] Error:', error);
+      console.error('❌ [RESERVATION] Error response:', error.response);
+      console.error('❌ [RESERVATION] Error data:', error.response?.data);
+      console.error('❌ [RESERVATION] Error status:', error.response?.status);
+      console.error('❌ [RESERVATION] Error message:', error.message);
+      
+      const errorMsg = error.response?.data?.message || error.response?.data || error.message || 'Không thể đặt chỗ!';
+      message.error(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -136,10 +181,33 @@ const BookingModal = ({ visible, onClose, station, userLocation }) => {
     return station.address || facility?.address || facility?.fullAddress || 'Chưa có địa chỉ';
   };
 
-  // Get available charging points (status = active, Backend uses lowercase)
+  // Get available charging points - MUST match BE validation (only "active")
+  // BE defines 3 statuses: "active", "inactive", "using"
+  // Only "active" points can be reserved
   const availablePoints = station?.chargingPoints?.filter(
-    (point) => point.status === 'active'
+    (point) => {
+      const status = point.status?.toLowerCase();
+      console.log('🔍 [BookingModal] Checking charging point:', {
+        pointName: point.pointName,
+        id: point.id,
+        pointId: point.pointId,
+        status: point.status,
+        statusLower: status,
+        willBeAcceptedByBE: status === 'active'
+      });
+      // CRITICAL: BE only accepts "active" status (not "inactive" or "using")
+      return status === 'active';
+    }
   ) || [];
+
+  console.log('📍 [BookingModal] Total charging points:', station?.chargingPoints?.length);
+  console.log('✅ [BookingModal] Available charging points:', availablePoints.length);
+  console.log('📋 [BookingModal] Available points details:', availablePoints.map(p => ({
+    name: p.pointName,
+    id: p.id,
+    pointId: p.pointId,
+    status: p.status
+  })));
 
   if (!station) return null;
 
@@ -266,7 +334,10 @@ const BookingModal = ({ visible, onClose, station, userLocation }) => {
               className="w-full"
               size="large"
               value={selectedChargingPoint}
-              onChange={setSelectedChargingPoint}
+              onChange={(value) => {
+                console.log('⚡ [BookingModal] Selected charging point ID:', value);
+                setSelectedChargingPoint(value);
+              }}
             >
               {availablePoints.map((point) => (
                 <Option key={point.id || point.pointId} value={point.id || point.pointId}>
@@ -282,25 +353,12 @@ const BookingModal = ({ visible, onClose, station, userLocation }) => {
           )}
         </div>
 
-        {/* Battery Start Percentage */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <Battery className="inline mr-2" size={16} />
-            Pin hiện tại: {startPercentage}%
-          </label>
-          <Slider
-            min={0}
-            max={100}
-            value={startPercentage}
-            onChange={setStartPercentage}
-            marks={{
-              0: '0%',
-              25: '25%',
-              50: '50%',
-              75: '75%',
-              100: '100%',
-            }}
-          />
+        {/* Info Message */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-sm text-blue-800">
+            <Calendar className="inline mr-2" size={16} />
+            <strong>Lưu ý:</strong> Sau khi đặt chỗ, bạn cần đến trạm và quét mã QR để bắt đầu sạc.
+          </p>
         </div>
 
         {/* Action Buttons */}
@@ -311,13 +369,13 @@ const BookingModal = ({ visible, onClose, station, userLocation }) => {
           <Button
             type="primary"
             size="large"
-            onClick={handleStartCharging}
+            onClick={handleCreateReservation}
             loading={submitting}
             disabled={!selectedVehicle || !selectedChargingPoint || vehicles.length === 0}
             className="bg-gradient-to-r from-green-500 to-blue-500"
           >
-            <Zap className="inline mr-2" size={18} />
-            Bắt đầu sạc
+            <Calendar className="inline mr-2" size={18} />
+            Đặt chỗ
           </Button>
         </div>
       </div>
