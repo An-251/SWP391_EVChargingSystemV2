@@ -14,6 +14,7 @@ import StaffHome from "./Page/Staff/StaffHome/Home";
 import DriverPage from "./Page/DriverPage";
 import DriverProfile from "./Page/DriverPage/DriverProfile";
 import DriverVehicles from "./Page/DriverPage/DriverVehicles";
+import DriverReservations from "./Page/DriverPage/DriverReservations/DriverReservations";
 import ActiveSession from "./Page/DriverPage/DriverSession/ActiveSession";
 import SessionHistory from "./Page/DriverPage/DriverSession/SessionHistory";
 import SessionCompleted from "./Page/DriverPage/DriverSession/SessionCompleted";
@@ -167,6 +168,28 @@ function App() {
                       style={{ minHeight: "100vh" }}
                     >
                       <DriverVehicles />
+                    </motion.div>
+                  </ErrorBoundary>
+                </SubscriptionGuard>
+              </RoleBasedRoute>
+            } 
+          />
+
+          {/* Driver Reservations Route - Protected and Subscription Guarded */}
+          <Route 
+            path="/driver/reservations" 
+            element={
+              <RoleBasedRoute allowedRoles={["Driver"]}>
+                <SubscriptionGuard>
+                  <ErrorBoundary>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.5 }}
+                      style={{ minHeight: "100vh" }}
+                    >
+                      <DriverReservations />
                     </motion.div>
                   </ErrorBoundary>
                 </SubscriptionGuard>
