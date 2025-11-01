@@ -38,11 +38,20 @@ public class DriverController {
             @PathVariable Integer driverId,
             @Valid @RequestBody ReservationRequest request) {
         try {
+            System.out.println("📝 [CREATE RESERVATION] Request received:");
+            System.out.println("  - Driver ID: " + driverId);
+            System.out.println("  - Charging Point ID: " + request.getChargingPointId());
+            System.out.println("  - Duration: " + request.getDurationMinutes());
+            
             // Validate driver exists
             Driver driver = validateDriver(driverId);
+            System.out.println("✅ [CREATE RESERVATION] Driver validated: " + driver.getId());
 
             // Validate charging point exists and is available
             ChargingPoint chargingPoint = validateChargingPoint(request.getChargingPointId());
+            System.out.println("✅ [CREATE RESERVATION] Charging point found: " + chargingPoint.getId());
+            System.out.println("  - Point name: " + chargingPoint.getPointName());
+            System.out.println("  - Current status: " + chargingPoint.getStatus());
 
             // Check if charging point is available
             ResponseEntity<?> availabilityCheck = checkChargingPointAvailability(chargingPoint);
@@ -143,18 +152,42 @@ public class DriverController {
      * Returns error response if not available, null if available
      */
     private ResponseEntity<?> checkChargingPointAvailability(ChargingPoint chargingPoint) {
-        // Check status
-        if (!"AVAILABLE".equalsIgnoreCase(chargingPoint.getStatus())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Charging point is not available");
+        System.out.println("🔍 [AVAILABILITY CHECK] Checking charging point:");
+        System.out.println("  - Point ID: " + chargingPoint.getId());
+        System.out.println("  - Point name: " + chargingPoint.getPointName());
+        System.out.println("  - Current status: '" + chargingPoint.getStatus() + "'");
+        System.out.println("  - Status length: " + (chargingPoint.getStatus() != null ? chargingPoint.getStatus().length() : 0));
+        System.out.println("  - Status bytes: " + java.util.Arrays.toString(chargingPoint.getStatus() != null ? chargingPoint.getStatus().getBytes() : new byte[0]));
+        
+        // CRITICAL FIX: Trim status to handle potential whitespace
+        String status = chargingPoint.getStatus();
+        if (status != null) {
+            status = status.trim();
         }
+        
+        System.out.println("  - Trimmed status: '" + status + "'");
+        System.out.println("  - Status equals 'active': " + "active".equalsIgnoreCase(status));
+        
+        // Check status - must be "active" (not "inactive" or "using")
+        if (!"active".equalsIgnoreCase(status)) {
+            System.out.println("❌ [AVAILABILITY CHECK] Status check FAILED");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Charging point is not available. Current status: '" + status + "'");
+        }
+        
+        System.out.println("✅ [AVAILABILITY CHECK] Status check PASSED");
 
         // Check if already reserved
-        if (hasActiveReservation(chargingPoint.getId())) {
+        boolean hasReservation = hasActiveReservation(chargingPoint.getId());
+        System.out.println("🔍 [AVAILABILITY CHECK] Has active reservation: " + hasReservation);
+        
+        if (hasReservation) {
+            System.out.println("❌ [AVAILABILITY CHECK] Reservation check FAILED");
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body("Charging point is currently reserved");
         }
-
+        
+        System.out.println("✅ [AVAILABILITY CHECK] All checks PASSED - Point is available");
         return null; // Available
     }
 
