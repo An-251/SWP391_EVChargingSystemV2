@@ -79,6 +79,18 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
 // Thêm vào interface ChargingSessionRepository
 
 
+    /**
+     * Tìm các session chưa có invoice của một driver trong khoảng thời gian
+     */
+    @Query("SELECT cs FROM ChargingSession cs WHERE cs.driver.id = :driverId " +
+            "AND cs.invoice IS NULL " +
+            "AND cs.status = 'completed' " +
+            "AND cs.startTime BETWEEN :startDate AND :endDate")
+    List<ChargingSession> findUnbilledSessionsByDriverAndDateRange(
+            @Param("driverId") Integer driverId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
     @Query("SELECT cs FROM ChargingSession cs WHERE cs.driver.id = :driverId " +
             "AND cs.startTime >= :startDate AND cs.startTime <= :endDate " +
             "AND cs.status = 'inactive' AND cs.cost > 0")

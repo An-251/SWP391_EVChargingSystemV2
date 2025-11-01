@@ -57,4 +57,8 @@ public class ChargingSession {
     @JoinColumn(name = "POINT_ID")
     private ChargingPoint chargingPoint;
 
+    @ManyToOne
+    @JoinColumn(name = "INVOICE_ID")
+    private Invoice invoice;
+
 }

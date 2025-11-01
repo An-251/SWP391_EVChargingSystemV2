@@ -39,18 +39,12 @@ public class ChargingSessionService implements IChargingSessionService {
     private static final BigDecimal KWH_PER_PERCENT = new BigDecimal("0.5");
     private static final BigDecimal COST_PER_KWH = new BigDecimal("3000");
 
-    // Session Status Constants
+    // ChargingSession Status Constants
     private static final String STATUS_CHARGING = "charging";      // Đang sạc
     private static final String STATUS_COMPLETED = "completed";    // Hoàn thành
     private static final String STATUS_CANCELLED = "cancelled";    // Đã hủy
     private static final String STATUS_FAILED = "failed";          // Lỗi hệ thống
     private static final String STATUS_INTERRUPTED = "interrupted"; // Bị gián đoạn
-    // private static final String STATUS_TIMEOUT = "timeout";        // Đã loại bỏ
-
-    // Legacy status (backward compatibility - cho charging point/station)
-    private static final String STATUS_ACTIVE = "active";
-    private static final String STATUS_USING = "using";
-    private static final String STATUS_INACTIVE = "inactive";
 
     @Override
     public ChargingSession startChargingSession(StartChargingSessionRequest request) {
@@ -82,7 +76,7 @@ public class ChargingSessionService implements IChargingSessionService {
         ChargingPoint chargingPoint = chargingPointService.findById(request.getChargingPointId())
                 .orElseThrow(() -> new RuntimeException("Charging point not found with ID: " + request.getChargingPointId()));
 
-        if (!STATUS_ACTIVE.equals(chargingPoint.getStatus())) {
+        if (!"active".equals(chargingPoint.getStatus())) {
             throw new RuntimeException("Charging point must be 'active' to start charging");
         }
 
@@ -93,7 +87,7 @@ public class ChargingSessionService implements IChargingSessionService {
         }
 
         ChargingStation station = chargingPoint.getStation();
-        if (station != null && STATUS_INACTIVE.equals(station.getStatus())) {
+        if (station != null && "inactive".equals(station.getStatus())) {
             throw new RuntimeException("Charging station is inactive");
         }
 
@@ -226,8 +220,6 @@ public class ChargingSessionService implements IChargingSessionService {
 
         log.warn("Session {} marked as '{}'", sessionId, STATUS_INTERRUPTED);
     }
-
-    // Phương thức timeoutChargingSession đã bị loại bỏ
 
     private BigDecimal applyPlanDiscount(Integer driverId, BigDecimal baseCost) {
         Optional<PlanRegistration> activePlan = planRegistrationRepository

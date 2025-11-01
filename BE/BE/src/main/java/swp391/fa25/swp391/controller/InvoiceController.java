@@ -205,7 +205,42 @@ public class InvoiceController {
         }
     }
 
-    // ==================== ADMIN ENDPOINTS (giữ nguyên) ====================
+    // ==================== ADMIN ENDPOINTS ====================
+
+    /**
+     * Admin tạo invoice tổng hợp cho driver từ các session chưa có invoice
+     * trong khoảng thời gian 
+     */
+    @PostMapping("/admin/generate-consolidated")
+    public ResponseEntity<?> generateConsolidatedInvoice(@RequestBody ManualGenerateRequest request) {
+        try {
+            LocalDate startDate = LocalDate.parse(request.getStartDate());
+            LocalDate endDate = LocalDate.parse(request.getEndDate());
+
+            Invoice invoice = invoiceServiceImpl.generateInvoiceForUnbilledSessions(
+                    request.getDriverId(),
+                    startDate,
+                    endDate
+            );
+
+            if (invoice == null) {
+                return ResponseEntity.ok(ApiResponse.success(
+                        "No unbilled sessions found for this period", null
+                ));
+            }
+
+            InvoiceDetailResponse response = mapToDetailResponse(invoice);
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Consolidated invoice generated successfully",
+                    response
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to generate consolidated invoice: " + e.getMessage()));
+        }
+    }
 
     @PostMapping("/admin/generate-manual")
     public ResponseEntity<?> generateManualInvoice(@RequestBody ManualGenerateRequest request) {

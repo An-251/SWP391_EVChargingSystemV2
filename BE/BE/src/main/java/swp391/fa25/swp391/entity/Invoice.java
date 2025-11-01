@@ -8,6 +8,8 @@ import org.hibernate.annotations.Nationalized;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -59,10 +61,8 @@ public class Invoice {
     @JoinColumn(name = "DRIVER_ID", nullable = false)
     private Driver driver;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "SESSION_ID")
-    private ChargingSession session; // Nullable vì invoice có thể là monthly invoice
-
+    @OneToMany(mappedBy = "invoice", fetch = FetchType.LAZY)
+    private List<ChargingSession> sessions = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "PLAN_ID")
