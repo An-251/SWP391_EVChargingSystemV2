@@ -87,7 +87,47 @@ export const registerUser = createAsyncThunk("registerUser", async (values, { re
     
     // BE trả về: { success, message, data: { message, id, username, email, role, token, driverId } }
     const registrationResult = response.data.data;
-    console.log("🚗 [REGISTER] Driver ID created:", registrationResult?.driverId);
+    const driverId = registrationResult?.driverId;
+    console.log("🚗 [REGISTER] Driver ID created:", driverId);
+
+    // 🆕 Tự động gán gói Basic cho driver mới
+    if (driverId) {
+      try {
+        console.log("📦 [REGISTER] Auto-assigning Basic plan to driver:", driverId);
+        
+        // Lấy gói Basic - Correct API path
+        const plansResponse = await api.get("/api/subscriptions/profile");
+        console.log("📦 [REGISTER] Plans response:", plansResponse.data);
+        
+        const plans = plansResponse.data?.data || plansResponse.data;
+        const basicPlan = plans.find(plan => 
+          plan.isDefault === true || 
+          plan.planName?.toLowerCase().includes('basic') ||
+          plan.planType?.toLowerCase().includes('basic')
+        ) || plans[0]; // Fallback to first plan
+        
+        if (basicPlan) {
+          console.log("📦 [REGISTER] Found Basic plan:", basicPlan);
+          console.log("📦 [REGISTER] Plan ID:", basicPlan.id || basicPlan.planId);
+          
+          // Đăng ký driver vào gói Basic - Correct API path
+          const planRegisterResponse = await api.post("/api/driver/subscriptions/register", {
+            driverId: driverId,
+            planId: basicPlan.id || basicPlan.planId
+          });
+          
+          console.log("✅ [REGISTER] Successfully assigned Basic plan to driver");
+          console.log("✅ [REGISTER] Plan registration response:", planRegisterResponse.data);
+        } else {
+          console.warn("⚠️ [REGISTER] No Basic plan found, skipping auto-assignment");
+        }
+      } catch (planError) {
+        console.error("❌ [REGISTER] Failed to assign Basic plan:", planError);
+        console.error("❌ [REGISTER] Error details:", planError.response?.data);
+        // Không throw error vì đăng ký account vẫn thành công
+        // User có thể tự đăng ký gói sau
+      }
+    }
 
     return response.data;
   } catch (error) {
