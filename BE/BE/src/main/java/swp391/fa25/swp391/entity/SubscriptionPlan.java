@@ -50,6 +50,5 @@ public class SubscriptionPlan {
     @OneToMany(mappedBy = "plan")
     private List<PlanRegistration> planRegistrations = new ArrayList<>();
 
-    @OneToMany(mappedBy = "subscriptionPlan", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    private List<PlanBenefit> benefits = new ArrayList<>();
+
 }

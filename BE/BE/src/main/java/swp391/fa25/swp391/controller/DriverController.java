@@ -28,6 +28,9 @@ public class DriverController {
     private final IChargingPointService chargingPointService;
     private final IReservationService reservationService;
 
+    // Constant for reservation duration
+    private static final int RESERVATION_DURATION_MINUTES = 1; // Cố định 1 tiếng
+
     /**
      * Create reservation (when user clicks reserve button and confirms)
      * Start time is set to NOW, end time is NOW + duration
@@ -41,8 +44,14 @@ public class DriverController {
             // Validate driver exists
             Driver driver = validateDriver(driverId);
 
-            // Validate charging point exists and is available
+            // Validate charging point exists
             ChargingPoint chargingPoint = validateChargingPoint(request.getChargingPointId());
+
+            // Validate time slot availability
+            ResponseEntity<?> timeValidation = validateReservationTime(request, request.getChargingPointId());
+            if (timeValidation != null) {
+                return timeValidation;
+            }
 
             // Check if charging point is available
             ResponseEntity<?> availabilityCheck = checkChargingPointAvailability(chargingPoint);
@@ -139,14 +148,44 @@ public class DriverController {
     }
 
     /**
+     * Validate reservation time slot
+     */
+    private ResponseEntity<?> validateReservationTime(ReservationRequest request, Integer chargingPointId) {
+        // Calculate time slot
+        LocalDateTime startTime = LocalDateTime.now();
+        LocalDateTime endTime = startTime.plusMinutes(RESERVATION_DURATION_MINUTES);
+
+        // Validate overlapping reservations
+        if (hasOverlappingReservation(chargingPointId, startTime, endTime)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("This charging point is already reserved for the next hour");
+        }
+
+        return null;
+    }
+
+    /**
      * Check if charging point is available for reservation
      * Returns error response if not available, null if available
      */
     private ResponseEntity<?> checkChargingPointAvailability(ChargingPoint chargingPoint) {
-        // Check status
-        if (!"AVAILABLE".equalsIgnoreCase(chargingPoint.getStatus())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Charging point is not available");
+        String status = chargingPoint.getStatus();
+        
+        // Check if point can be reserved
+        if (!"ACTIVE".equalsIgnoreCase(status)) {
+            if ("USING".equalsIgnoreCase(status)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Charging point is currently in use");
+            } else if ("MAINTENANCE".equalsIgnoreCase(status)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Charging point is under maintenance");
+            } else if ("INACTIVE".equalsIgnoreCase(status)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Charging point is currently inactive");
+            } else if ("BOOKED".equalsIgnoreCase(status)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Charging point is already booked");
+            }
         }
 
         // Check if already reserved
@@ -171,19 +210,40 @@ public class DriverController {
     }
 
     /**
+     * Check for overlapping reservations
+     */
+    private boolean hasOverlappingReservation(Integer chargingPointId, LocalDateTime startTime, LocalDateTime endTime) {
+        List<Reservation> reservations = reservationService.findByChargingPointId(chargingPointId);
+        
+        return reservations.stream()
+                .filter(r -> "ACTIVE".equalsIgnoreCase(r.getStatus()))
+                .anyMatch(r -> {
+                    // Check if new reservation overlaps with existing one
+                    return !(endTime.isBefore(r.getStartTime()) || startTime.isAfter(r.getEndTime()));
+                });
+    }
+
+    /**
      * Create and save a new reservation
      */
     private Reservation createAndSaveReservation(Driver driver, ChargingPoint chargingPoint,
                                                  ReservationRequest request) {
-        // Calculate time range
+        // Calculate time range (fixed 1 hour)
         LocalDateTime startTime = LocalDateTime.now();
-        LocalDateTime endTime = startTime.plusMinutes(request.getDurationMinutes());
+        LocalDateTime endTime = startTime.plusMinutes(RESERVATION_DURATION_MINUTES);
 
-        // Build reservation entity
+        // Build and save reservation
         Reservation reservation = buildReservationEntity(driver, chargingPoint, startTime, endTime);
+        Reservation savedReservation = reservationService.register(reservation);
 
-        // Save and return
-        return reservationService.register(reservation);
+        // Update charging point status to BOOKED
+        chargingPoint.setStatus("BOOKED");
+        chargingPointService.updateChargingPoint(chargingPoint);
+
+        // Schedule reservation expiry check
+        scheduleReservationExpiryCheck(savedReservation, chargingPoint);
+        
+        return savedReservation;
     }
 
     /**
@@ -228,7 +288,60 @@ public class DriverController {
      * Cancel reservation by updating status
      */
     private void cancelReservationStatus(Reservation reservation) {
+        // Update reservation status
         reservation.setStatus("CANCELLED");
         reservationService.register(reservation);
+
+        // Update charging point status back to ACTIVE
+        ChargingPoint chargingPoint = reservation.getChargingPoint();
+        if (chargingPoint != null && "BOOKED".equalsIgnoreCase(chargingPoint.getStatus())) {
+            chargingPoint.setStatus("ACTIVE");
+            chargingPointService.updateChargingPoint(chargingPoint);
+        }
+    }
+
+    /**
+     * Schedule a task to check reservation expiry
+     */
+    private void scheduleReservationExpiryCheck(Reservation reservation, ChargingPoint chargingPoint) {
+        // TODO: Implement using Spring's @Scheduled or TaskScheduler
+        // This should:
+        // 1. Check if reservation is still ACTIVE at end time
+        // 2. If yes, mark it as EXPIRED
+        // 3. Update charging point status back to ACTIVE if it's still BOOKED
+    }
+
+    /**
+     * Handle reservation fulfillment (when driver starts charging)
+     */
+    @PostMapping("/reservations/{reservationId}/fulfill")
+    public ResponseEntity<?> fulfillReservation(@PathVariable Integer reservationId) {
+        try {
+            Reservation reservation = reservationService.findById(reservationId);
+
+            // Validate reservation exists
+            if (reservation == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Reservation not found");
+            }
+
+            // Validate reservation is active
+            if (!"ACTIVE".equalsIgnoreCase(reservation.getStatus())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Only active reservations can be fulfilled");
+            }
+
+            // Update reservation status
+            reservation.setStatus("FULFILLED");
+            reservationService.register(reservation);
+
+            // Charging point status will be updated to USING by the charging session service
+
+            return ResponseEntity.ok("Reservation fulfilled successfully");
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error fulfilling reservation: " + e.getMessage());
+        }
     }
 }
