@@ -9,14 +9,14 @@ import {
   Zap, 
   CreditCard,
   Building2,
-  Menu,
+  Menu as MenuIcon, // Đổi tên để tránh xung đột với Menu của antd
   X,
   LogOut,
-  ChevronRight,
   BarChart3,
   UserPlus
 } from 'lucide-react';
-import { message } from 'antd';
+// THAY ĐỔI: Import thêm Dropdown và Menu từ antd
+import { message, Dropdown, Menu as AntMenu } from 'antd';
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -49,92 +49,113 @@ const AdminLayout = () => {
 
   const isActive = (path) => location.pathname === path;
 
+  // THAY ĐỔI: Tạo menu cho Dropdown
+  const userMenu = (
+    <AntMenu>
+      <AntMenu.Item key="info" disabled style={{ cursor: 'default' }}>
+        <p className="font-semibold text-slate-800">{user?.fullName || user?.username}</p>
+        <p className="text-xs text-slate-500">{user?.email}</p>
+      </AntMenu.Item>
+      <AntMenu.Divider />
+      <AntMenu.Item key="logout" onClick={handleLogout} danger>
+        <div className="flex items-center space-x-2">
+          <LogOut size={16} />
+          <span>Logout</span>
+        </div>
+      </AntMenu.Item>
+    </AntMenu>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    // THAY ĐỔI LỚN: Thêm `h-screen w-screen overflow-hidden` để fix lỗi bị cắt
+    <div className="h-screen w-screen bg-slate-50 flex overflow-hidden">
       {/* Sidebar */}
       <aside
-        className={`bg-gradient-to-b from-gray-900 to-gray-800 text-white transition-all duration-300 ${
+        className={`bg-gradient-to-b from-slate-900 to-slate-800 text-white transition-all duration-300 ${
           sidebarOpen ? 'w-64' : 'w-20'
         } flex flex-col`}
       >
         {/* Logo & Toggle */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-700">
-          {sidebarOpen && (
-            <h1 className="text-xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
-              Admin Panel
-            </h1>
+        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-700">
+          {sidebarOpen ? (
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                <Zap size={18} className="text-white" />
+              </div>
+              <h1 className="text-xl font-bold text-white">EV Charge</h1>
+            </div>
+          ) : (
+            <div className="w-full flex justify-center">
+              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                <Zap size={18} className="text-white" />
+              </div>
+            </div>
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-gray-700 transition-colors"
+            className="p-2 rounded-lg hover:bg-slate-700 transition-colors"
           >
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            {/* Đã đổi tên Menu (lucide) thành MenuIcon */}
+            {sidebarOpen ? <X size={20} /> : <MenuIcon size={20} />} 
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-2 py-4 space-y-2">
+        {/* THAY ĐỔI: Thêm overflow-y-auto để menu tự cuộn khi quá dài */}
+        <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             
             return (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all ${
-                  active
-                    ? 'bg-gradient-to-r from-green-500 to-blue-500 shadow-lg'
-                    : 'hover:bg-gray-700'
-                }`}
-              >
-                <Icon size={20} />
-                {sidebarOpen && (
-                  <>
+              <div key={item.path} className="relative group">
+                <button
+                  onClick={() => navigate(item.path)}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors relative ${
+                    active
+                      ? 'bg-slate-700 text-white'
+                      : 'text-gray-300 hover:bg-slate-700 hover:text-white'
+                  }`}
+                >
+                  {active && (
+                    <span className="absolute left-0 top-2 bottom-2 w-1 bg-gradient-to-r from-green-400 to-blue-500 rounded-r-full"></span>
+                  )}
+                  <Icon size={20} />
+                  {sidebarOpen && (
                     <span className="flex-1 text-left font-medium">{item.label}</span>
-                    {active && <ChevronRight size={16} />}
-                  </>
+                  )}
+                </button>
+                {!sidebarOpen && (
+                  <span className="absolute left-full ml-3 w-max px-3 py-1.5 bg-slate-900 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                    {item.label}
+                  </span>
                 )}
-              </button>
+              </div>
             );
           })}
         </nav>
 
-        {/* User Info & Logout */}
-        <div className="p-4 border-t border-gray-700">
-          {sidebarOpen && (
-            <div className="mb-3 px-3 py-2 bg-gray-700 rounded-lg">
-              <p className="text-sm font-semibold">{user?.fullName || user?.username}</p>
-              <p className="text-xs text-gray-400">{user?.role}</p>
-            </div>
-          )}
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg bg-red-600 hover:bg-red-700 transition-colors"
-          >
-            <LogOut size={20} />
-            {sidebarOpen && <span className="font-medium">Logout</span>}
-          </button>
-        </div>
+        {/* THAY ĐỔI LỚN: Đã xóa toàn bộ phần User Info & Logout ở cuối sidebar */}
+        
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="h-16 bg-white shadow-sm border-b border-gray-200 flex items-center px-6">
+        <header className="h-16 bg-white shadow-sm border-b border-slate-200 flex items-center justify-between px-6">
           <div className="flex-1">
-            <h2 className="text-xl font-semibold text-gray-800">
-              {menuItems.find(item => item.path === location.pathname)?.label || 'Admin'}
+            <h2 className="text-xl font-semibold text-slate-800">
+              {menuItems.find(item => item.path === location.pathname)?.label || 'Dashboard'}
             </h2>
           </div>
+          
+          {/* THAY ĐỔI LỚN: Chuyển User Info + Logout vào Dropdown */}
           <div className="flex items-center space-x-4">
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-700">{user?.username}</p>
-              <p className="text-xs text-gray-500">{user?.email}</p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-400 to-blue-500 flex items-center justify-center text-white font-bold">
-              {user?.username?.charAt(0).toUpperCase()}
-            </div>
+            <Dropdown overlay={userMenu} trigger={['click']}>
+              <button className="w-10 h-10 rounded-full bg-gradient-to-r from-green-400 to-blue-500 flex items-center justify-center text-white font-bold cursor-pointer hover:opacity-90 transition-opacity">
+                {user?.username?.charAt(0).toUpperCase()}
+              </button>
+            </Dropdown>
           </div>
         </header>
 
