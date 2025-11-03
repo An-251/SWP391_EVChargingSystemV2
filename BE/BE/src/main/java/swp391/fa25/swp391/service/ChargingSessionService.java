@@ -135,6 +135,7 @@ public class ChargingSessionService implements IChargingSessionService {
         session.setReservation(reservation); //  Có thể là null (walk-in) hoặc có giá trị (reservation)
         session.setStartTime(LocalDateTime.now());
         session.setStartPercentage(request.getStartPercentage());
+        session.setEndPercentage(request.getTargetPercentage()); // Set target percentage as end percentage
         session.setStatus(STATUS_CHARGING);
         session.setKwhUsed(BigDecimal.ZERO);
         session.setCost(BigDecimal.ZERO);
