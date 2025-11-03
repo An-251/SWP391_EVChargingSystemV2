@@ -100,10 +100,10 @@ public class ChargingPointService implements IChargingPointService {
         ChargingPoint point = findById(pointId)
                 .orElseThrow(() -> new IllegalArgumentException("Charging point not found"));
 
-        // Validate current status
-        if (!STATUS_ACTIVE.equals(point.getStatus())) {
+        // Validate current status - accept both ACTIVE (walk-in) and BOOKED (reservation)
+        if (!STATUS_ACTIVE.equals(point.getStatus()) && !STATUS_BOOKED.equals(point.getStatus())) {
             throw new IllegalStateException(
-                    "Charging point must be 'active' to start using. Current status: " + point.getStatus()
+                    "Charging point must be 'active' or 'booked' to start using. Current status: " + point.getStatus()
             );
         }
 

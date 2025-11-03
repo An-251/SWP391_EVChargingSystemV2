@@ -11,9 +11,11 @@ import swp391.fa25.swp391.dto.response.ReservationResponse;
 import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.Driver;
 import swp391.fa25.swp391.entity.Reservation;
+import swp391.fa25.swp391.entity.Vehicle;
 import swp391.fa25.swp391.service.IService.IChargingPointService;
 import swp391.fa25.swp391.service.IService.IDriverService;
 import swp391.fa25.swp391.service.IService.IReservationService;
+import swp391.fa25.swp391.service.IService.IVehicleService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,6 +29,7 @@ public class DriverController {
     private final IDriverService driverService;
     private final IChargingPointService chargingPointService;
     private final IReservationService reservationService;
+    private final IVehicleService vehicleService;
 
     // Constant for reservation duration
     private static final int RESERVATION_DURATION_MINUTES = 1;
@@ -48,6 +51,8 @@ public class DriverController {
             // Validate charging point exists
             ChargingPoint chargingPoint = validateChargingPoint(request.getChargingPointId());
 
+            // Validate vehicle exists
+            Vehicle vehicle = validateVehicle(request.getVehicleId());
 
             // Validate time slot availability
             ResponseEntity<?> timeValidation = validateReservationTime(request, request.getChargingPointId());
@@ -62,7 +67,7 @@ public class DriverController {
             }
 
             // Create and save reservation
-            Reservation savedReservation = createAndSaveReservation(driver, chargingPoint, request);
+            Reservation savedReservation = createAndSaveReservation(driver, chargingPoint, vehicle, request);
 
             // Build response
             ReservationResponse response = buildReservationResponse(savedReservation);
@@ -147,6 +152,14 @@ public class DriverController {
     private ChargingPoint validateChargingPoint(Integer chargingPointId) {
         return chargingPointService.findById(chargingPointId)
                 .orElseThrow(() -> new RuntimeException("Charging point not found"));
+    }
+
+    /**
+     * Validate vehicle exists
+     */
+    private Vehicle validateVehicle(Long vehicleId) {
+        return vehicleService.findById(vehicleId.intValue())
+                .orElseThrow(() -> new RuntimeException("Vehicle not found"));
     }
 
     /**
@@ -236,13 +249,13 @@ public class DriverController {
      * Create and save a new reservation
      */
     private Reservation createAndSaveReservation(Driver driver, ChargingPoint chargingPoint,
-                                                 ReservationRequest request) {
+                                                 Vehicle vehicle, ReservationRequest request) {
 
         LocalDateTime startTime = LocalDateTime.now();
         LocalDateTime endTime = startTime.plusMinutes(RESERVATION_DURATION_MINUTES);
 
         // Build and save reservation
-        Reservation reservation = buildReservationEntity(driver, chargingPoint, startTime, endTime);
+        Reservation reservation = buildReservationEntity(driver, chargingPoint, vehicle, startTime, endTime);
         Reservation savedReservation = reservationService.register(reservation);
 
         // Update charging point status to BOOKED
@@ -259,10 +272,11 @@ public class DriverController {
      * Build Reservation entity from components
      */
     private Reservation buildReservationEntity(Driver driver, ChargingPoint chargingPoint,
-                                               LocalDateTime startTime, LocalDateTime endTime) {
+                                               Vehicle vehicle, LocalDateTime startTime, LocalDateTime endTime) {
         Reservation reservation = new Reservation();
         reservation.setDriver(driver);
         reservation.setChargingPoint(chargingPoint);
+        reservation.setVehicle(vehicle);
         reservation.setStartTime(startTime);
         reservation.setEndTime(endTime);
         reservation.setStatus("ACTIVE");
@@ -274,6 +288,7 @@ public class DriverController {
      */
     private ReservationResponse buildReservationResponse(Reservation reservation) {
         ChargingPoint cp = reservation.getChargingPoint();
+        Vehicle vehicle = reservation.getVehicle();
 
         return ReservationResponse.builder()
                 .reservationId(reservation.getId())
@@ -283,6 +298,9 @@ public class DriverController {
                 .connectorType(cp.getConnectorType())
                 .stationName(cp.getStation() != null ? cp.getStation().getStationName() : null)
                 .status(reservation.getStatus())
+                .vehicleId(vehicle != null ? vehicle.getId().longValue() : null)
+                .chargingPointId(cp.getId())
+                .stationId(cp.getStation() != null ? cp.getStation().getId() : null)
                 .build();
     }
 

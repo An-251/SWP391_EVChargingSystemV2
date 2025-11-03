@@ -32,4 +32,10 @@ public class ReservationResponse {
     private String stationName;
 
     private String status; // ACTIVE, COMPLETED, CANCELLED
+
+    private Long vehicleId; // Vehicle ID for this reservation
+    
+    private Integer chargingPointId; // Charging point ID
+    
+    private Integer stationId; // Station ID
 }
