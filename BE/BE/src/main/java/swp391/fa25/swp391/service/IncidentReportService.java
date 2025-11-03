@@ -185,4 +185,39 @@ public class IncidentReportService implements IIncidentReportService {
         }
         incidentReportRepository.deleteById(reportId);
     }
+
+    @Override
+    @Transactional
+    public IncidentReport createReportByEmployee(EmployeeCreateReportRequest request) {
+        // Kiểm tra charging point
+        ChargingPoint point = chargingPointRepository.findById(request.getPointId())
+                .orElseThrow(() -> new RuntimeException("Charging point not found with id: " + request.getPointId()));
+
+        // Kiểm tra employee (optional - nếu muốn validate)
+        if (request.getEmployeeId() != null) {
+            StationEmployee employee = stationEmployeeRepository.findById(request.getEmployeeId())
+                    .orElseThrow(() -> new RuntimeException("Employee not found with id: " + request.getEmployeeId()));
+        }
+
+        IncidentReport report = new IncidentReport();
+        report.setReportDate(Instant.now());
+        report.setDescription(request.getDescription());
+        report.setSeverity(request.getSeverity());
+        report.setStatus("PENDING"); // Để admin xử lý sau
+        report.setReportType("USER_REPORTED"); // Vẫn là user reported
+
+        // Thông tin user
+        report.setReporterUserId(request.getReporterUserId());
+        report.setReporterName(request.getReporterName());
+        report.setReporterEmail(request.getReporterEmail());
+
+        // Ghi chú của employee (nếu có)
+        if (request.getEmployeeNotes() != null) {
+            report.setResolutionNotes("Employee notes: " + request.getEmployeeNotes());
+        }
+
+        report.setPoint(point);
+
+        return incidentReportRepository.save(report);
+    }
 }
