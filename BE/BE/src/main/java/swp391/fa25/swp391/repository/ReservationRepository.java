@@ -180,7 +180,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @Param("endTime") LocalDateTime endTime
     );
 
+    // Trong ReservationRepository
     List<Reservation> findByDriverId(Long driverId);
+
+    List<Reservation> findByChargingPointId(Integer chargingPointId);
 
     List<Reservation> findByChargingPointIdAndStatusNot(Integer chargingPointId, String status);
 
