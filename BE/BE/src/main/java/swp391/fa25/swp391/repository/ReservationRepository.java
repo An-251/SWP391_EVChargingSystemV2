@@ -4,17 +4,29 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
-import swp391.fa25.swp391.entity.Reservation;
-import swp391.fa25.swp391.entity.Driver;
 import swp391.fa25.swp391.entity.ChargingPoint;
+import swp391.fa25.swp391.entity.Driver;
+import swp391.fa25.swp391.entity.Reservation;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.LocalDateTime; // ⭐ IMPORT LocalDateTime
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
+
+
+        // ⭐ Đổi parameter từ Instant sang LocalDateTime
+        List<Reservation> findByStatusAndEndTimeBefore(String status, LocalDateTime endTime);
+
+        // ⭐ Tìm reservations sắp hết hạn (trong 5 phút)
+        @Query("SELECT r FROM Reservation r WHERE r.status = 'ACTIVE' " +
+                "AND r.endTime BETWEEN :now AND :fiveMinutesLater")
+        List<Reservation> findExpiringReservations(
+                @Param("now") Instant now,
+                @Param("fiveMinutesLater") Instant fiveMinutesLater
+        );
 
     /**
      * Tìm tất cả Reservation theo Driver

@@ -16,6 +16,7 @@ import java.util.Optional;
 public class ChargingStationService implements IChargingStationService {
 
     private final ChargingStationRepository chargingStationRepository;
+    private final FacilityService facilityService; // ⭐ THÊM dependency
 
     // Status constants
     private static final String STATUS_ACTIVE = "active";
@@ -112,14 +113,23 @@ public class ChargingStationService implements IChargingStationService {
         }
 
         boolean anyPointUsing = hasAnyPointUsing(station);
+        boolean anyPointBooked = hasAnyPointBooked(station); // ⭐ THÊM check BOOKED
 
-        if (anyPointUsing && !STATUS_USING.equals(station.getStatus())) {
+        String oldStatus = station.getStatus();
+        
+        // ⭐ Logic mới: USING hoặc BOOKED đều set station = USING
+        if ((anyPointUsing || anyPointBooked) && !STATUS_USING.equals(station.getStatus())) {
             station.setStatus(STATUS_USING);
             chargingStationRepository.save(station);
-        } else if (!anyPointUsing && STATUS_USING.equals(station.getStatus())) {
-            // Revert to active if no points are using
+        } else if (!anyPointUsing && !anyPointBooked && STATUS_USING.equals(station.getStatus())) {
+            // Revert to active if no points are using or booked
             station.setStatus(STATUS_ACTIVE);
             chargingStationRepository.save(station);
+        }
+
+        // ⭐ CASCADE lên Facility nếu status thay đổi
+        if (!oldStatus.equals(station.getStatus()) && station.getFacility() != null) {
+            facilityService.updateFacilityStatusBasedOnStations(station.getFacility());
         }
     }
 
@@ -132,5 +142,16 @@ public class ChargingStationService implements IChargingStationService {
         }
         return station.getChargingPoints().stream()
                 .anyMatch(point -> STATUS_USING.equals(point.getStatus()));
+    }
+
+    /**
+     * ⭐ NEW: Check if station has any point in "booked" status
+     */
+    private boolean hasAnyPointBooked(ChargingStation station) {
+        if (station.getChargingPoints() == null) {
+            return false;
+        }
+        return station.getChargingPoints().stream()
+                .anyMatch(point -> "booked".equals(point.getStatus()));
     }
 }
