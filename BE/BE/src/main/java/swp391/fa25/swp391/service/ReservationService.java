@@ -13,6 +13,7 @@ import swp391.fa25.swp391.repository.ChargingPointRepository;
 import swp391.fa25.swp391.repository.ChargingStationRepository;
 import swp391.fa25.swp391.repository.FacilityRepository;
 import swp391.fa25.swp391.repository.ReservationRepository;
+import swp391.fa25.swp391.service.IService.IReservationService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,7 +21,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ReservationService {
+public class ReservationService implements IReservationService {
 
     private final ReservationRepository reservationRepository;
     private final ChargingPointRepository chargingPointRepository;
@@ -61,10 +62,25 @@ public class ReservationService {
         return savedReservation;
     }
 
+    @Override
+    public Reservation register(Reservation reservation) {
+        return null;
+    }
+
+    @Override
+    public Reservation findById(Integer id) {
+        return null;
+    }
+
     // ⭐ Thêm 2 overload methods
     public Reservation findById(Long id) {
         return reservationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reservation not found with id: " + id));
+    }
+
+    @Override
+    public List<Reservation> findAll() {
+        return List.of();
     }
 
     public Reservation findById(int id) {
@@ -73,6 +89,11 @@ public class ReservationService {
 
     public List<Reservation> getReservationsByDriver(Long driverId) {
         return reservationRepository.findByDriverId(driverId);
+    }
+
+    @Override
+    public List<Reservation> findByChargingPointId(Integer chargingPointId) {
+        return List.of();
     }
 
     @Transactional
