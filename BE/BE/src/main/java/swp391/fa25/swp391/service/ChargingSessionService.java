@@ -147,7 +147,7 @@ public class ChargingSessionService implements IChargingSessionService {
         // Nếu có reservation, cập nhật status thành FULFILLED
         if (reservation != null) {
             reservation.setStatus("FULFILLED");
-            reservationService.register(reservation);
+            reservationService.createReservation(reservation);
             log.info("Reservation {} marked as FULFILLED", reservation.getId());
         }
 
