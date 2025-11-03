@@ -99,5 +99,31 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+    /**
+     * ⭐ Đếm số session chưa có invoice trong khoảng thời gian
+     */
+    long countByDriverIdAndInvoiceIsNullAndStartTimeBetween(
+            Integer driverId,
+            LocalDateTime startTime,
+            LocalDateTime endTime
+    );
 
+    /**
+     * ⭐ Lấy tất cả session chưa có invoice trong khoảng thời gian
+     */
+    List<ChargingSession> findByDriverIdAndInvoiceIsNullAndStartTimeBetween(
+            Integer driverId,
+            LocalDateTime startTime,
+            LocalDateTime endTime
+    );
+
+    /**
+     * ⭐ Đếm tất cả session chưa có invoice của driver (không giới hạn thời gian)
+     */
+    long countByDriverIdAndInvoiceIsNull(Integer driverId);
+
+    /**
+     * ⭐ Lấy tất cả session chưa có invoice của driver
+     */
+    List<ChargingSession> findByDriverIdAndInvoiceIsNull(Integer driverId);
 }

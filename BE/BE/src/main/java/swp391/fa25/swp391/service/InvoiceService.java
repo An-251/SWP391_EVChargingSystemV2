@@ -494,4 +494,21 @@ public class InvoiceService implements IInvoiceService {
 
         log.info("========== SUSPENSION CHECK COMPLETED ==========");
     }
+    public long countUnbilledSessions(Integer driverId, LocalDateTime startTime, LocalDateTime endTime) {
+        return sessionRepository.countByDriverIdAndInvoiceIsNullAndStartTimeBetween(
+                driverId, startTime, endTime
+        );
+    }
+
+    /**
+     * ⭐ Lấy tất cả driver đang active
+     */
+    public List<Driver> findAllActiveDrivers() {
+        return driverRepository.findByAccountStatus("ACTIVE");
+    }
+
+    public Driver findDriverById(Integer driverId) {
+        return driverRepository.findById(driverId)
+                .orElseThrow(() -> new RuntimeException("Driver not found"));
+    }
 }
