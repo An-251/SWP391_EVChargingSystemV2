@@ -40,24 +40,7 @@ public class IncidentReportController {
         return ResponseEntity.status(HttpStatus.CREATED).body(savedReport);
     }
 
-    // ==================== EMPLOYEE XỬ LÝ BÁO CÁO ====================
-
-    @PutMapping("/handle")
-    @Operation(summary = "Employee xử lý báo cáo")
-    public ResponseEntity<IncidentReport> handleReport(
-            @RequestBody HandleReportRequest request) {
-        IncidentReport updatedReport = incidentReportService.handleReport(request);
-        return ResponseEntity.ok(updatedReport);
-    }
-
-    @PutMapping("/{reportId}/assign")
-    @Operation(summary = "Gán employee xử lý")
-    public ResponseEntity<IncidentReport> assignEmployee(
-            @PathVariable Integer reportId,
-            @RequestParam Integer employeeId) {
-        IncidentReport updatedReport = incidentReportService.assignEmployee(reportId, employeeId);
-        return ResponseEntity.ok(updatedReport);
-    }
+    // ==================== ADMIN XỬ LÝ BÁO CÁO ====================
 
     @PutMapping("/{reportId}/status")
     @Operation(summary = "Cập nhật trạng thái")
@@ -124,6 +107,16 @@ public class IncidentReportController {
     public ResponseEntity<Long> countPendingReports() {
         Long count = incidentReportService.countPendingReports();
         return ResponseEntity.ok(count);
+    }
+    
+    // ==================== EMPLOYEE GHI NHẬN BÁO CÁO TỪ USER ====================
+
+    @PostMapping("/employee-report")
+    @Operation(summary = "Employee ghi nhận báo cáo từ user")
+    public ResponseEntity<IncidentReport> createReportByEmployee(
+            @RequestBody EmployeeCreateReportRequest request) {
+        IncidentReport savedReport = incidentReportService.createReportByEmployee(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedReport);
     }
 
     // ==================== XÓA BÁO CÁO ====================
