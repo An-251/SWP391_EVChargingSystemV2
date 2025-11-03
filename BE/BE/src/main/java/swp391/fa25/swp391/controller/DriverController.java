@@ -87,7 +87,7 @@ public class DriverController {
     @GetMapping("/{driverId}/reservations")
     public ResponseEntity<?> getDriverReservations(@PathVariable Integer driverId) {
         try {
-            List<Reservation> reservations = reservationService.findByUserId(driverId);
+            List<Reservation> reservations = reservationService.getReservationsByDriver(driverId.longValue());
 
             List<ReservationResponse> responseList = reservations.stream()
                     .map(this::buildReservationResponse)
