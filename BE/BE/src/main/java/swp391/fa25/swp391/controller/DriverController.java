@@ -41,11 +41,20 @@ public class DriverController {
             @PathVariable Integer driverId,
             @Valid @RequestBody ReservationRequest request) {
         try {
+            System.out.println("📝 [CREATE RESERVATION] Request received:");
+            System.out.println("  - Driver ID: " + driverId);
+            System.out.println("  - Charging Point ID: " + request.getChargingPointId());
+            System.out.println("  - Duration: " + request.getDurationMinutes());
+            
             // Validate driver exists
             Driver driver = validateDriver(driverId);
+            System.out.println("✅ [CREATE RESERVATION] Driver validated: " + driver.getId());
 
             // Validate charging point exists
             ChargingPoint chargingPoint = validateChargingPoint(request.getChargingPointId());
+            System.out.println("✅ [CREATE RESERVATION] Charging point found: " + chargingPoint.getId());
+            System.out.println("  - Point name: " + chargingPoint.getPointName());
+            System.out.println("  - Current status: " + chargingPoint.getStatus());
 
             // Validate time slot availability
             ResponseEntity<?> timeValidation = validateReservationTime(request, request.getChargingPointId());
@@ -187,13 +196,20 @@ public class DriverController {
                         .body("Charging point is already booked");
             }
         }
+        
+        System.out.println("✅ [AVAILABILITY CHECK] Status check PASSED");
 
         // Check if already reserved
-        if (hasActiveReservation(chargingPoint.getId())) {
+        boolean hasReservation = hasActiveReservation(chargingPoint.getId());
+        System.out.println("🔍 [AVAILABILITY CHECK] Has active reservation: " + hasReservation);
+        
+        if (hasReservation) {
+            System.out.println("❌ [AVAILABILITY CHECK] Reservation check FAILED");
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body("Charging point is currently reserved");
         }
-
+        
+        System.out.println("✅ [AVAILABILITY CHECK] All checks PASSED - Point is available");
         return null; // Available
     }
 
