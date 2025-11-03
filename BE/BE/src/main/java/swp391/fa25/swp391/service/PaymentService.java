@@ -61,7 +61,7 @@ public class PaymentService {
         // ⭐ GỬI NOTIFICATION
         try {
             notificationService.sendPaymentSuccessNotification(savedInvoice);
-            log.info("✅ Sent payment success notification for invoice {}", invoiceId);
+            log.info(" Sent payment success notification for invoice {}", invoiceId);
         } catch (Exception e) {
             log.error("Failed to send payment notification for invoice {}", invoiceId, e);
             // Không throw exception - payment đã thành công

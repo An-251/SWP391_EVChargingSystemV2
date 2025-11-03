@@ -1,5 +1,6 @@
 package swp391.fa25.swp391.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -46,5 +47,13 @@ public class ChargingSessionResponse {
     private BigDecimal kwhUsed; // Điện năng tiêu thụ (kWh)
     private BigDecimal cost; // Tổng chi phí (VND)
 
+    //Reservation
+    private Long reservationId;
+    private String chargingType;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime reservationStartTime;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime reservationEndTime;
     private String status; // ACTIVE, COMPLETED, CANCELLED
 }

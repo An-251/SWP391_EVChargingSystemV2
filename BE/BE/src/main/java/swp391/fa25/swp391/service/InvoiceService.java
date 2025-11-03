@@ -164,8 +164,8 @@ public class InvoiceService implements IInvoiceService {
         log.info("Generating invoice for driver {} from {} to {}",
                 driver.getId(), startDate, endDate);
 
-        // 1. Lấy tất cả completed sessions trong tháng
-        List<ChargingSession> sessions = sessionRepository.findCompletedSessionsByDriverAndDateRange(
+        // 1. Lấy tất cả unbilled completed sessions trong khoảng thời gian
+        List<ChargingSession> sessions = sessionRepository.findUnbilledSessionsByDriverAndDateRange(
                 driver.getId(),
                 startDate.atStartOfDay(),
                 endDate.atTime(23, 59, 59)
@@ -216,10 +216,18 @@ public class InvoiceService implements IInvoiceService {
         invoice.setStatus("UNPAID");
         invoice.setPlanAtBilling(currentPlan);
 
+        // Lưu invoice trước để có ID
         Invoice savedInvoice = invoiceRepository.save(invoice);
 
-        log.info("Created invoice {} for driver {}, amount: {}, due date: {}",
-                savedInvoice.getId(), driver.getId(), totalCost, dueDate);
+        // Cập nhật invoice reference cho các sessions
+        for (ChargingSession session : sessions) {
+            session.setInvoice(savedInvoice);
+            sessionRepository.save(session);
+        }
+        savedInvoice.setSessions(sessions);
+
+        log.info("Created invoice {} for driver {}, amount: {}, due date: {}, sessions: {}",
+                savedInvoice.getId(), driver.getId(), totalCost, dueDate, sessions.size());
 
         return savedInvoice;
     }
@@ -295,6 +303,84 @@ public class InvoiceService implements IInvoiceService {
         }
 
         return invoice;
+    }
+
+    /**
+     * ⭐ Tạo invoice tổng hợp cho các sessions chưa có invoice
+     */
+    @Transactional
+    public Invoice generateInvoiceForUnbilledSessions(Integer driverId, LocalDate startDate, LocalDate endDate) {
+        log.info("Generating consolidated invoice for unbilled sessions. Driver: {}, Period: {} to {}",
+                driverId, startDate, endDate);
+
+        Driver driver = driverRepository.findById(driverId)
+                .orElseThrow(() -> new RuntimeException("Driver not found"));
+
+        // 1. Lấy các sessions chưa có invoice
+        List<ChargingSession> unbilledSessions = sessionRepository.findUnbilledSessionsByDriverAndDateRange(
+                driver.getId(),
+                startDate.atStartOfDay(),
+                endDate.atTime(23, 59, 59)
+        );
+
+        if (unbilledSessions.isEmpty()) {
+            log.info("No unbilled sessions found for driver {} in period {} to {}",
+                    driverId, startDate, endDate);
+            return null;
+        }
+
+        log.info("Found {} unbilled sessions for driver {}", unbilledSessions.size(), driverId);
+
+        // 2. Tính tổng cost
+        BigDecimal totalSessionsCost = unbilledSessions.stream()
+                .map(ChargingSession::getCost)
+                .filter(cost -> cost != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        log.info("Total sessions cost: {}", totalSessionsCost);
+
+        // 3. Tạo invoice
+        Instant issueDate = Instant.now();
+        Instant dueDate = issueDate.plus(DAYS_TO_DUE_DATE, ChronoUnit.DAYS);
+
+        Invoice invoice = new Invoice();
+        invoice.setDriver(driver);
+        invoice.setBillingStartDate(startDate);
+        invoice.setBillingEndDate(endDate);
+        invoice.setIssueDate(issueDate);
+        invoice.setDueDate(dueDate);
+        invoice.setTotalCost(totalSessionsCost);
+        invoice.setStatus("UNPAID");
+
+        // Get current plan
+        Optional<PlanRegistration> currentPlanOpt = planRegistrationRepository
+                .findActiveByDriverId(driver.getId(), LocalDate.now());
+        if (currentPlanOpt.isPresent()) {
+            invoice.setPlanAtBilling(currentPlanOpt.get().getPlan());
+        }
+
+        // 4. Lưu invoice
+        Invoice savedInvoice = invoiceRepository.save(invoice);
+
+        // 5. Cập nhật invoice reference cho các sessions
+        for (ChargingSession session : unbilledSessions) {
+            session.setInvoice(savedInvoice);
+            sessionRepository.save(session);
+        }
+        savedInvoice.setSessions(unbilledSessions);
+
+        // 6. Gửi notification
+        try {
+            notificationService.sendInvoiceCreatedNotification(savedInvoice);
+        } catch (Exception e) {
+            log.error("Failed to send notification", e);
+        }
+
+        log.info("Created consolidated invoice {} for driver {}, amount: {}, sessions: {}, due date: {}",
+                savedInvoice.getId(), driver.getId(), totalSessionsCost, 
+                unbilledSessions.size(), dueDate);
+
+        return savedInvoice;
     }
 
     // ==================== ⭐ REMINDER & OVERDUE CHECKS (Tích hợp vào file này) ====================
@@ -407,5 +493,22 @@ public class InvoiceService implements IInvoiceService {
         }
 
         log.info("========== SUSPENSION CHECK COMPLETED ==========");
+    }
+    public long countUnbilledSessions(Integer driverId, LocalDateTime startTime, LocalDateTime endTime) {
+        return sessionRepository.countByDriverIdAndInvoiceIsNullAndStartTimeBetween(
+                driverId, startTime, endTime
+        );
+    }
+
+    /**
+     * ⭐ Lấy tất cả driver đang active
+     */
+    public List<Driver> findAllActiveDrivers() {
+        return driverRepository.findByAccountStatus("ACTIVE");
+    }
+
+    public Driver findDriverById(Integer driverId) {
+        return driverRepository.findById(driverId)
+                .orElseThrow(() -> new RuntimeException("Driver not found"));
     }
 }

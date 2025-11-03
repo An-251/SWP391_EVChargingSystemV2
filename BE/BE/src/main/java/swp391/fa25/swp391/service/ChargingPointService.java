@@ -19,9 +19,11 @@ public class ChargingPointService implements IChargingPointService {
     private final ChargingStationService chargingStationService;
 
     // Status constants
-    private static final String STATUS_ACTIVE = "active";
-    private static final String STATUS_INACTIVE = "inactive";
-    private static final String STATUS_USING = "using";
+    private static final String STATUS_ACTIVE = "active";      // Trạm đang hoạt động bình thường
+    private static final String STATUS_INACTIVE = "inactive";  // Trạm tạm ngưng hoạt động
+    private static final String STATUS_USING = "using";        // Đang có session sạc
+    private static final String STATUS_BOOKED = "booked";      // Đã được đặt chỗ
+    private static final String STATUS_MAINTENANCE = "maintenance"; // Đang bảo trì
 
     @Override
     @Transactional
@@ -74,9 +76,10 @@ public class ChargingPointService implements IChargingPointService {
             throw new IllegalStateException("Admin can only set point to 'active' or 'inactive'");
         }
 
-        // Cannot change to inactive if currently using
-        if (STATUS_INACTIVE.equals(newStatus) && STATUS_USING.equals(point.getStatus())) {
-            throw new IllegalStateException("Cannot set charging point to inactive while it is in use");
+        // Cannot change to inactive if currently using or booked
+        if (STATUS_INACTIVE.equals(newStatus) && 
+            (STATUS_USING.equals(point.getStatus()) || STATUS_BOOKED.equals(point.getStatus()))) {
+            throw new IllegalStateException("Cannot set charging point to inactive while it is in use or booked");
         }
 
         point.setStatus(newStatus);

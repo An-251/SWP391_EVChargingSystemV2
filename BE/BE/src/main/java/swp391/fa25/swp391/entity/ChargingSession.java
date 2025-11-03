@@ -57,4 +57,11 @@ public class ChargingSession {
     @JoinColumn(name = "POINT_ID")
     private ChargingPoint chargingPoint;
 
+    @ManyToOne
+    @JoinColumn(name = "INVOICE_ID")
+    private Invoice invoice;
+    @OneToOne(optional = true)
+    @JoinColumn(name = "RESERVATION_ID", referencedColumnName = "id")
+    private Reservation reservation;
+
 }

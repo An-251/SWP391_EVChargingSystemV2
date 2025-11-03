@@ -24,4 +24,5 @@ public interface DriverRepository extends JpaRepository<Driver, Integer> {
             "JOIN d.planRegistrations pr " +
             "WHERE pr.status = 'ACTIVE'")
     List<Driver> findAllWithActivePlan();
+    List<Driver> findByAccountStatus(String status);
 }

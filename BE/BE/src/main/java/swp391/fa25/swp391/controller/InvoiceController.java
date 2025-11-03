@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.dto.response.InvoiceDetailResponse;
+import swp391.fa25.swp391.entity.Driver;
 import swp391.fa25.swp391.entity.Invoice;
 import swp391.fa25.swp391.service.InvoiceService;
 import swp391.fa25.swp391.service.PaymentService;
@@ -15,6 +16,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -205,7 +207,42 @@ public class InvoiceController {
         }
     }
 
-    // ==================== ADMIN ENDPOINTS (giữ nguyên) ====================
+    // ==================== ADMIN ENDPOINTS ====================
+
+    /**
+     * Admin tạo invoice tổng hợp cho driver từ các session chưa có invoice
+     * trong khoảng thời gian 
+     */
+    @PostMapping("/admin/generate-consolidated")
+    public ResponseEntity<?> generateConsolidatedInvoice(@RequestBody ManualGenerateRequest request) {
+        try {
+            LocalDate startDate = LocalDate.parse(request.getStartDate());
+            LocalDate endDate = LocalDate.parse(request.getEndDate());
+
+            Invoice invoice = invoiceServiceImpl.generateInvoiceForUnbilledSessions(
+                    request.getDriverId(),
+                    startDate,
+                    endDate
+            );
+
+            if (invoice == null) {
+                return ResponseEntity.ok(ApiResponse.success(
+                        "No unbilled sessions found for this period", null
+                ));
+            }
+
+            InvoiceDetailResponse response = mapToDetailResponse(invoice);
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Consolidated invoice generated successfully",
+                    response
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to generate consolidated invoice: " + e.getMessage()));
+        }
+    }
 
     @PostMapping("/admin/generate-manual")
     public ResponseEntity<?> generateManualInvoice(@RequestBody ManualGenerateRequest request) {
@@ -388,6 +425,125 @@ public class InvoiceController {
                 .build();
     }
 
+
+    /**
+     * ⭐ NEW: Lấy danh sách tất cả driver có thể tạo invoice (cho admin dashboard)
+     */
+    @GetMapping("/admin/drivers-ready")
+    public ResponseEntity<?> getDriversReadyForInvoice() {
+        try {
+            List<Driver> allDrivers = invoiceServiceImpl.findAllActiveDrivers();
+
+            List<InvoiceReadyResponse> readyDrivers = new ArrayList<>();
+
+            for (Driver driver : allDrivers) {
+                // Tính billing period cho từng driver
+                LocalDate billingStartDate;
+                LocalDate billingEndDate = LocalDate.now();
+
+                List<Invoice> driverInvoices = invoiceService.findByDriverId(driver.getId());
+
+                if (driverInvoices.isEmpty()) {
+                    billingStartDate = driver.getAccount().getCreatedDate()
+                            .atZone(ZoneId.systemDefault()).toLocalDate();
+                } else {
+                    Invoice lastInvoice = driverInvoices.stream()
+                            .max((i1, i2) -> i1.getIssueDate().compareTo(i2.getIssueDate()))
+                            .orElseThrow();
+                    billingStartDate = lastInvoice.getBillingEndDate().plusDays(1);
+                }
+
+                long daysSinceStart = ChronoUnit.DAYS.between(billingStartDate, billingEndDate);
+
+                // ⭐ SỬA: Convert LocalDate sang LocalDateTime
+                long unbilledCount = invoiceServiceImpl.countUnbilledSessions(
+                        driver.getId(),
+                        billingStartDate.atStartOfDay(),      // ⭐ THÊM .atStartOfDay()
+                        billingEndDate.atTime(23, 59, 59)     // ⭐ THÊM .atTime()
+                );
+
+                // ⭐ Chỉ thêm driver đã đủ 30 ngày VÀ có session chưa billing
+                if (daysSinceStart >= 30 && unbilledCount > 0) {
+                    readyDrivers.add(InvoiceReadyResponse.builder()
+                            .driverId(driver.getId())
+                            .driverName(driver.getAccount().getFullName())
+                            .driverEmail(driver.getAccount().getEmail())
+                            .isReady(true)
+                            .daysSinceBillingStart(daysSinceStart)
+                            .billingStartDate(billingStartDate)
+                            .billingEndDate(billingEndDate)
+                            .unbilledSessionCount(unbilledCount)
+                            .message("Sẵn sàng tạo invoice")
+                            .build());
+                }
+            }
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    String.format("Found %d drivers ready for invoice", readyDrivers.size()),
+                    readyDrivers
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Error: " + e.getMessage()));
+        }
+    }
+    @GetMapping("/admin/check-ready/{driverId}")
+    public ResponseEntity<?> checkInvoiceReady(@PathVariable Integer driverId) {
+        try {
+            // Lấy invoice gần nhất của driver
+            List<Invoice> allInvoices = invoiceService.findByDriverId(driverId);
+
+            LocalDate billingStartDate;
+            LocalDate billingEndDate = LocalDate.now();
+
+            if (allInvoices.isEmpty()) {
+                // USER MỚI - Tính từ ngày đăng ký
+                Driver driver = invoiceServiceImpl.findDriverById(driverId);
+                Instant registeredDate = driver.getAccount().getCreatedDate();
+                billingStartDate = registeredDate.atZone(ZoneId.systemDefault()).toLocalDate();
+
+            } else {
+                // USER CŨ - Tính từ invoice gần nhất
+                Invoice lastInvoice = allInvoices.stream()
+                        .max((i1, i2) -> i1.getIssueDate().compareTo(i2.getIssueDate()))
+                        .orElseThrow();
+
+                billingStartDate = lastInvoice.getBillingEndDate().plusDays(1);
+            }
+
+            // CHECK: Đã đủ 30 ngày chưa?
+            long daysSinceStart = ChronoUnit.DAYS.between(billingStartDate, billingEndDate);
+            boolean isReady = daysSinceStart >= 30;
+
+            // ⭐ CHECK: Có session nào chưa billing không?
+            long unbilledCount = invoiceServiceImpl.countUnbilledSessions(
+                    driverId,
+                    billingStartDate.atStartOfDay(),
+                    billingEndDate.atTime(23, 59, 59)
+            );
+
+            InvoiceReadyResponse response = InvoiceReadyResponse.builder()
+                    .driverId(driverId)
+                    .isReady(isReady && unbilledCount > 0)
+                    .daysSinceBillingStart(daysSinceStart)
+                    .billingStartDate(billingStartDate)
+                    .billingEndDate(billingEndDate)
+                    .unbilledSessionCount(unbilledCount)
+                    .message(isReady && unbilledCount > 0
+                            ? "Đã đủ 30 ngày, có thể tạo invoice"
+                            : "Chưa đủ điều kiện tạo invoice")
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Invoice readiness check completed", response
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Error: " + e.getMessage()));
+        }
+    }
     // ==================== DTOs ====================
 
     @lombok.Data
@@ -404,4 +560,20 @@ public class InvoiceController {
         private Boolean hasUnpaid;
         private Boolean hasOverdue;
     }
+    @lombok.Data
+    @lombok.Builder
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class InvoiceReadyResponse {
+        private Integer driverId;
+        private String driverName;
+        private String driverEmail;
+        private Boolean isReady;
+        private Long daysSinceBillingStart;
+        private LocalDate billingStartDate;
+        private LocalDate billingEndDate;
+        private Long unbilledSessionCount;
+        private String message;
+    }
+
 }
