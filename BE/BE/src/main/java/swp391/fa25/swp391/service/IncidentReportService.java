@@ -63,34 +63,6 @@ public class IncidentReportService implements IIncidentReportService {
     }
 
     @Override
-    @Transactional
-    public IncidentReport handleReport(HandleReportRequest request) {
-        // CẬP NHẬT: Dùng RuntimeException
-        IncidentReport report = incidentReportRepository.findById(request.getReportId())
-                .orElseThrow(() -> new RuntimeException("Report not found with id: " + request.getReportId()));
-
-        if (request.getEmployeeId() != null) {
-            // CẬP NHẬT: Dùng RuntimeException
-            StationEmployee employee = stationEmployeeRepository.findById(request.getEmployeeId())
-                    .orElseThrow(() -> new RuntimeException("Employee not found with id: " + request.getEmployeeId()));
-            report.setEmployee(employee);
-        }
-
-        if (request.getStatus() != null) {
-            report.setStatus(request.getStatus());
-            if ("RESOLVED".equals(request.getStatus()) || "CLOSED".equals(request.getStatus())) {
-                report.setResolvedDate(Instant.now());
-            }
-        }
-
-        if (request.getResolutionNotes() != null) {
-            report.setResolutionNotes(request.getResolutionNotes());
-        }
-
-        return incidentReportRepository.save(report);
-    }
-
-    @Override
     @Transactional(readOnly = true)
     public List<IncidentReport> getAllReports() {
         return incidentReportRepository.findAll();
@@ -149,20 +121,6 @@ public class IncidentReportService implements IIncidentReportService {
         if ("RESOLVED".equals(status) || "CLOSED".equals(status)) {
             report.setResolvedDate(Instant.now());
         }
-        return incidentReportRepository.save(report);
-    }
-
-    @Override
-    @Transactional
-    public IncidentReport assignEmployee(Integer reportId, Integer employeeId) {
-        IncidentReport report = getReportById(reportId); // Sẽ throw RuntimeException nếu không tìm thấy
-
-        // CẬP NHẬT: Dùng RuntimeException
-        StationEmployee employee = stationEmployeeRepository.findById(employeeId)
-                .orElseThrow(() -> new RuntimeException("Employee not found with id: " + employeeId));
-
-        report.setEmployee(employee);
-        report.setStatus("IN_PROGRESS");
         return incidentReportRepository.save(report);
     }
 
