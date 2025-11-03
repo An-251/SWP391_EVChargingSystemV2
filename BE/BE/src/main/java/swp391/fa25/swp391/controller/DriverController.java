@@ -29,7 +29,7 @@ public class DriverController {
     private final IReservationService reservationService;
 
     // Constant for reservation duration
-    private static final int RESERVATION_DURATION_MINUTES = 1; // Cố định 1 tiếng
+    private static final int RESERVATION_DURATION_MINUTES = 1;
 
     /**
      * Create reservation (when user clicks reserve button and confirms)
@@ -41,20 +41,13 @@ public class DriverController {
             @PathVariable Integer driverId,
             @Valid @RequestBody ReservationRequest request) {
         try {
-            System.out.println("📝 [CREATE RESERVATION] Request received:");
-            System.out.println("  - Driver ID: " + driverId);
-            System.out.println("  - Charging Point ID: " + request.getChargingPointId());
-            System.out.println("  - Duration: " + request.getDurationMinutes());
-            
+
             // Validate driver exists
             Driver driver = validateDriver(driverId);
-            System.out.println("✅ [CREATE RESERVATION] Driver validated: " + driver.getId());
 
             // Validate charging point exists
             ChargingPoint chargingPoint = validateChargingPoint(request.getChargingPointId());
-            System.out.println("✅ [CREATE RESERVATION] Charging point found: " + chargingPoint.getId());
-            System.out.println("  - Point name: " + chargingPoint.getPointName());
-            System.out.println("  - Current status: " + chargingPoint.getStatus());
+
 
             // Validate time slot availability
             ResponseEntity<?> timeValidation = validateReservationTime(request, request.getChargingPointId());
@@ -209,7 +202,7 @@ public class DriverController {
                     .body("Charging point is currently reserved");
         }
         
-        System.out.println("✅ [AVAILABILITY CHECK] All checks PASSED - Point is available");
+
         return null; // Available
     }
 
@@ -244,7 +237,7 @@ public class DriverController {
      */
     private Reservation createAndSaveReservation(Driver driver, ChargingPoint chargingPoint,
                                                  ReservationRequest request) {
-        // Calculate time range (fixed 1 hour)
+
         LocalDateTime startTime = LocalDateTime.now();
         LocalDateTime endTime = startTime.plusMinutes(RESERVATION_DURATION_MINUTES);
 
