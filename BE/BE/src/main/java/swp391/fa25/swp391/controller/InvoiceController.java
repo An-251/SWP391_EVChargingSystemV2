@@ -13,11 +13,13 @@ import swp391.fa25.swp391.service.IService.IInvoiceService;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Collectors;
 
 @RestController
@@ -43,6 +45,29 @@ public class InvoiceController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("Error retrieving invoices: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * ⭐ Admin endpoint to get all invoices
+     */
+    @GetMapping("/admin/all")
+    public ResponseEntity<?> getAllInvoicesForAdmin() {
+        try {
+            List<Invoice> invoices = invoiceService.findAll();
+            
+            // ⭐ Map to DTO to avoid circular reference
+            List<InvoiceDetailResponse> responses = invoices.stream()
+                    .map(this::mapToDetailResponse)
+                    .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(ApiResponse.success(
+                    String.format("Found %d invoices", invoices.size()), 
+                    responses
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Error: " + e.getMessage()));
         }
     }
 
@@ -394,6 +419,54 @@ public class InvoiceController {
         Boolean isAccountSuspended = "SUSPENDED".equals(
                 invoice.getDriver().getAccount().getStatus()
         );
+        
+        // Map charging sessions
+        java.util.List<InvoiceDetailResponse.SessionSummary> sessionSummaries = null;
+        if (invoice.getSessions() != null && !invoice.getSessions().isEmpty()) {
+            sessionSummaries = invoice.getSessions().stream()
+                    .map(session -> {
+                        String duration = null;
+                        if (session.getStartTime() != null && session.getEndTime() != null) {
+                            // Convert LocalDateTime to seconds for duration calculation
+                            java.time.Duration dur = java.time.Duration.between(
+                                    session.getStartTime(), 
+                                    session.getEndTime()
+                            );
+                            long hours = dur.toHours();
+                            long minutes = dur.toMinutesPart();
+                            duration = String.format("%d giờ %d phút", hours, minutes);
+                        }
+                        
+                        String stationName = null;
+                        String chargingPointName = null;
+                        if (session.getChargingPoint() != null) {
+                            chargingPointName = session.getChargingPoint().getPointName();
+                            if (session.getChargingPoint().getStation() != null) {
+                                stationName = session.getChargingPoint().getStation().getStationName();
+                            }
+                        }
+                        
+                        // Convert LocalDateTime to Instant for response
+                        Instant startInstant = session.getStartTime() != null 
+                                ? session.getStartTime().atZone(java.time.ZoneId.systemDefault()).toInstant()
+                                : null;
+                        Instant endInstant = session.getEndTime() != null
+                                ? session.getEndTime().atZone(java.time.ZoneId.systemDefault()).toInstant()
+                                : null;
+                        
+                        return InvoiceDetailResponse.SessionSummary.builder()
+                                .id(session.getId())
+                                .startTime(startInstant)
+                                .endTime(endInstant)
+                                .duration(duration)
+                                .energyConsumed(session.getKwhUsed())
+                                .cost(session.getCost())
+                                .stationName(stationName)
+                                .chargingPointName(chargingPointName)
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+        }
 
         return InvoiceDetailResponse.builder()
                 .invoiceId(invoice.getId())
@@ -422,6 +495,7 @@ public class InvoiceController {
                 .warningMessage(warningMessage)
                 .qrCode(invoice.getQrCode())
                 .qrCodeExpired(false) // TODO: implement QR expiry check if needed
+                .sessions(sessionSummaries)
                 .build();
     }
 
@@ -433,34 +507,52 @@ public class InvoiceController {
     public ResponseEntity<?> getDriversReadyForInvoice() {
         try {
             List<Driver> allDrivers = invoiceServiceImpl.findAllActiveDrivers();
+            
+            System.out.println("========== DEBUG DRIVERS READY ==========");
+            System.out.println("Total active drivers found: " + allDrivers.size());
 
             List<InvoiceReadyResponse> readyDrivers = new ArrayList<>();
 
             for (Driver driver : allDrivers) {
+                System.out.println("\n--- Checking Driver ID: " + driver.getId() + " (" + driver.getAccount().getFullName() + ") ---");
+                
                 // Tính billing period cho từng driver
                 LocalDate billingStartDate;
                 LocalDate billingEndDate = LocalDate.now();
 
                 List<Invoice> driverInvoices = invoiceService.findByDriverId(driver.getId());
+                System.out.println("Previous invoices count: " + driverInvoices.size());
 
                 if (driverInvoices.isEmpty()) {
                     billingStartDate = driver.getAccount().getCreatedDate()
                             .atZone(ZoneId.systemDefault()).toLocalDate();
+                    System.out.println("No previous invoices - Using account creation date: " + billingStartDate);
                 } else {
                     Invoice lastInvoice = driverInvoices.stream()
                             .max((i1, i2) -> i1.getIssueDate().compareTo(i2.getIssueDate()))
                             .orElseThrow();
                     billingStartDate = lastInvoice.getBillingEndDate().plusDays(1);
+                    System.out.println("Last invoice end date: " + lastInvoice.getBillingEndDate());
+                    System.out.println("New billing start date: " + billingStartDate);
                 }
 
                 long daysSinceStart = ChronoUnit.DAYS.between(billingStartDate, billingEndDate);
+                System.out.println("Days since billing start: " + daysSinceStart);
 
                 // ⭐ SỬA: Convert LocalDate sang LocalDateTime
+                LocalDateTime startDateTime = billingStartDate.atStartOfDay();
+                LocalDateTime endDateTime = billingEndDate.atTime(23, 59, 59);
+                
+                System.out.println("Query range: " + startDateTime + " to " + endDateTime);
+                
                 long unbilledCount = invoiceServiceImpl.countUnbilledSessions(
                         driver.getId(),
-                        billingStartDate.atStartOfDay(),      // ⭐ THÊM .atStartOfDay()
-                        billingEndDate.atTime(23, 59, 59)     // ⭐ THÊM .atTime()
+                        startDateTime,
+                        endDateTime
                 );
+                
+                System.out.println("Unbilled sessions count: " + unbilledCount);
+                System.out.println("Eligible for invoice: " + (daysSinceStart >= 30 && unbilledCount > 0));
 
                 // ⭐ Chỉ thêm driver đã đủ 30 ngày VÀ có session chưa billing
                 if (daysSinceStart >= 30 && unbilledCount > 0) {
@@ -475,8 +567,15 @@ public class InvoiceController {
                             .unbilledSessionCount(unbilledCount)
                             .message("Sẵn sàng tạo invoice")
                             .build());
+                    System.out.println("✅ Driver ADDED to ready list");
+                } else {
+                    System.out.println("❌ Driver NOT added - Days: " + daysSinceStart + " >= 30? " + (daysSinceStart >= 30) + ", Count: " + unbilledCount + " > 0? " + (unbilledCount > 0));
                 }
             }
+            
+            System.out.println("\n========== FINAL RESULT ==========");
+            System.out.println("Total drivers ready: " + readyDrivers.size());
+            System.out.println("====================================\n");
 
             return ResponseEntity.ok(ApiResponse.success(
                     String.format("Found %d drivers ready for invoice", readyDrivers.size()),
@@ -544,6 +643,7 @@ public class InvoiceController {
                     .body(ApiResponse.error("Error: " + e.getMessage()));
         }
     }
+
     // ==================== DTOs ====================
 
     @lombok.Data
@@ -554,6 +654,7 @@ public class InvoiceController {
     }
 
     @lombok.Data
+    @lombok.NoArgsConstructor
     @lombok.AllArgsConstructor
     public static class PaymentStatusCheck {
         private Boolean needsPayment;

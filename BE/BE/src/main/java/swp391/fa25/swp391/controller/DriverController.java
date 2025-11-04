@@ -14,7 +14,7 @@ import swp391.fa25.swp391.entity.Reservation;
 import swp391.fa25.swp391.entity.Vehicle;
 import swp391.fa25.swp391.service.IService.IChargingPointService;
 import swp391.fa25.swp391.service.IService.IDriverService;
-import swp391.fa25.swp391.service.IService.IReservationService;
+import swp391.fa25.swp391.service.ReservationService;
 import swp391.fa25.swp391.service.IService.IVehicleService;
 
 import java.time.LocalDateTime;
@@ -28,11 +28,20 @@ import java.util.stream.Collectors;
 public class DriverController {
     private final IDriverService driverService;
     private final IChargingPointService chargingPointService;
-    private final IReservationService reservationService;
+    private final ReservationService reservationService; //  Đổi từ Interface sang concrete class
     private final IVehicleService vehicleService;
 
     // Constant for reservation duration
     private static final int RESERVATION_DURATION_MINUTES = 1;
+    
+    // Status Constants - CHỈ ĐỌC, KHÔNG ĐƯỢC DÙNG ĐỂ SET STATUS
+    private static final String STATUS_ACTIVE = "active";
+    private static final String STATUS_USING = "using";
+    private static final String STATUS_MAINTENANCE = "maintenance";
+    private static final String STATUS_INACTIVE = "inactive";
+    private static final String STATUS_BOOKED = "booked";
+    private static final String STATUS_FULFILLED = "fulfilled";
+    private static final String STATUS_CANCELLED = "cancelled";
 
     /**
      * Create reservation (when user clicks reserve button and confirms)
@@ -66,7 +75,7 @@ public class DriverController {
                 return availabilityCheck;
             }
 
-            // Create and save reservation
+            // FIX: Gọi createReservation() từ service (service tự update charging point)
             Reservation savedReservation = createAndSaveReservation(driver, chargingPoint, vehicle, request);
 
             // Build response
@@ -109,30 +118,44 @@ public class DriverController {
      * DELETE /api/drivers/reservations/{reservationId}
      */
     @DeleteMapping("/reservations/{reservationId}")
-    public ResponseEntity<?> cancelReservation(@PathVariable Integer reservationId) {
+    public ResponseEntity<?> cancelReservation(
+            @PathVariable Integer reservationId,
+            @RequestParam Integer driverId) { // ⭐ Thêm driverId để validate
         try {
-            Reservation reservation = reservationService.findById(reservationId);
-
-            // Validate reservation exists
-            if (reservation == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("Reservation not found");
-            }
-
-            // Validate reservation can be cancelled
-            if (!canCancelReservation(reservation)) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body("Can only cancel active reservations");
-            }
-
-            // Cancel reservation
-            cancelReservationStatus(reservation);
+            // FIX: Gọi cancelReservation() từ service (service tự nhả charging point)
+            Reservation cancelledReservation = reservationService.cancelReservation(
+                    reservationId.longValue(), 
+                    driverId.longValue()
+            );
 
             return ResponseEntity.ok("Reservation cancelled successfully");
 
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error cancelling reservation: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Handle reservation fulfillment (when driver starts charging)
+     */
+    @PostMapping("/reservations/{reservationId}/fulfill")
+    public ResponseEntity<?> fulfillReservation(@PathVariable Integer reservationId) {
+        try {
+            // FIX: Gọi fulfillReservation() từ service
+            reservationService.fulfillReservation(reservationId.longValue());
+
+            return ResponseEntity.ok("Reservation fulfilled successfully");
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error fulfilling reservation: " + e.getMessage());
         }
     }
 
@@ -181,42 +204,33 @@ public class DriverController {
 
     /**
      * Check if charging point is available for reservation
-     * Returns error response if not available, null if available
      */
     private ResponseEntity<?> checkChargingPointAvailability(ChargingPoint chargingPoint) {
-        String status = chargingPoint.getStatus();
+        String status = chargingPoint.getStatus().toLowerCase();
         
-        // Check if point can be reserved
-        if (!"ACTIVE".equalsIgnoreCase(status)) {
-            if ("USING".equalsIgnoreCase(status)) {
+        if (!STATUS_ACTIVE.equals(status)) {
+            if (STATUS_USING.equals(status)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body("Charging point is currently in use");
-            } else if ("MAINTENANCE".equalsIgnoreCase(status)) {
+            } else if (STATUS_MAINTENANCE.equals(status)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body("Charging point is under maintenance");
-            } else if ("INACTIVE".equalsIgnoreCase(status)) {
+            } else if (STATUS_INACTIVE.equals(status)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body("Charging point is currently inactive");
-            } else if ("BOOKED".equalsIgnoreCase(status)) {
+            } else if (STATUS_BOOKED.equals(status)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body("Charging point is already booked");
             }
         }
-        
-        System.out.println("✅ [AVAILABILITY CHECK] Status check PASSED");
 
         // Check if already reserved
-        boolean hasReservation = hasActiveReservation(chargingPoint.getId());
-        System.out.println("🔍 [AVAILABILITY CHECK] Has active reservation: " + hasReservation);
-        
-        if (hasReservation) {
-            System.out.println("❌ [AVAILABILITY CHECK] Reservation check FAILED");
+        if (hasActiveReservation(chargingPoint.getId())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body("Charging point is currently reserved");
         }
-        
 
-        return null; // Available
+        return null;
     }
 
     /**
@@ -227,7 +241,7 @@ public class DriverController {
         LocalDateTime now = LocalDateTime.now();
 
         return reservations.stream()
-                .filter(r -> "ACTIVE".equalsIgnoreCase(r.getStatus()))
+                .filter(r -> STATUS_ACTIVE.equalsIgnoreCase(r.getStatus()))
                 .anyMatch(r -> r.getStartTime().isBefore(now) && r.getEndTime().isAfter(now));
     }
 
@@ -238,15 +252,15 @@ public class DriverController {
         List<Reservation> reservations = reservationService.findByChargingPointId(chargingPointId);
         
         return reservations.stream()
-                .filter(r -> "ACTIVE".equalsIgnoreCase(r.getStatus()))
+                .filter(r -> STATUS_ACTIVE.equalsIgnoreCase(r.getStatus()))
                 .anyMatch(r -> {
-                    // Check if new reservation overlaps with existing one
                     return !(endTime.isBefore(r.getStartTime()) || startTime.isAfter(r.getEndTime()));
                 });
     }
 
     /**
      * Create and save a new reservation
+     * KHÔNG ĐỘNG VÀO CHARGING POINT - Service tự xử lý
      */
     private Reservation createAndSaveReservation(Driver driver, ChargingPoint chargingPoint,
                                                  Vehicle vehicle, ReservationRequest request) {
@@ -254,18 +268,15 @@ public class DriverController {
         LocalDateTime startTime = LocalDateTime.now();
         LocalDateTime endTime = startTime.plusMinutes(RESERVATION_DURATION_MINUTES);
 
-        // Build and save reservation
+        // Build reservation entity
         Reservation reservation = buildReservationEntity(driver, chargingPoint, vehicle, startTime, endTime);
-        Reservation savedReservation = reservationService.register(reservation);
-
-        // Update charging point status to BOOKED
-        chargingPoint.setStatus("BOOKED");
-        chargingPointService.updateChargingPoint(chargingPoint);
-
-        // Schedule reservation expiry check
-        scheduleReservationExpiryCheck(savedReservation, chargingPoint);
         
-        return savedReservation;
+        // FIX: Gọi createReservation() - service tự update charging point
+        return reservationService.createReservation(reservation);
+        
+        // REMOVED: Không tự update charging point nữa
+        // chargingPoint.setStatus(STATUS_BOOKED);
+        // chargingPointService.updateChargingPoint(chargingPoint);
     }
 
     /**
@@ -279,7 +290,8 @@ public class DriverController {
         reservation.setVehicle(vehicle);
         reservation.setStartTime(startTime);
         reservation.setEndTime(endTime);
-        reservation.setStatus("ACTIVE");
+        // KHÔNG set status ở đây - service sẽ tự set
+        // reservation.setStatus(STATUS_ACTIVE);
         return reservation;
     }
 
@@ -302,73 +314,5 @@ public class DriverController {
                 .chargingPointId(cp.getId())
                 .stationId(cp.getStation() != null ? cp.getStation().getId() : null)
                 .build();
-    }
-
-    /**
-     * Check if reservation can be cancelled
-     */
-    private boolean canCancelReservation(Reservation reservation) {
-        return "ACTIVE".equalsIgnoreCase(reservation.getStatus());
-    }
-
-    /**
-     * Cancel reservation by updating status
-     */
-    private void cancelReservationStatus(Reservation reservation) {
-        // Update reservation status
-        reservation.setStatus("CANCELLED");
-        reservationService.register(reservation);
-
-        // Update charging point status back to ACTIVE
-        ChargingPoint chargingPoint = reservation.getChargingPoint();
-        if (chargingPoint != null && "BOOKED".equalsIgnoreCase(chargingPoint.getStatus())) {
-            chargingPoint.setStatus("ACTIVE");
-            chargingPointService.updateChargingPoint(chargingPoint);
-        }
-    }
-
-    /**
-     * Schedule a task to check reservation expiry
-     */
-    private void scheduleReservationExpiryCheck(Reservation reservation, ChargingPoint chargingPoint) {
-        // TODO: Implement using Spring's @Scheduled or TaskScheduler
-        // This should:
-        // 1. Check if reservation is still ACTIVE at end time
-        // 2. If yes, mark it as EXPIRED
-        // 3. Update charging point status back to ACTIVE if it's still BOOKED
-    }
-
-    /**
-     * Handle reservation fulfillment (when driver starts charging)
-     */
-    @PostMapping("/reservations/{reservationId}/fulfill")
-    public ResponseEntity<?> fulfillReservation(@PathVariable Integer reservationId) {
-        try {
-            Reservation reservation = reservationService.findById(reservationId);
-
-            // Validate reservation exists
-            if (reservation == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("Reservation not found");
-            }
-
-            // Validate reservation is active
-            if (!"ACTIVE".equalsIgnoreCase(reservation.getStatus())) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body("Only active reservations can be fulfilled");
-            }
-
-            // Update reservation status
-            reservation.setStatus("FULFILLED");
-            reservationService.register(reservation);
-
-            // Charging point status will be updated to USING by the charging session service
-
-            return ResponseEntity.ok("Reservation fulfilled successfully");
-
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error fulfilling reservation: " + e.getMessage());
-        }
     }
 }

@@ -132,10 +132,10 @@ public class ChargingSessionService implements IChargingSessionService {
         session.setDriver(driver);
         session.setVehicle(vehicle);
         session.setChargingPoint(chargingPoint);
-        session.setReservation(reservation); //  Có thể là null (walk-in) hoặc có giá trị (reservation)
+        session.setReservation(reservation);
         session.setStartTime(LocalDateTime.now());
         session.setStartPercentage(request.getStartPercentage());
-        session.setEndPercentage(request.getTargetPercentage()); // Set target percentage as end percentage
+        session.setEndPercentage(request.getTargetPercentage());
         session.setStatus(STATUS_CHARGING);
         session.setKwhUsed(BigDecimal.ZERO);
         session.setCost(BigDecimal.ZERO);
@@ -144,10 +144,9 @@ public class ChargingSessionService implements IChargingSessionService {
         ChargingSession savedSession = chargingSessionRepository.save(session);
 
         //  10. CẬP NHẬT TRẠNG THÁI
-        // Nếu có reservation, cập nhật status thành FULFILLED
+        // ✅ FIX: Nếu có reservation, gọi fulfillReservation()
         if (reservation != null) {
-            reservation.setStatus("FULFILLED");
-            reservationService.createReservation(reservation);
+            reservationService.fulfillReservation(reservation.getId());
             log.info("Reservation {} marked as FULFILLED", reservation.getId());
         }
 
