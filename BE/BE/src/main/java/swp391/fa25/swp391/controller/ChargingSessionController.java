@@ -463,6 +463,7 @@ public class ChargingSessionController {
                 .endPercentage(session.getEndPercentage())
                 .chargedPercentage(chargedPercentage)
                 .kwhUsed(session.getKwhUsed())
+                .startFee(session.getStartFee())
                 .cost(session.getCost())
 
                 .reservationId(reservationId)

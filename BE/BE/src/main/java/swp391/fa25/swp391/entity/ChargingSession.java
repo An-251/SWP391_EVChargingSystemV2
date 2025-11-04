@@ -35,6 +35,9 @@ public class ChargingSession {
     @Column(name = "COST", precision = 18, scale = 2)
     private BigDecimal cost;
 
+    @Column(name = "START_FEE", precision = 18, scale = 2)
+    private BigDecimal startFee;
+
     @Nationalized
     @Column(name = "STATUS", length = 50)
     private String status;

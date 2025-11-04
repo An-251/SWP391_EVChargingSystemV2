@@ -45,6 +45,7 @@ public class ChargingSessionResponse {
     private Integer endPercentage;
     private Integer chargedPercentage;
     private BigDecimal kwhUsed; // Điện năng tiêu thụ (kWh)
+    private BigDecimal startFee; // Phí khởi động phiên sạc (VND)
     private BigDecimal cost; // Tổng chi phí (VND)
 
     //Reservation

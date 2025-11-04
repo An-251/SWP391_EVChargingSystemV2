@@ -39,6 +39,9 @@ public class ChargingSessionService implements IChargingSessionService {
     // Hằng số cấu hình
     private static final BigDecimal KWH_PER_PERCENT = new BigDecimal("0.5");
     private static final BigDecimal COST_PER_KWH = new BigDecimal("3000");
+    private static final BigDecimal START_FEE = new BigDecimal("5000"); // Phí khởi động phiên sạc
+    private static final BigDecimal OVERUSE_PENALTY_PER_MINUTE = new BigDecimal("2000"); // Phí phạt mỗi phút
+    private static final int GRACE_PERIOD_MINUTES = 5; // Thời gian ân hạn sau khi đầy pin
 
     // ChargingSession Status Constants
     private static final String STATUS_CHARGING = "charging";      // Đang sạc
@@ -140,6 +143,7 @@ public class ChargingSessionService implements IChargingSessionService {
         session.setKwhUsed(BigDecimal.ZERO);
         session.setCost(BigDecimal.ZERO);
         session.setOverusedTime(BigDecimal.ZERO);
+        session.setStartFee(START_FEE); // ⭐ Set phí khởi động
 
         ChargingSession savedSession = chargingSessionRepository.save(session);
 
@@ -188,7 +192,33 @@ public class ChargingSessionService implements IChargingSessionService {
         BigDecimal baseCost = kwhUsed.multiply(COST_PER_KWH)
                 .setScale(0, RoundingMode.HALF_UP);
 
-        BigDecimal finalCost = applyPlanDiscount(session.getDriver().getId(), baseCost);
+        // ⭐ TÍNH PHÍ PHẠT OVERUSE NẾU ĐÃ ĐẦY PIN NHƯNG KHÔNG DỪNG
+        BigDecimal overusePenalty = BigDecimal.ZERO;
+        BigDecimal overuseMinutes = BigDecimal.ZERO;
+        
+        if (request.getEndPercentage() >= 100) {
+            // Tính thời gian từ lúc đầy pin (target %) đến lúc dừng
+            overuseMinutes = calculateOveruseTime(session, endTime);
+            
+            if (overuseMinutes.compareTo(new BigDecimal(GRACE_PERIOD_MINUTES)) > 0) {
+                // Chỉ tính phí phạt nếu quá thời gian ân hạn
+                BigDecimal penaltyMinutes = overuseMinutes.subtract(new BigDecimal(GRACE_PERIOD_MINUTES));
+                overusePenalty = penaltyMinutes.multiply(OVERUSE_PENALTY_PER_MINUTE)
+                        .setScale(0, RoundingMode.HALF_UP);
+                
+                log.warn("⚠️ Overuse penalty applied! Session {}: {} minutes overtime, penalty: {} VND",
+                        sessionId, penaltyMinutes, overusePenalty);
+            }
+            
+            session.setOverusedTime(overuseMinutes);
+        }
+
+        // ⭐ TÍNH TỔNG CHI PHÍ = START_FEE + BASE_COST + OVERUSE_PENALTY
+        BigDecimal totalCostBeforeDiscount = session.getStartFee()
+                .add(baseCost)
+                .add(overusePenalty);
+        
+        BigDecimal finalCost = applyPlanDiscount(session.getDriver().getId(), totalCostBeforeDiscount);
 
         session.setKwhUsed(kwhUsed);
         session.setCost(finalCost);
@@ -199,8 +229,8 @@ public class ChargingSessionService implements IChargingSessionService {
         // Giải phóng charging point
         chargingPointService.stopUsingPoint(session.getChargingPoint().getId());
 
-        log.info("Session {} '{}'. Base cost: {}, Final cost (with discount): {}",
-                sessionId, STATUS_COMPLETED, baseCost, finalCost);
+        log.info("✅ Session {} completed. Start fee: {}, Base cost: {}, Overuse penalty: {}, Total before discount: {}, Final cost: {}",
+                sessionId, session.getStartFee(), baseCost, overusePenalty, totalCostBeforeDiscount, finalCost);
 
         return updatedSession;
     }
@@ -297,6 +327,29 @@ public class ChargingSessionService implements IChargingSessionService {
                 baseCost, discountAmount, finalCost);
 
         return finalCost;
+    }
+
+    /**
+     * Tính thời gian vượt quá khi đã đầy pin
+     * @param session ChargingSession
+     * @param endTime Thời gian kết thúc phiên sạc
+     * @return Số phút vượt quá
+     */
+    private BigDecimal calculateOveruseTime(ChargingSession session, LocalDateTime endTime) {
+        // Tính thời gian cần để sạc đầy dựa trên tỉ lệ phần trăm
+        int percentageCharged = session.getEndPercentage() - session.getStartPercentage();
+        
+        // Giả định: 1% = 1 phút sạc (có thể điều chỉnh)
+        long estimatedMinutesToFull = percentageCharged;
+        
+        // Thời gian dự kiến đầy pin
+        LocalDateTime estimatedFullTime = session.getStartTime().plusMinutes(estimatedMinutesToFull);
+        
+        // Tính thời gian vượt quá
+        long minutesOveruse = java.time.Duration.between(estimatedFullTime, endTime).toMinutes();
+        
+        // Nếu âm (dừng trước khi đầy) thì return 0
+        return minutesOveruse > 0 ? new BigDecimal(minutesOveruse) : BigDecimal.ZERO;
     }
 
     // ======= Các method hỗ trợ =======
