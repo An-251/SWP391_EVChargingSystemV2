@@ -8,6 +8,8 @@ import org.hibernate.annotations.Nationalized;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -41,4 +43,10 @@ public class EnterpriseInvoice {
     @Column(name = "ISSUE_DATE")
     private LocalDate issueDate;
 
+    @OneToMany(
+            mappedBy = "enterpriseInvoice", // "enterpriseInvoice" là tên trường trong class EnterpriseInvoiceDetail
+            cascade = CascadeType.ALL,      // Nếu xóa Hóa đơn, các chi tiết cũng bị xóa
+            fetch = FetchType.LAZY          // Giữ LAZY, EntityGraph sẽ override khi cần
+    )
+    private List<EnterpriseInvoiceDetail> enterpriseInvoiceDetails = new ArrayList<>();
 }
