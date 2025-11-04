@@ -22,4 +22,5 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Integer> {
      * Kiểm tra biển số xe đã tồn tại chưa
      */
     boolean existsByLicensePlate(String licensePlate);
+    List<Vehicle> findByEnterpriseId(Integer enterpriseId);
 }

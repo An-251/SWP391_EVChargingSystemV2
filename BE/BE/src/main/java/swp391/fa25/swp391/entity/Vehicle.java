@@ -40,7 +40,7 @@ public class Vehicle {
     private BigDecimal batteryCapacity;
 
     @ManyToOne
-    @JoinColumn(name = "DRIVER_ID")
+    @JoinColumn(name = "DRIVER_ID", nullable = true) // <-- THÊM nullable = true
     private Driver driver;
 
     @OneToMany(mappedBy = "vehicle")
