@@ -9,9 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import swp391.fa25.swp391.dto.request.CreateEmployeeRequest;
-import swp391.fa25.swp391.dto.request.LoginRequest;
-import swp391.fa25.swp391.dto.request.RegisterRequest;
+import swp391.fa25.swp391.dto.request.*;
 import swp391.fa25.swp391.dto.response.AccountResponse;
 import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.dto.response.LoginResponse;
@@ -22,6 +20,7 @@ import swp391.fa25.swp391.security.JwtTokenProvider;
 import swp391.fa25.swp391.service.AuthService;
 import swp391.fa25.swp391.service.IService.IAccountService;
 import swp391.fa25.swp391.service.IService.IDriverService;
+import swp391.fa25.swp391.service.PasswordResetService;
 
 import java.util.List;
 import java.util.Optional;
@@ -170,6 +169,66 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Logout error: " + e.getMessage()));
+        }
+    }
+
+    // Thêm vào AuthController.java
+
+    private final PasswordResetService passwordResetService; // Inject thêm
+
+    /**
+     * Send OTP for password reset
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        try {
+            passwordResetService.sendPasswordResetOtp(request.getEmail());
+            return ResponseEntity.ok(ApiResponse.success("OTP sent to your email"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error sending OTP: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Verify OTP
+     */
+    @PostMapping("/verify-otp")
+    public ResponseEntity<?> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        try {
+            boolean isValid = passwordResetService.verifyOtp(request.getEmail(), request.getOtp());
+            if (isValid) {
+                return ResponseEntity.ok(ApiResponse.success("OTP verified successfully"));
+            }
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid or expired OTP"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error verifying OTP: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Reset password
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        try {
+            passwordResetService.resetPassword(
+                    request.getEmail(),
+                    request.getOtp(),
+                    request.getNewPassword()
+            );
+            return ResponseEntity.ok(ApiResponse.success("Password reset successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error resetting password: " + e.getMessage()));
         }
     }
 }
