@@ -96,6 +96,11 @@
             <artifactId>momopayment</artifactId>
             <version>1.0</version>
         </dependency>
+        <!-- Spring Mail -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
