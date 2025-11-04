@@ -13,9 +13,6 @@ public interface IIncidentReportService {
     // Hướng 2: System tự động báo lỗi (Trả về Entity)
     IncidentReport createSystemReport(SystemReportRequest request);
 
-    // Employee xử lý báo cáo (Trả về Entity)
-    IncidentReport handleReport(HandleReportRequest request);
-
     // Admin xem tất cả báo cáo (Trả về List Entity)
     List<IncidentReport> getAllReports();
 
@@ -40,12 +37,11 @@ public interface IIncidentReportService {
     // Cập nhật status báo cáo (Trả về Entity)
     IncidentReport updateReportStatus(Integer reportId, String status);
 
-    // Gán employee xử lý (Trả về Entity)
-    IncidentReport assignEmployee(Integer reportId, Integer employeeId);
-
     // Đóng báo cáo với ghi chú giải quyết (Trả về Entity)
     IncidentReport closeReport(Integer reportId, String resolutionNotes);
 
     // Xóa báo cáo
     void deleteReport(Integer reportId);
+
+    IncidentReport createReportByEmployee(EmployeeCreateReportRequest request);
 }
