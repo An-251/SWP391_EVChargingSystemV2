@@ -78,44 +78,51 @@ public class ReservationService implements IReservationService {
     }
 
     @Override
+    @Scheduled(fixedRate = 60000)
+    @Transactional
     public void processReservations() {
-        
+        processExpiredReservations();
     }
 
-
     @Override
+    @Transactional
     public Reservation register(Reservation reservation) {
-        return null;
+        return createReservation(reservation); // ✅ Đã return kết quả
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Reservation findById(Integer id) {
-        return null;
+        return reservationRepository.findById(Long.valueOf(id))
+                .orElseThrow(() -> new RuntimeException("Reservation not found with id: " + id));
     }
 
-    // ⭐ Thêm 2 overload methods
-
+    @Transactional(readOnly = true)
     public Reservation findById(Long id) {
         return reservationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reservation not found with id: " + id));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Reservation> findAll() {
-        return List.of();
+        return reservationRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
     public Reservation findById(int id) {
         return findById(Long.valueOf(id));
     }
 
+    @Transactional(readOnly = true)
     public List<Reservation> getReservationsByDriver(Long driverId) {
         return reservationRepository.findByDriverId(driverId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Reservation> findByChargingPointId(Integer chargingPointId) {
-        return List.of();
+        return reservationRepository.findByChargingPointId(chargingPointId);
     }
 
     @Transactional
@@ -172,7 +179,6 @@ public class ReservationService implements IReservationService {
     /**
      * Chạy mỗi 1 phút để kiểm tra reservations đã hết hạn
      */
-    @Scheduled(fixedRate = 60000) // 1 phút
     @Transactional
     public void processExpiredReservations() {
         LocalDateTime now = LocalDateTime.now();
