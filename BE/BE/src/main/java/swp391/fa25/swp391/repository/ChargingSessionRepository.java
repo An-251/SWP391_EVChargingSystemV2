@@ -126,4 +126,11 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
      * ⭐ Lấy tất cả session chưa có invoice của driver
      */
     List<ChargingSession> findByDriverIdAndInvoiceIsNull(Integer driverId);
+
+    List<ChargingSession> findByVehicleIdAndStatusAndEndTimeBetweenAndEnterpriseInvoiceIsNull(
+            Integer vehicleId,
+            String status,
+            LocalDateTime startTime,
+            LocalDateTime endTime
+    );
 }
