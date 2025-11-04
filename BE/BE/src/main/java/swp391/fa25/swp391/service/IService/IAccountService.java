@@ -20,5 +20,5 @@ public interface IAccountService {
     boolean existsByEmail(String email);
     boolean deleteAccountById(Integer id);
     boolean existsByRole(String role);
-
+    Account save(Account account);
 }
