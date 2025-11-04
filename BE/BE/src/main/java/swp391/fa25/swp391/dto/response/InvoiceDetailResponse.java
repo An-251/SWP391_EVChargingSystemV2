@@ -83,4 +83,22 @@ public class InvoiceDetailResponse {
     // ==================== QR CODE ====================
     private String qrCode;
     private Boolean qrCodeExpired;
+    
+    // ==================== CHARGING SESSIONS ====================
+    private java.util.List<SessionSummary> sessions;
+    
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SessionSummary {
+        private Integer id;
+        private Instant startTime;
+        private Instant endTime;
+        private String duration;
+        private BigDecimal energyConsumed;
+        private BigDecimal cost;
+        private String stationName;
+        private String chargingPointName;
+    }
 }
