@@ -74,7 +74,9 @@ public class ReservationService implements IReservationService {
                 savedReservation.getDriver().getId(),
                 savedReservation.getEndTime());
         
-        return savedReservation;
+        // ⭐ FIX: Refresh entity để lấy ChargingPoint đã updated (tránh detached entity)
+        return reservationRepository.findById(savedReservation.getId())
+                .orElse(savedReservation);
     }
 
     @Override
