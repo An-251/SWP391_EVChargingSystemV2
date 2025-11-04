@@ -64,4 +64,16 @@ public class ChargingSession {
     @JoinColumn(name = "RESERVATION_ID", referencedColumnName = "id")
     private Reservation reservation;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "STARTED_BY_EMPLOYEE_ID")
+    private StationEmployee startedByEmployee; // Nhân viên trạm đã BẮT ĐẦU
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ENDED_BY_EMPLOYEE_ID")
+    private StationEmployee endedByEmployee; // Nhân viên trạm đã KẾT THÚC
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ENT_INVOICE_ID")
+    private EnterpriseInvoice enterpriseInvoice; // Liên kết tới Hóa đơn Doanh nghiệp
+
 }
