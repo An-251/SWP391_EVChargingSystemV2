@@ -6,12 +6,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import swp391.fa25.swp391.entity.ChargingPoint;
-import swp391.fa25.swp391.entity.ChargingStation;
-import swp391.fa25.swp391.entity.Facility;
 import swp391.fa25.swp391.entity.Reservation;
 import swp391.fa25.swp391.repository.ChargingPointRepository;
-import swp391.fa25.swp391.repository.ChargingStationRepository;
-import swp391.fa25.swp391.repository.FacilityRepository;
 import swp391.fa25.swp391.repository.ReservationRepository;
 
 import java.time.LocalDateTime;
@@ -24,8 +20,17 @@ public class ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final ChargingPointRepository chargingPointRepository;
-    private final ChargingStationRepository chargingStationRepository;
-    private final FacilityRepository facilityRepository;
+
+    // Reservation Status Constants
+    private static final String STATUS_ACTIVE = "active";         // Đã đặt chỗ (point = booked)
+    private static final String STATUS_FULFILLED = "fulfilled";   // Đã quét QR, đang sạc (point = using)
+    private static final String STATUS_CANCELLED = "cancelled";   // User hủy
+    private static final String STATUS_EXPIRED = "expired";       // Hết giờ chưa sử dụng
+
+    // ChargingPoint Status Constants
+    private static final String POINT_STATUS_ACTIVE = "active";
+    private static final String POINT_STATUS_BOOKED = "booked";
+    private static final String POINT_STATUS_USING = "using";
 
     // ==================== CRUD Operations ====================
 
@@ -34,34 +39,43 @@ public class ReservationService {
         ChargingPoint chargingPoint = reservation.getChargingPoint();
         
         // Kiểm tra charging point có available không
-        if (!"ACTIVE".equals(chargingPoint.getStatus())) {
+        if (!POINT_STATUS_ACTIVE.equals(chargingPoint.getStatus())) {
             throw new RuntimeException("Charging point is not available");
         }
         
+        // Set start_time = NOW, end_time = start_time + duration
+        LocalDateTime now = LocalDateTime.now();
+        reservation.setStartTime(now);
+        // end_time được set từ request (ví dụ: now + 1 hour)
+        
         // Kiểm tra trùng lịch
         List<Reservation> existingReservations = reservationRepository
-                .findByChargingPointIdAndStatusNot(chargingPoint.getId(), "CANCELLED");
+                .findByChargingPointIdAndStatusNot(chargingPoint.getId(), STATUS_CANCELLED);
 
         for (Reservation existing : existingReservations) {
-            if (!"EXPIRED".equals(existing.getStatus()) && 
+            // Chỉ kiểm tra những reservation chưa expired/fulfilled
+            if ((STATUS_ACTIVE.equals(existing.getStatus())) &&
                 isTimeOverlap(reservation.getStartTime(), reservation.getEndTime(),
                               existing.getStartTime(), existing.getEndTime())) {
                 throw new RuntimeException("Charging point is already reserved for this time slot");
             }
         }
 
-        // Lưu reservation với status PENDING
-        reservation.setStatus("PENDING");
+        // Lưu reservation với status ACTIVE ngay lập tức
+        reservation.setStatus(STATUS_ACTIVE);
         Reservation savedReservation = reservationRepository.save(reservation);
         
-        log.info("✅ Created reservation {} for driver {}", 
+        // Đánh dấu charging point là BOOKED
+        reserveChargingPointOnly(chargingPoint);
+        
+        log.info("Created reservation {} with status ACTIVE for driver {}, valid until {}", 
                 savedReservation.getId(), 
-                savedReservation.getDriver().getId());
+                savedReservation.getDriver().getId(),
+                savedReservation.getEndTime());
         
         return savedReservation;
     }
 
-    // ⭐ Thêm 2 overload methods
     public Reservation findById(Long id) {
         return reservationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reservation not found with id: " + id));
@@ -84,115 +98,88 @@ public class ReservationService {
             throw new RuntimeException("You are not authorized to cancel this reservation");
         }
 
-        if ("CANCELLED".equals(reservation.getStatus()) || "EXPIRED".equals(reservation.getStatus())) {
-            throw new RuntimeException("Reservation is already " + reservation.getStatus().toLowerCase());
+        // Chỉ có thể cancel nếu đang ở trạng thái ACTIVE
+        if (!STATUS_ACTIVE.equals(reservation.getStatus())) {
+            throw new RuntimeException("Can only cancel active reservations. Current status: " + reservation.getStatus());
         }
-
-        // Lưu status cũ
-        String oldStatus = reservation.getStatus();
         
         // Cập nhật status thành CANCELLED
-        reservation.setStatus("CANCELLED");
+        reservation.setStatus(STATUS_CANCELLED);
         Reservation savedReservation = reservationRepository.save(reservation);
         
-        // Nếu reservation đã CONFIRMED (đang sử dụng), nhả tài nguyên
-        if ("CONFIRMED".equals(oldStatus)) {
-            releaseResources(reservation.getChargingPoint());
+        // Nhả charging point về ACTIVE
+        releaseChargingPointOnly(reservation.getChargingPoint());
+        
+        log.info("Cancelled reservation {}", reservationId);
+        return savedReservation;
+    }
+
+    /**
+     * Được gọi từ ChargingSessionService khi user quét QR và bắt đầu sạc
+     */
+    @Transactional
+    public void fulfillReservation(Long reservationId) {
+        Reservation reservation = findById(reservationId);
+        
+        // Kiểm tra status phải là ACTIVE
+        if (!STATUS_ACTIVE.equals(reservation.getStatus())) {
+            throw new RuntimeException("Reservation must be active to fulfill. Current status: " + reservation.getStatus());
         }
         
-        log.info("✅ Cancelled reservation {}", reservationId);
-        return savedReservation;
+        // Kiểm tra chưa hết hạn
+        if (LocalDateTime.now().isAfter(reservation.getEndTime())) {
+            throw new RuntimeException("Reservation has expired");
+        }
+        
+        // Cập nhật thành FULFILLED
+        reservation.setStatus(STATUS_FULFILLED);
+        reservationRepository.save(reservation);
+        
+        log.info("Fulfilled reservation {} - User started charging session", reservationId);
     }
 
     // ==================== Scheduled Tasks ====================
 
     /**
-     * Chạy mỗi 1 phút để kiểm tra và xử lý reservations
+     * Chạy mỗi 1 phút để kiểm tra reservations đã hết hạn
      */
     @Scheduled(fixedRate = 60000) // 1 phút
     @Transactional
-    public void processReservations() {
+    public void processExpiredReservations() {
         LocalDateTime now = LocalDateTime.now();
         
-        // 1. Xử lý expired reservations
-        processExpiredReservations(now);
+        log.debug("Checking for expired reservations at {}", now);
         
-        // 2. Xử lý starting reservations
-        processStartingReservations(now);
-    }
-
-    private void processExpiredReservations(LocalDateTime now) {
-        log.debug("🔍 Checking for expired reservations at {}", now);
-        
-        // Tìm reservations đã hết hạn
+        // Tìm reservations ACTIVE đã hết hạn (end_time < now)
         List<Reservation> expiredReservations = reservationRepository
-                .findExpiredReservations(now, List.of("PENDING", "CONFIRMED"));
+                .findExpiredReservations(now, List.of(STATUS_ACTIVE));
         
         if (expiredReservations.isEmpty()) {
             return;
         }
         
-        log.info("⚠️ Found {} expired reservations", expiredReservations.size());
+        log.info("Found {} expired reservations", expiredReservations.size());
         
         for (Reservation reservation : expiredReservations) {
             try {
-                log.info("📋 Processing expired reservation ID: {}, Status: {}, EndTime: {}", 
+                log.info("Processing expired reservation ID: {}, EndTime: {}", 
                         reservation.getId(), 
-                        reservation.getStatus(),
                         reservation.getEndTime());
                 
                 // Cập nhật status thành EXPIRED
-                reservation.setStatus("EXPIRED");
+                reservation.setStatus(STATUS_EXPIRED);
                 reservationRepository.save(reservation);
                 
-                // Nhả tài nguyên
+                // Nhả charging point về ACTIVE
                 ChargingPoint chargingPoint = reservation.getChargingPoint();
                 if (chargingPoint != null) {
-                    releaseResources(chargingPoint);
+                    releaseChargingPointOnly(chargingPoint);
                 }
                 
-                log.info("✅ Successfully expired reservation {}", reservation.getId());
+                log.info("Successfully expired reservation {}", reservation.getId());
                         
             } catch (Exception e) {
-                log.error("❌ Error processing expired reservation {}: {}", 
-                        reservation.getId(), e.getMessage(), e);
-            }
-        }
-    }
-
-    private void processStartingReservations(LocalDateTime now) {
-        LocalDateTime soon = now.plusMinutes(5);
-        
-        // Tìm reservations sắp bắt đầu
-        List<Reservation> startingReservations = reservationRepository
-                .findReservationsStartingSoon(now, soon, "PENDING");
-        
-        if (startingReservations.isEmpty()) {
-            return;
-        }
-        
-        log.info("🔔 Found {} reservations starting soon", startingReservations.size());
-        
-        for (Reservation reservation : startingReservations) {
-            try {
-                log.info("📋 Confirming reservation ID: {}, StartTime: {}", 
-                        reservation.getId(), 
-                        reservation.getStartTime());
-                
-                // Cập nhật status thành CONFIRMED
-                reservation.setStatus("CONFIRMED");
-                reservationRepository.save(reservation);
-                
-                // Đánh dấu tài nguyên đang sử dụng
-                ChargingPoint chargingPoint = reservation.getChargingPoint();
-                if (chargingPoint != null) {
-                    reserveResources(chargingPoint);
-                }
-                
-                log.info("✅ Successfully confirmed reservation {}", reservation.getId());
-                        
-            } catch (Exception e) {
-                log.error("❌ Error confirming reservation {}: {}", 
+                log.error("Error processing expired reservation {}: {}",
                         reservation.getId(), e.getMessage(), e);
             }
         }
@@ -201,127 +188,31 @@ public class ReservationService {
     // ==================== Helper Methods ====================
 
     /**
-     * Đánh dấu tài nguyên đang được sử dụng (khi reservation CONFIRMED)
+     * Đánh dấu ChargingPoint thành BOOKED (khi tạo reservation ACTIVE)
      */
-    private void reserveResources(ChargingPoint chargingPoint) {
+    private void reserveChargingPointOnly(ChargingPoint chargingPoint) {
         if (chargingPoint == null) return;
         
-        // 1. Cập nhật ChargingPoint thành BOOKED
-        chargingPoint.setStatus("BOOKED");
+        chargingPoint.setStatus(POINT_STATUS_BOOKED);
         chargingPointRepository.save(chargingPoint);
-        log.info("🔒 Set ChargingPoint {} to BOOKED", chargingPoint.getId());
-        
-        // 2. Cập nhật ChargingStation
-        ChargingStation station = chargingPoint.getStation();
-        if (station != null) {
-            updateStationStatus(station);
-        }
+        log.info("Set ChargingPoint {} to {}", chargingPoint.getId(), POINT_STATUS_BOOKED);
     }
 
     /**
-     * Nhả tài nguyên về trạng thái sẵn sàng (khi reservation EXPIRED/CANCELLED)
+     * Nhả ChargingPoint về ACTIVE (khi reservation EXPIRED/CANCELLED)
      */
-    private void releaseResources(ChargingPoint chargingPoint) {
+    private void releaseChargingPointOnly(ChargingPoint chargingPoint) {
         if (chargingPoint == null) return;
         
-        log.info("🔓 Releasing resources for ChargingPoint {}, current status: {}", 
+        log.info("Releasing ChargingPoint {}, current status: {}",
                 chargingPoint.getId(), 
                 chargingPoint.getStatus());
         
-        // 1. Nhả ChargingPoint về ACTIVE
-        if ("BOOKED".equals(chargingPoint.getStatus()) || "USING".equals(chargingPoint.getStatus())) {
-            chargingPoint.setStatus("ACTIVE");
+        // Chỉ nhả về ACTIVE nếu đang ở trạng thái BOOKED
+        if (POINT_STATUS_BOOKED.equals(chargingPoint.getStatus())) {
+            chargingPoint.setStatus(POINT_STATUS_ACTIVE);
             chargingPointRepository.save(chargingPoint);
-            log.info("✅ Released ChargingPoint {} to ACTIVE", chargingPoint.getId());
-        }
-        
-        // 2. Cập nhật ChargingStation
-        ChargingStation station = chargingPoint.getStation();
-        if (station != null) {
-            updateStationStatus(station);
-        }
-    }
-
-    /**
-     * Cập nhật status của station dựa trên các points
-     */
-    private void updateStationStatus(ChargingStation station) {
-        if (station == null) return;
-        
-        List<ChargingPoint> points = station.getChargingPoints();
-        if (points == null || points.isEmpty()) return;
-        
-        log.debug("🔍 Updating station {} status, current points status: {}", 
-                station.getId(),
-                points.stream().map(ChargingPoint::getStatus).toList());
-        
-        // Đếm số lượng point theo status
-        long activeCount = points.stream()
-                .filter(p -> "ACTIVE".equals(p.getStatus()))
-                .count();
-        
-        long maintenanceCount = points.stream()
-                .filter(p -> "MAINTENANCE".equals(p.getStatus()))
-                .count();
-        
-        // Xác định status mới của station
-        String newStatus;
-        if (maintenanceCount == points.size()) {
-            newStatus = "MAINTENANCE";
-        } else if (activeCount > 0) {
-            newStatus = "ACTIVE";
-        } else {
-            newStatus = "USING"; // Tất cả points đang BOOKED/USING
-        }
-        
-        // Cập nhật nếu status thay đổi
-        if (!newStatus.equals(station.getStatus())) {
-            String oldStatus = station.getStatus();
-            station.setStatus(newStatus);
-            chargingStationRepository.save(station);
-            log.info("✅ Updated ChargingStation {} status: {} -> {}", 
-                    station.getId(), oldStatus, newStatus);
-            
-            // 3. Cập nhật Facility
-            updateFacilityStatus(station.getFacility());
-        }
-    }
-
-    /**
-     * Cập nhật status của facility dựa trên các stations
-     */
-    private void updateFacilityStatus(Facility facility) {
-        if (facility == null) return;
-        
-        List<ChargingStation> stations = facility.getChargingStations();
-        if (stations == null || stations.isEmpty()) return;
-        
-        // Đếm số lượng station theo status
-        long activeCount = stations.stream()
-                .filter(s -> "ACTIVE".equals(s.getStatus()))
-                .count();
-        
-        long maintenanceCount = stations.stream()
-                .filter(s -> "MAINTENANCE".equals(s.getStatus()))
-                .count();
-        
-        // Xác định status mới của facility
-        String newStatus;
-        if (maintenanceCount == stations.size()) {
-            newStatus = "MAINTENANCE";
-        } else if (activeCount > 0) {
-            newStatus = "ACTIVE";
-        } else {
-            newStatus = "USING";
-        }
-        
-        // Cập nhật nếu status thay đổi
-        if (!newStatus.equals(facility.getStatus())) {
-            String oldStatus = facility.getStatus();
-            facility.setStatus(newStatus);
-            facilityRepository.save(facility);
-            log.info("✅ Updated Facility {} status: {} -> {}", 
-                    facility.getId(), oldStatus, newStatus);
+            log.info("Released ChargingPoint {} to {}", chargingPoint.getId(), POINT_STATUS_ACTIVE);
         }
     }
 
