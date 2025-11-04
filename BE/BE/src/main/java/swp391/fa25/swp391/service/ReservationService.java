@@ -77,8 +77,12 @@ public class ReservationService implements IReservationService {
         return savedReservation;
     }
 
-<<<<<<< HEAD
-=======
+    @Override
+    public void processReservations() {
+        
+    }
+
+
     @Override
     public Reservation register(Reservation reservation) {
         return null;
@@ -90,7 +94,7 @@ public class ReservationService implements IReservationService {
     }
 
     // ⭐ Thêm 2 overload methods
->>>>>>> c3205d918169ac663f30f8af31fbabc9b33a8cb4
+
     public Reservation findById(Long id) {
         return reservationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reservation not found with id: " + id));
