@@ -2,6 +2,7 @@
 package swp391.fa25.swp391.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,13 +15,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PasswordResetService {
 
     private final PasswordResetTokenRepository tokenRepository;
     private final IAccountService accountService;
-    private final EmailService emailService;
+    private final OtpService emailService;
     private final PasswordEncoder passwordEncoder;
 
     private static final int OTP_LENGTH = 6;

@@ -183,7 +183,7 @@ public class AuthController {
     public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         try {
             passwordResetService.sendPasswordResetOtp(request.getEmail());
-            return ResponseEntity.ok(ApiResponse.success("OTP sent to your email"));
+            return ResponseEntity.ok(ApiResponse.success("OTP sent to your email and phone"));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error(e.getMessage()));
