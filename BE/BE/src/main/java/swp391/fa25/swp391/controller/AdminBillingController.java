@@ -8,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-import swp391.fa25.swp391.dto.request.enterprise.GenerateInvoiceRequest;
+import swp391.fa25.swp391.dto.request.GenerateInvoiceRequest;
 import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.entity.Admin;
 import swp391.fa25.swp391.entity.EnterpriseInvoice;

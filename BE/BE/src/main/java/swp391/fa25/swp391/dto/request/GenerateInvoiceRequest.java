@@ -1,4 +1,4 @@
-package swp391.fa25.swp391.dto.request.enterprise;
+package swp391.fa25.swp391.dto.request;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;

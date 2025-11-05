@@ -90,15 +90,6 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
             @Param("driverId") Integer driverId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
-
-    @Query("SELECT cs FROM ChargingSession cs WHERE cs.driver.id = :driverId " +
-            "AND cs.startTime >= :startDate AND cs.startTime <= :endDate " +
-            "AND cs.status = 'inactive' AND cs.cost > 0")
-    List<ChargingSession> findCompletedSessionsByDriverAndDateRange(
-            @Param("driverId") Integer driverId,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
-    );
     /**
      * ⭐ Đếm số session chưa có invoice trong khoảng thời gian
      */
@@ -107,25 +98,6 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
             LocalDateTime startTime,
             LocalDateTime endTime
     );
-
-    /**
-     * ⭐ Lấy tất cả session chưa có invoice trong khoảng thời gian
-     */
-    List<ChargingSession> findByDriverIdAndInvoiceIsNullAndStartTimeBetween(
-            Integer driverId,
-            LocalDateTime startTime,
-            LocalDateTime endTime
-    );
-
-    /**
-     * ⭐ Đếm tất cả session chưa có invoice của driver (không giới hạn thời gian)
-     */
-    long countByDriverIdAndInvoiceIsNull(Integer driverId);
-
-    /**
-     * ⭐ Lấy tất cả session chưa có invoice của driver
-     */
-    List<ChargingSession> findByDriverIdAndInvoiceIsNull(Integer driverId);
 
     List<ChargingSession> findByVehicleIdAndStatusAndEndTimeBetweenAndEnterpriseInvoiceIsNull(
             Integer vehicleId,

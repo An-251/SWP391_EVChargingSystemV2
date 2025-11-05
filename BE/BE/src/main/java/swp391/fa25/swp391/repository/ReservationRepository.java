@@ -194,14 +194,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @Param("statuses") List<String> statuses
     );
 
-    // ⭐ Tìm reservation sắp bắt đầu
-    @Query("SELECT r FROM Reservation r WHERE r.startTime BETWEEN :now AND :soon AND r.status = :status")
-    List<Reservation> findReservationsStartingSoon(
-            @Param("now") LocalDateTime now,
-            @Param("soon") LocalDateTime soon,
-            @Param("status") String status
-    );
-
     // ⭐ Tìm reservation đang active
     @Query("SELECT r FROM Reservation r WHERE r.startTime <= :now AND r.endTime > :now AND r.status = 'CONFIRMED'")
     List<Reservation> findActiveReservations(@Param("now") LocalDateTime now);

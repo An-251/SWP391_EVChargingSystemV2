@@ -20,11 +20,6 @@ public interface AccountRepository extends JpaRepository<Account, Integer> {
     Optional<Account> findByUsername(String username);
 
     /**
-     * Tìm Account theo email
-     */
-    Optional<Account> findByEmail(String email);
-
-    /**
      * Tìm tất cả accounts theo username (vì login trong AccountService.java dùng List)
      */
     List<Account> findAllByUsername(String username);

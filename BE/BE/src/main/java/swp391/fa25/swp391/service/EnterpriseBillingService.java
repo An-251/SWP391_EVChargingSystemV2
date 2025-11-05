@@ -1,10 +1,11 @@
 package swp391.fa25.swp391.service;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import swp391.fa25.swp391.dto.request.enterprise.GenerateInvoiceRequest;
+import swp391.fa25.swp391.dto.request.GenerateInvoiceRequest;
 import swp391.fa25.swp391.entity.*;
 import swp391.fa25.swp391.repository.*;
 import swp391.fa25.swp391.service.IService.IEnterpriseBillingService;
@@ -27,7 +28,7 @@ public class EnterpriseBillingService implements IEnterpriseBillingService {
     private final ChargingSessionRepository chargingSessionRepository;
 
     @Override
-    public EnterpriseInvoice generateEnterpriseInvoice(GenerateInvoiceRequest request, Admin admin) {
+    public EnterpriseInvoice generateEnterpriseInvoice(@Valid GenerateInvoiceRequest request, Admin admin) {
         log.info("Admin {} generating invoice for enterprise {}", admin.getId(), request.getEnterpriseId());
 
         // 1. Tìm Enterprise

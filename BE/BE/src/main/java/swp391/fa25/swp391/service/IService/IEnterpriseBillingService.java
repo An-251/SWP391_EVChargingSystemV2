@@ -1,6 +1,7 @@
 package swp391.fa25.swp391.service.IService;
 
-import swp391.fa25.swp391.dto.request.enterprise.GenerateInvoiceRequest;
+import jakarta.validation.Valid;
+import swp391.fa25.swp391.dto.request.GenerateInvoiceRequest;
 import swp391.fa25.swp391.entity.Admin;
 import swp391.fa25.swp391.entity.EnterpriseInvoice;
 
@@ -15,7 +16,7 @@ public interface IEnterpriseBillingService {
      *a @param admin Admin thực hiện
      * @return Hóa đơn tổng (EnterpriseInvoice) đã được tạo
      */
-    EnterpriseInvoice generateEnterpriseInvoice(GenerateInvoiceRequest request, Admin admin);
+    EnterpriseInvoice generateEnterpriseInvoice (GenerateInvoiceRequest request, Admin admin);
 
     /**
      * Lấy chi tiết một hóa đơn (bao gồm các dòng chi tiết)

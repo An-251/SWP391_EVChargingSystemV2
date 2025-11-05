@@ -18,9 +18,4 @@ public interface ChargingStationRepository extends JpaRepository<ChargingStation
      * Phương thức này thay thế cho findByField("name", stationName) trong Service
      */
     boolean existsByStationName(String stationName);
-
-    /**
-     * Tìm ChargingStation theo tên trạm
-     */
-    Optional<ChargingStation> findByStationName(String stationName);
 }
