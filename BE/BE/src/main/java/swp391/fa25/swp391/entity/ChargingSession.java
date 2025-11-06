@@ -57,8 +57,8 @@ public class ChargingSession {
     private Vehicle vehicle;
 
     @ManyToOne
-    @JoinColumn(name = "POINT_ID")
-    private ChargingPoint chargingPoint;
+    @JoinColumn(name = "CHARGER_ID")
+    private Charger charger;
 
     @ManyToOne
     @JoinColumn(name = "INVOICE_ID")

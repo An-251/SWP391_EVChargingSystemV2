@@ -27,12 +27,16 @@ public class ChargingSessionResponse {
     private String vehicleModel;
     private String licensePlate;
 
-    // Charging point info
+    // Charger info
+    private Integer chargerId;
+    private String chargerCode;
+    private String connectorType;
+    
+    // Charging point info (parent of charger)
     private Integer chargingPointId;
     private String chargingPointName;
     private String stationName;
     private String stationAddress;
-    private String connectorType;
 
     // Session timing
     private LocalDateTime startTime;

@@ -9,10 +9,13 @@ import org.springframework.web.bind.annotation.*;
 import swp391.fa25.swp391.dto.request.ChargingPointRequest;
 import swp391.fa25.swp391.dto.request.StatusUpdateRequest;
 import swp391.fa25.swp391.dto.response.ApiResponse;
+import swp391.fa25.swp391.dto.response.ChargerResponse;
 import swp391.fa25.swp391.dto.response.ChargingPointResponse;
+import swp391.fa25.swp391.entity.Charger;
 import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.ChargingStation;
 import swp391.fa25.swp391.security.CustomUserDetails;
+import swp391.fa25.swp391.service.ChargerService;
 import swp391.fa25.swp391.service.ChargingPointService;
 
 import java.util.List;
@@ -23,31 +26,48 @@ import java.util.stream.Collectors;
 public class ChargingPointController {
 
     private final ChargingPointService chargingPointService;
+    private final ChargerService chargerService;
 
-    public ChargingPointController(ChargingPointService chargingPointService) {
+    public ChargingPointController(ChargingPointService chargingPointService, ChargerService chargerService) {
         this.chargingPointService = chargingPointService;
+        this.chargerService = chargerService;
     }
 
     // ==================== HELPER CONVERTER METHODS ====================
 
     private ChargingPointResponse convertToDto(ChargingPoint point) {
+        // Get list of chargers for this charging point
+        List<Charger> chargers = chargerService.findByChargingPointId(point.getId());
+        List<ChargerResponse> chargerResponses = chargers.stream()
+                .map(this::convertChargerToDto)
+                .collect(Collectors.toList());
+        
         return ChargingPointResponse.builder()
                 .id(point.getId())
                 .pointName(point.getPointName())
-                .connectorType(point.getConnectorType())
-                .maxPower(point.getMaxPower())
                 .status(point.getStatus())
                 .pricePerKwh(point.getPricePerKwh())
                 .stationId(point.getStation() != null ? point.getStation().getId() : null)
                 .stationName(point.getStation() != null ? point.getStation().getStationName() : null)
+                .chargers(chargerResponses)
+                .build();
+    }
+
+    private ChargerResponse convertChargerToDto(Charger charger) {
+        return ChargerResponse.builder()
+                .id(charger.getId())
+                .chargerCode(charger.getChargerCode())
+                .connectorType(charger.getConnectorType())
+                .maxPower(charger.getMaxPower())
+                .status(charger.getStatus())
+                .chargingPointId(charger.getChargingPoint() != null ? charger.getChargingPoint().getId() : null)
+                .chargingPointName(charger.getChargingPoint() != null ? charger.getChargingPoint().getPointName() : null)
                 .build();
     }
 
     private ChargingPoint convertToEntity(ChargingPointRequest request) {
         ChargingPoint point = new ChargingPoint();
         point.setPointName(request.getPointName());
-        point.setConnectorType(request.getConnectorType());
-        point.setMaxPower(request.getMaxPower());
         point.setStatus("active"); // Default status
         point.setPricePerKwh(request.getPricePerKwh());
 
@@ -100,8 +120,6 @@ public class ChargingPointController {
         return chargingPointService.findById(id)
                 .<ResponseEntity<?>>map(existingPoint -> {
                     existingPoint.setPointName(request.getPointName());
-                    existingPoint.setConnectorType(request.getConnectorType());
-                    existingPoint.setMaxPower(request.getMaxPower());
                     // Don't update status here - use separate endpoint
                     existingPoint.setPricePerKwh(request.getPricePerKwh());
 

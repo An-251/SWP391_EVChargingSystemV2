@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import swp391.fa25.swp391.dto.request.enterprise.GenerateInvoiceRequest;
+import swp391.fa25.swp391.dto.request.GenerateInvoiceRequest;
 import swp391.fa25.swp391.entity.*;
 import swp391.fa25.swp391.repository.*;
 import swp391.fa25.swp391.service.IService.IEnterpriseBillingService;

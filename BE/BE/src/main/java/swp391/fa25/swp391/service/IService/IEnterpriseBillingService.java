@@ -1,6 +1,6 @@
 package swp391.fa25.swp391.service.IService;
 
-import swp391.fa25.swp391.dto.request.enterprise.GenerateInvoiceRequest;
+import swp391.fa25.swp391.dto.request.GenerateInvoiceRequest;
 import swp391.fa25.swp391.entity.Admin;
 import swp391.fa25.swp391.entity.EnterpriseInvoice;
 

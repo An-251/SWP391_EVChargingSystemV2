@@ -20,8 +20,8 @@ public class StartChargingSessionRequest {
     @NotNull(message = "Driver ID is required")
     private Integer driverId;
 
-    @NotNull(message = "Charging point ID is required")
-    private Integer chargingPointId;
+    @NotNull(message = "Charger ID is required")
+    private Integer chargerId;
 
     @NotNull(message = "Vehicle ID is required")
     private Integer vehicleId;

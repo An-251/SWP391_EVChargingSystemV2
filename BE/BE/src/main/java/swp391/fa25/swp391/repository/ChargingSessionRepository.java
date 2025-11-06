@@ -61,12 +61,12 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
     Optional<ChargingSession> findActiveSessionByDriverId(@Param("driverId") Integer driverId);
 
     /**
-     * Tìm session ĐANG ACTIVE tại charging point (status = using)
-     * Kiểm tra charging point có đang được sử dụng không
+     * Tìm session ĐANG ACTIVE tại charger (status = using)
+     * Kiểm tra charger có đang được sử dụng không
      */
     @Query("SELECT cs FROM ChargingSession cs " +
-            "WHERE cs.chargingPoint.id = :chargingPointId AND cs.status = 'using'")
-    Optional<ChargingSession> findActiveSessionByChargingPointId(@Param("chargingPointId") Integer chargingPointId);
+            "WHERE cs.charger.id = :chargerId AND cs.status = 'using'")
+    Optional<ChargingSession> findActiveSessionByChargerId(@Param("chargerId") Integer chargerId);
 
 
     /**

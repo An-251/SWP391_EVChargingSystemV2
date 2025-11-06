@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @Builder
@@ -14,10 +15,9 @@ import java.math.BigDecimal;
 public class ChargingPointResponse {
     private Integer id;
     private String pointName;
-    private String connectorType;
-    private BigDecimal maxPower;
     private String status;
     private BigDecimal pricePerKwh;
     private Integer stationId; // Trả về ID thay vì Entity
     private String stationName; // Thêm tên trạm sạc cho tiện
+    private List<ChargerResponse> chargers; // Danh sách chargers thuộc point này
 }

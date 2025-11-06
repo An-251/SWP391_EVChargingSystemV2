@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import swp391.fa25.swp391.dto.request.ReservationRequest;
 import swp391.fa25.swp391.dto.response.ReservationListResponse;
 import swp391.fa25.swp391.dto.response.ReservationResponse;
+import swp391.fa25.swp391.entity.Charger;
 import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.Driver;
 import swp391.fa25.swp391.entity.Reservation;
@@ -301,13 +302,19 @@ public class DriverController {
     private ReservationResponse buildReservationResponse(Reservation reservation) {
         ChargingPoint cp = reservation.getChargingPoint();
         Vehicle vehicle = reservation.getVehicle();
+        
+        // Get connector type from first available charger
+        String connectorType = null;
+        if (cp != null && cp.getChargers() != null && !cp.getChargers().isEmpty()) {
+            connectorType = cp.getChargers().get(0).getConnectorType();
+        }
 
         return ReservationResponse.builder()
                 .reservationId(reservation.getId())
                 .startTime(reservation.getStartTime())
                 .endTime(reservation.getEndTime())
                 .chargingPointName(cp.getPointName())
-                .connectorType(cp.getConnectorType())
+                .connectorType(connectorType)
                 .stationName(cp.getStation() != null ? cp.getStation().getStationName() : null)
                 .status(reservation.getStatus())
                 .vehicleId(vehicle != null ? vehicle.getId().longValue() : null)

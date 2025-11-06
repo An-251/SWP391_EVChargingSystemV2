@@ -14,6 +14,7 @@ import swp391.fa25.swp391.dto.request.StopChargingSessionRequest;
 import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.dto.response.ChargingSessionListResponse;
 import swp391.fa25.swp391.dto.response.ChargingSessionResponse;
+import swp391.fa25.swp391.entity.Charger;
 import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.ChargingSession;
 import swp391.fa25.swp391.entity.Reservation;
@@ -426,7 +427,8 @@ public class ChargingSessionController {
             chargedPercentage = session.getEndPercentage() - session.getStartPercentage();
         }
 
-        ChargingPoint cp = session.getChargingPoint();
+        Charger charger = session.getCharger();
+        ChargingPoint cp = charger != null ? charger.getChargingPoint() : null;
 
         // ✅ LẤY THÔNG TIN RESERVATION (NẾU CÓ)
         Reservation reservation = session.getReservation();
@@ -454,11 +456,13 @@ public class ChargingSessionController {
                 .vehicleId(session.getVehicle().getId())
                 .vehicleModel(session.getVehicle().getModel())
                 .licensePlate(session.getVehicle().getLicensePlate())
-                .chargingPointId(cp.getId())
-                .chargingPointName(cp.getPointName())
-                .connectorType(cp.getConnectorType())
-                .stationName(cp.getStation() != null ? cp.getStation().getStationName() : null)
-                .stationAddress(cp.getStation() != null ? cp.getStation().getFacility().getFullAddress() : null)
+                .chargerId(charger != null ? charger.getId() : null)
+                .chargerCode(charger != null ? charger.getChargerCode() : null)
+                .connectorType(charger != null ? charger.getConnectorType() : null)
+                .chargingPointId(cp != null ? cp.getId() : null)
+                .chargingPointName(cp != null ? cp.getPointName() : null)
+                .stationName(cp != null && cp.getStation() != null ? cp.getStation().getStationName() : null)
+                .stationAddress(cp != null && cp.getStation() != null ? cp.getStation().getFacility().getFullAddress() : null)
                 .startPercentage(session.getStartPercentage())
                 .endPercentage(session.getEndPercentage())
                 .chargedPercentage(chargedPercentage)

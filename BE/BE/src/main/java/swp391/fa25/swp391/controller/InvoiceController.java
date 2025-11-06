@@ -5,6 +5,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.dto.response.InvoiceDetailResponse;
+import swp391.fa25.swp391.entity.Charger;
+import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.Driver;
 import swp391.fa25.swp391.entity.Invoice;
 import swp391.fa25.swp391.service.InvoiceService;
@@ -19,7 +21,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Collectors;
 
 @RestController
@@ -439,10 +440,14 @@ public class InvoiceController {
                         
                         String stationName = null;
                         String chargingPointName = null;
-                        if (session.getChargingPoint() != null) {
-                            chargingPointName = session.getChargingPoint().getPointName();
-                            if (session.getChargingPoint().getStation() != null) {
-                                stationName = session.getChargingPoint().getStation().getStationName();
+                        Charger charger = session.getCharger();
+                        if (charger != null) {
+                            ChargingPoint chargingPoint = charger.getChargingPoint();
+                            if (chargingPoint != null) {
+                                chargingPointName = chargingPoint.getPointName();
+                                if (chargingPoint.getStation() != null) {
+                                    stationName = chargingPoint.getStation().getStationName();
+                                }
                             }
                         }
                         

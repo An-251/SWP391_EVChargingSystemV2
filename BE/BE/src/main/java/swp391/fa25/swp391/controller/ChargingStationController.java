@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import swp391.fa25.swp391.dto.request.ChargingStationRequest;
 import swp391.fa25.swp391.dto.request.StatusUpdateRequest;
 import swp391.fa25.swp391.dto.response.ApiResponse;
+import swp391.fa25.swp391.dto.response.ChargerResponse;
 import swp391.fa25.swp391.dto.response.ChargingPointResponse;
 import swp391.fa25.swp391.dto.response.ChargingStationResponse;
 import swp391.fa25.swp391.entity.ChargingPoint;
@@ -95,15 +96,30 @@ public class ChargingStationController {
     }
 
     private ChargingPointResponse convertToPointDto(ChargingPoint point) {
+        // Map chargers to ChargerResponse
+        List<ChargerResponse> chargerResponses = null;
+        if (point.getChargers() != null) {
+            chargerResponses = point.getChargers().stream()
+                    .map(charger -> ChargerResponse.builder()
+                            .id(charger.getId())
+                            .chargerCode(charger.getChargerCode())
+                            .connectorType(charger.getConnectorType())
+                            .maxPower(charger.getMaxPower())
+                            .status(charger.getStatus())
+                            .chargingPointId(point.getId())
+                            .chargingPointName(point.getPointName())
+                            .build())
+                    .collect(Collectors.toList());
+        }
+        
         return ChargingPointResponse.builder()
                 .id(point.getId())
                 .pointName(point.getPointName())
-                .connectorType(point.getConnectorType())
-                .maxPower(point.getMaxPower())
                 .status(point.getStatus())
                 .pricePerKwh(point.getPricePerKwh())
                 .stationId(point.getStation() != null ? point.getStation().getId() : null)
                 .stationName(point.getStation() != null ? point.getStation().getStationName() : null)
+                .chargers(chargerResponses)
                 .build();
     }
 

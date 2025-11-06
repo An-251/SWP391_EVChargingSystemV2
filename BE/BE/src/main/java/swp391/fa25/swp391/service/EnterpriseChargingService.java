@@ -8,7 +8,9 @@ import swp391.fa25.swp391.dto.request.EmpStartSessionRequest;
 import swp391.fa25.swp391.dto.request.EmpStopSessionRequest;
 import swp391.fa25.swp391.entity.*;
 import swp391.fa25.swp391.repository.ChargingSessionRepository;
+import swp391.fa25.swp391.repository.ChargerRepository;
 import swp391.fa25.swp391.repository.VehicleRepository;
+import swp391.fa25.swp391.service.IService.IChargerService;
 import swp391.fa25.swp391.service.IService.IChargingPointService;
 import swp391.fa25.swp391.service.IService.IEnterpriseChargingService;
 
@@ -24,6 +26,8 @@ public class EnterpriseChargingService implements IEnterpriseChargingService {
 
     private final ChargingSessionRepository chargingSessionRepository;
     private final VehicleRepository vehicleRepository;
+    private final ChargerRepository chargerRepository;
+    private final IChargerService chargerService;
     private final IChargingPointService chargingPointService;
 
     // Lấy hằng số từ ChargingSessionService của bạn
@@ -46,7 +50,7 @@ public class EnterpriseChargingService implements IEnterpriseChargingService {
             throw new RuntimeException("Vehicle ID " + request.getVehicleId() + " is not an enterprise vehicle.");
         }
 
-        // 3. Validate Charging Point (Giống logic cũ)
+        // 3. Validate Charging Point
         ChargingPoint chargingPoint = chargingPointService.findById(request.getChargingPointId())
                 .orElseThrow(() -> new RuntimeException("Charging point not found with ID: " + request.getChargingPointId()));
 
@@ -60,12 +64,19 @@ public class EnterpriseChargingService implements IEnterpriseChargingService {
             throw new RuntimeException("Charging station is inactive");
         }
 
-        // 5. Tạo Session
+        // 5. Tìm Charger khả dụng trong ChargingPoint
+        Charger charger = chargerRepository.findByChargingPointId(request.getChargingPointId())
+                .stream()
+                .filter(c -> "available".equalsIgnoreCase(c.getStatus()))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("No available charger at charging point " + request.getChargingPointId()));
+
+        // 6. Tạo Session
         ChargingSession session = new ChargingSession();
         session.setVehicle(vehicle);
         session.setDriver(null); // Không có Driver
         session.setStartedByEmployee(employee); // Gán nhân viên
-        session.setChargingPoint(chargingPoint);
+        session.setCharger(charger); // Gán Charger thay vì ChargingPoint
         session.setStartTime(LocalDateTime.now());
         session.setStartPercentage(request.getStartPercentage());
         session.setStatus(STATUS_CHARGING);
@@ -77,10 +88,11 @@ public class EnterpriseChargingService implements IEnterpriseChargingService {
 
         ChargingSession savedSession = chargingSessionRepository.save(session);
 
-        // 6. Cập nhật charging point status
-        chargingPointService.startUsingPoint(request.getChargingPointId());
+        // 7. Cập nhật charger status thành 'in_use'
+        chargerService.startUsingCharger(charger.getId());
 
-        log.info("Created enterprise charging session {} for vehicle {}", savedSession.getId(), vehicle.getId());
+        log.info("Created enterprise charging session {} for vehicle {} using charger {}", 
+                savedSession.getId(), vehicle.getId(), charger.getId());
         return savedSession;
     }
 
@@ -124,8 +136,11 @@ public class EnterpriseChargingService implements IEnterpriseChargingService {
 
         ChargingSession updatedSession = chargingSessionRepository.save(session);
 
-        // 4. Giải phóng charging point
-        chargingPointService.stopUsingPoint(session.getChargingPoint().getId());
+        // 4. Giải phóng charger
+        Charger charger = session.getCharger();
+        if (charger != null) {
+            chargerService.stopUsingCharger(charger.getId());
+        }
 
         log.info("Session {} '{}'. Vehicle {}. Cost: {}",
                 sessionId, STATUS_COMPLETED, session.getVehicle().getId(), finalCost);
