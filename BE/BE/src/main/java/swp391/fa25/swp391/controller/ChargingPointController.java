@@ -181,7 +181,7 @@ public class ChargingPointController {
 
     /**
      * User: Start using a charging point (booking)
-     * Automatically sets point to "using" and propagates to station
+     * Finds an available charger and starts using it
      * POST /api/charging-points/{id}/start
      */
     @PostMapping("/charging-points/{id}/start")
@@ -189,9 +189,18 @@ public class ChargingPointController {
             @PathVariable Integer id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
-            chargingPointService.startUsingPoint(id);
+            // Find available charger in this charging point
+            List<Charger> chargers = chargerService.findByChargingPointId(id);
+            Charger availableCharger = chargers.stream()
+                    .filter(c -> "available".equalsIgnoreCase(c.getStatus()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("No available charger at this charging point"));
+            
+            // Start using the charger
+            chargerService.startUsingCharger(availableCharger.getId());
+            
             return ResponseEntity.ok(
-                    ApiResponse.success("Charging point is now in use")
+                    ApiResponse.success("Charger " + availableCharger.getChargerCode() + " is now in use")
             );
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -204,7 +213,7 @@ public class ChargingPointController {
 
     /**
      * User: Stop using a charging point (complete charging)
-     * Sets point back to "active" and updates station if no other points are using
+     * Stops the first in-use charger found at this point
      * POST /api/charging-points/{id}/stop
      */
     @PostMapping("/charging-points/{id}/stop")
@@ -212,9 +221,18 @@ public class ChargingPointController {
             @PathVariable Integer id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
-            chargingPointService.stopUsingPoint(id);
+            // Find in-use charger in this charging point
+            List<Charger> chargers = chargerService.findByChargingPointId(id);
+            Charger inUseCharger = chargers.stream()
+                    .filter(c -> "in_use".equalsIgnoreCase(c.getStatus()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("No charger is currently in use at this charging point"));
+            
+            // Stop using the charger
+            chargerService.stopUsingCharger(inUseCharger.getId());
+            
             return ResponseEntity.ok(
-                    ApiResponse.success("Charging session completed")
+                    ApiResponse.success("Charging session completed for charger " + inUseCharger.getChargerCode())
             );
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)

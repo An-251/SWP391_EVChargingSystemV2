@@ -1,9 +1,6 @@
 package swp391.fa25.swp391.service.IService;
 
-<<<<<<< HEAD
-=======
-import jakarta.validation.Valid;
->>>>>>> 32bc45039ddcbc8e68da53552ee1b27fbf813bf9
+
 import swp391.fa25.swp391.dto.request.GenerateInvoiceRequest;
 import swp391.fa25.swp391.entity.Admin;
 import swp391.fa25.swp391.entity.EnterpriseInvoice;
