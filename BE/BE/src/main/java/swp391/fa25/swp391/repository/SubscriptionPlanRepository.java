@@ -17,7 +17,4 @@ public interface SubscriptionPlanRepository extends JpaRepository<SubscriptionPl
 
 
     Optional<SubscriptionPlan> findByIsDefault(Boolean isDefault);
-
-
-    Optional<SubscriptionPlan> findByPlanType(String planType);
 }

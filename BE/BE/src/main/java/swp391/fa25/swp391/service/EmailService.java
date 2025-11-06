@@ -1,32 +1,53 @@
-// service/EmailService.java
 package swp391.fa25.swp391.service;
 
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
-import org.springframework.mail.SimpleMailMessage;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service email đa dụng, hỗ trợ HTML và tên người gửi
+ * Dùng cho NotificationService
+ */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    public void sendOtpEmail(String toEmail, String otp) {
+    @Value("${mail.from.address}")
+    private String fromAddress;
+
+    @Value("${mail.from.name}")
+    private String fromName;
+
+    /**
+     * Gửi email dạng Plain Text
+     */
+    public void sendEmail(String to, String subject, String body) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(toEmail);
-            message.setSubject("Password Reset OTP");
-            message.setText(String.format(
-                    "Your OTP for password reset is: %s\n\n" +
-                            "This OTP will expire in 15 minutes.\n" +
-                            "If you didn't request this, please ignore this email.",
-                    otp
-            ));
+            MimeMessage message = mailSender.createMimeMessage();
+            // false = plain text
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+
+            helper.setFrom(new InternetAddress(fromAddress, fromName));
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body);
 
             mailSender.send(message);
+            log.info("✅ Email sent successfully to: {}", to);
+
         } catch (Exception e) {
-            throw new RuntimeException("Failed to send email: " + e.getMessage());
+            log.error("❌ Failed to send email to {}: {}", to, e.getMessage());
+            // Ném RuntimeException để nếu cần có thể bắt ở tầng cao hơn (ví dụ @Async)
+            throw new RuntimeException("Failed to send email", e);
         }
     }
 }
+

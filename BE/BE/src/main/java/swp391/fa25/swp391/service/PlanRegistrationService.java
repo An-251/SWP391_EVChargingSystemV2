@@ -200,12 +200,4 @@ public class PlanRegistrationService {
                         .build())
                 .collect(Collectors.toList());
     }
-
-    /**
-     * ⭐ HELPER: Lấy active plan của driver (dùng cho session/invoice)
-     */
-    @Transactional(readOnly = true)
-    public Optional<PlanRegistration> getActiveRegistration(Integer driverId) {
-        return registrationRepository.findActiveByDriverId(driverId, LocalDate.now());
-    }
 }

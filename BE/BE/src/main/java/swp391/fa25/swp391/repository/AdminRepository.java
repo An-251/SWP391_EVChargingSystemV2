@@ -11,7 +11,4 @@ public interface AdminRepository extends JpaRepository<Admin, Integer> {
 
     // Tìm admin theo account_id
     Optional<Admin> findByAccountId(Integer accountId);
-
-    // Kiểm tra tồn tại admin theo account_id
-    boolean existsByAccountId(Integer accountId);
 }

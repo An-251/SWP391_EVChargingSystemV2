@@ -22,16 +22,4 @@ public interface ChargingPointRepository extends JpaRepository<ChargingPoint, In
      * Tìm ChargingPoint theo trạng thái (status)
      */
     List<ChargingPoint> findByStatus(String status);
-
-    /**
-     * Tìm ChargingPoint theo Station ID
-     */
-    List<ChargingPoint> findByStationId(Integer stationId);
-
-    /**
-     * Kiểm tra ChargingPoint có tồn tại theo ID và Status
-     */
-    boolean existsByIdAndStatus(Integer id, String status);
-
-    // Có thể thêm các queries khác tùy theo nhu cầu
 }

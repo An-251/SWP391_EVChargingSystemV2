@@ -64,18 +64,6 @@ public class FacilityService implements IFacilityService {
         return facilityRepository.findByAddressContaining(address);
     }
 
-    public List<Facility> findByAddress(String address) {
-        return facilityRepository.findByAddressContaining(address);
-    }
-
-    public List<ChargingStation> getChargingStationsByFacilityId(Integer facilityId) {
-        Optional<Facility> facility = facilityRepository.findById(facilityId);
-        if (facility.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return facility.get().getChargingStations();
-    }
-
     @Override
     public Facility save(Facility facility) {
         return facilityRepository.save(facility);
