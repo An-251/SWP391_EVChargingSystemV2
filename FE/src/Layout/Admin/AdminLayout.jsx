@@ -2,21 +2,27 @@ import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logoutUser } from '../../redux/auth/authSlice';
+import '../../styles/admin.css'; // Admin specific styles
+import EVChargeIcon from '../../Components/EVChargeIcon';
 import { 
   LayoutDashboard, 
   Users, 
   MapPin, 
-  Zap, 
+  Plug,
   CreditCard,
   Building2,
-  Menu as MenuIcon, // Đổi tên để tránh xung đột với Menu của antd
+  Menu as MenuIcon,
   X,
   LogOut,
   BarChart3,
-  UserPlus
+  UserPlus,
+  FileText,
+  AlertCircle,
+  UserCog
 } from 'lucide-react';
-// THAY ĐỔI: Import thêm Dropdown và Menu từ antd
-import { message, Dropdown, Menu as AntMenu } from 'antd';
+// THAY ĐỔI: Chỉ import Dropdown và message, không cần Menu
+import { message, Dropdown } from 'antd';
+import { APP_SHORT_NAME, LOGO_CONFIG } from '../../constants/branding';
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -29,10 +35,14 @@ const AdminLayout = () => {
     { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/admin/facilities', icon: Building2, label: 'Facilities' },
     { path: '/admin/stations', icon: MapPin, label: 'Stations' },
-    { path: '/admin/charging-points', icon: Zap, label: 'Charging Points' },
+    { path: '/admin/charging-points', icon: EVChargeIcon, label: 'Charging Points' },
+    { path: '/admin/chargers', icon: Plug, label: 'Chargers' },
     { path: '/admin/accounts', icon: Users, label: 'Accounts' },
     { path: '/admin/admin-registration', icon: UserPlus, label: 'Register Admin' },
+    { path: '/admin/employees', icon: UserCog, label: 'Employees' },
     { path: '/admin/subscriptions', icon: CreditCard, label: 'Subscriptions' },
+    { path: '/admin/invoices', icon: FileText, label: 'Invoices' },
+    { path: '/admin/incidents', icon: AlertCircle, label: 'Incidents' },
     { path: '/admin/reports', icon: BarChart3, label: 'Reports' },
   ];
 
@@ -49,22 +59,33 @@ const AdminLayout = () => {
 
   const isActive = (path) => location.pathname === path;
 
-  // THAY ĐỔI: Tạo menu cho Dropdown
-  const userMenu = (
-    <AntMenu>
-      <AntMenu.Item key="info" disabled style={{ cursor: 'default' }}>
-        <p className="font-semibold text-slate-800">{user?.fullName || user?.username}</p>
-        <p className="text-xs text-slate-500">{user?.email}</p>
-      </AntMenu.Item>
-      <AntMenu.Divider />
-      <AntMenu.Item key="logout" onClick={handleLogout} danger>
+  // THAY ĐỔI: Tạo menu items cho Dropdown (dùng items array thay vì Menu component)
+  const userMenuItems = [
+    {
+      key: 'info',
+      disabled: true,
+      label: (
+        <div>
+          <p className="font-semibold text-slate-800">{user?.fullName || user?.username}</p>
+          <p className="text-xs text-slate-500">{user?.email}</p>
+        </div>
+      ),
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'logout',
+      danger: true,
+      label: (
         <div className="flex items-center space-x-2">
           <LogOut size={16} />
           <span>Logout</span>
         </div>
-      </AntMenu.Item>
-    </AntMenu>
-  );
+      ),
+      onClick: handleLogout,
+    },
+  ];
 
   return (
     // THAY ĐỔI LỚN: Thêm `h-screen w-screen overflow-hidden` để fix lỗi bị cắt
@@ -79,15 +100,15 @@ const AdminLayout = () => {
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-700">
           {sidebarOpen ? (
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-                <Zap size={18} className="text-white" />
+              <div className={`w-8 h-8 rounded-full ${LOGO_CONFIG.admin.bgColor} flex items-center justify-center`}>
+                <EVChargeIcon size={LOGO_CONFIG.admin.iconSize} className={LOGO_CONFIG.admin.iconColor} />
               </div>
-              <h1 className="text-xl font-bold text-white">EV Charge</h1>
+              <h1 className={`text-xl font-bold ${LOGO_CONFIG.admin.textColor}`}>{APP_SHORT_NAME}</h1>
             </div>
           ) : (
             <div className="w-full flex justify-center">
-              <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-                <Zap size={18} className="text-white" />
+              <div className={`w-8 h-8 rounded-full ${LOGO_CONFIG.admin.bgColor} flex items-center justify-center`}>
+                <EVChargeIcon size={LOGO_CONFIG.admin.iconSize} className={LOGO_CONFIG.admin.iconColor} />
               </div>
             </div>
           )}
@@ -151,7 +172,7 @@ const AdminLayout = () => {
           
           {/* THAY ĐỔI LỚN: Chuyển User Info + Logout vào Dropdown */}
           <div className="flex items-center space-x-4">
-            <Dropdown overlay={userMenu} trigger={['click']}>
+            <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
               <button className="w-10 h-10 rounded-full bg-gradient-to-r from-green-400 to-blue-500 flex items-center justify-center text-white font-bold cursor-pointer hover:opacity-90 transition-opacity">
                 {user?.username?.charAt(0).toUpperCase()}
               </button>
