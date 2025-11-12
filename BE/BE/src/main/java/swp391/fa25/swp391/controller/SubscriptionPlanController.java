@@ -31,6 +31,7 @@ public class SubscriptionPlanController {
                 .id(plan.getId())
                 .planName(plan.getPlanName())
                 .planType(plan.getPlanType())
+                .targetUserType(plan.getTargetUserType()) // ⭐ THÊM
                 .price(plan.getPrice())
                 .validityDays(plan.getValidityDays())
                 .description(plan.getDescription())
@@ -47,6 +48,7 @@ public class SubscriptionPlanController {
         SubscriptionPlan plan = new SubscriptionPlan();
         plan.setPlanName(request.getPlanName());
         plan.setPlanType(request.getPlanType());
+        plan.setTargetUserType(request.getTargetUserType()); // ⭐ THÊM
         plan.setPrice(request.getPrice());
         plan.setValidityDays(request.getValidityDays());
         plan.setDescription(request.getDescription());
@@ -61,6 +63,7 @@ public class SubscriptionPlanController {
     private void updateEntityFromRequest(SubscriptionPlan plan, SubscriptionPlanRequest request) {
         plan.setPlanName(request.getPlanName());
         plan.setPlanType(request.getPlanType());
+        plan.setTargetUserType(request.getTargetUserType()); // ⭐ THÊM
         plan.setPrice(request.getPrice());
         plan.setValidityDays(request.getValidityDays());
         plan.setDescription(request.getDescription());
@@ -136,6 +139,29 @@ public class SubscriptionPlanController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Subscription plan not found or could not be deleted.");
+        }
+    }
+
+    /**
+     * ⭐ NEW: Get plans by target user type (Driver or Enterprise)
+     * GET /api/subscriptions/for/{userType}
+     * Example: /api/subscriptions/for/Driver
+     */
+    @GetMapping("/for/{userType}")
+    public ResponseEntity<?> getSubscriptionsByUserType(@PathVariable String userType) {
+        try {
+            List<SubscriptionPlan> plans = subscriptionPlanService.findByTargetUserType(userType);
+            if (plans.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("No subscription plans found for user type: " + userType);
+            }
+            List<SubscriptionPlanResponse> responseList = plans.stream()
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(responseList);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Error fetching plans for user type: " + e.getMessage());
         }
     }
 }

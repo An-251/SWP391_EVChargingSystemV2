@@ -1,160 +1,178 @@
 package swp391.fa25.swp391.controller;
 
-import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import swp391.fa25.swp391.dto.request.ChargerRequest;
-import swp391.fa25.swp391.dto.request.StatusUpdateRequest;
 import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.dto.response.ChargerResponse;
 import swp391.fa25.swp391.entity.Charger;
 import swp391.fa25.swp391.entity.ChargingPoint;
-import swp391.fa25.swp391.security.CustomUserDetails;
-import swp391.fa25.swp391.service.ChargerService;
+import swp391.fa25.swp391.service.IService.IChargerService;
 import swp391.fa25.swp391.service.IService.IChargingPointService;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Charger Controller - Admin management of chargers
+ */
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/chargers")
+@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class ChargerController {
 
-    private final ChargerService chargerService;
+    private final IChargerService chargerService;
     private final IChargingPointService chargingPointService;
 
-    public ChargerController(ChargerService chargerService, IChargingPointService chargingPointService) {
-        this.chargerService = chargerService;
-        this.chargingPointService = chargingPointService;
+    /**
+     * Get all chargers with pagination
+     * GET /api/chargers?page=0&size=10
+     */
+    @GetMapping
+    public ResponseEntity<Map<String, Object>> getAllChargers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        
+        List<Charger> chargers = chargerService.findAll();
+        
+        // Manual pagination
+        int start = page * size;
+        int end = Math.min((page + 1) * size, chargers.size());
+        List<Charger> pagedChargers = chargers.subList(Math.min(start, chargers.size()), end);
+        
+        List<ChargerResponse> responses = pagedChargers.stream()
+                .map(this::buildChargerResponse)
+                .collect(Collectors.toList());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", responses);
+        response.put("currentPage", page);
+        response.put("totalItems", chargers.size());
+        response.put("totalPages", (int) Math.ceil((double) chargers.size() / size));
+
+        return ResponseEntity.ok(response);
     }
 
-    // ==================== HELPER CONVERTER METHODS ====================
-
-    private ChargerResponse convertToDto(Charger charger) {
-        return ChargerResponse.builder()
-                .id(charger.getId())
-                .chargerCode(charger.getChargerCode())
-                .connectorType(charger.getConnectorType())
-                .maxPower(charger.getMaxPower())
-                .status(charger.getStatus())
-                .chargingPointId(charger.getChargingPoint() != null ? charger.getChargingPoint().getId() : null)
-                .chargingPointName(charger.getChargingPoint() != null ? charger.getChargingPoint().getPointName() : null)
-                .build();
+    /**
+     * Get charger by ID
+     * GET /api/chargers/{id}
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse> getChargerById(@PathVariable Integer id) {
+        return chargerService.findById(id)
+                .map(charger -> ResponseEntity.ok(
+                        ApiResponse.success("Charger found", buildChargerResponse(charger))))
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("Charger not found")));
     }
 
-    private Charger convertToEntity(ChargerRequest request) {
-        Charger charger = new Charger();
-        charger.setChargerCode(request.getChargerCode());
-        charger.setConnectorType(request.getConnectorType());
-        charger.setMaxPower(request.getMaxPower());
-        charger.setStatus(request.getStatus());
-
-        ChargingPoint chargingPoint = new ChargingPoint();
-        chargingPoint.setId(request.getChargingPointId());
-        charger.setChargingPoint(chargingPoint);
-
-        return charger;
+    /**
+     * Get chargers by charging point ID
+     * GET /api/chargers/charging-point/{pointId}
+     */
+    @GetMapping("/charging-point/{pointId}")
+    public ResponseEntity<ApiResponse> getChargersByChargingPoint(@PathVariable Integer pointId) {
+        List<Charger> chargers = chargerService.findByChargingPointId(pointId);
+        List<ChargerResponse> responses = chargers.stream()
+                .map(this::buildChargerResponse)
+                .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(ApiResponse.success("Chargers retrieved", responses));
     }
 
-    // ==================== CONTROLLER ENDPOINTS ====================
-
-    @PostMapping("/chargers")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> createCharger(@Valid @RequestBody ChargerRequest request) {
+    /**
+     * Create new charger
+     * POST /api/chargers
+     */
+    @PostMapping
+    public ResponseEntity<ApiResponse> createCharger(@RequestBody ChargerRequest request) {
         try {
             // Validate charging point exists
-            ChargingPoint point = chargingPointService.findById(request.getChargingPointId())
-                    .orElseThrow(() -> new IllegalArgumentException("Charging point not found"));
+            ChargingPoint chargingPoint = chargingPointService.findById(request.getChargingPointId())
+                    .orElseThrow(() -> new RuntimeException("Charging point not found"));
 
-            Charger newCharger = convertToEntity(request);
-            newCharger.setChargingPoint(point);
-            Charger savedCharger = chargerService.save(newCharger);
-            return ResponseEntity.status(HttpStatus.CREATED).body(convertToDto(savedCharger));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error(e.getMessage()));
+            // Create charger entity
+            Charger charger = new Charger();
+            charger.setChargerCode(request.getChargerCode());
+            charger.setMaxPower(request.getMaxPower());
+            charger.setConnectorType(request.getConnectorType());
+            charger.setStatus(request.getStatus() != null ? request.getStatus() : "active");
+            charger.setChargingPoint(chargingPoint);
+
+            Charger savedCharger = chargerService.save(charger);
+            ChargerResponse response = buildChargerResponse(savedCharger);
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Charger created successfully", response));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error("Error creating charger: " + e.getMessage()));
         }
     }
 
-    @GetMapping("/chargers")
-    public ResponseEntity<List<ChargerResponse>> getAllChargers() {
-        List<Charger> chargers = chargerService.findAll();
-        List<ChargerResponse> responseList = chargers.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(responseList);
-    }
-
-    @GetMapping("/chargers/{id}")
-    public ResponseEntity<?> getChargerById(@PathVariable Integer id) {
-        return chargerService.findById(id)
-                .<ResponseEntity<?>>map(charger -> {
-                    ChargerResponse response = convertToDto(charger);
-                    return ResponseEntity.ok(response);
-                })
-                .orElseGet(() ->
-                        ResponseEntity.status(HttpStatus.NOT_FOUND)
-                                .body(ApiResponse.error("Charger not found with ID: " + id))
-                );
-    }
-
-    @GetMapping("/charging-points/{pointId}/chargers")
-    public ResponseEntity<List<ChargerResponse>> getChargersByChargingPoint(@PathVariable Integer pointId) {
-        List<Charger> chargers = chargerService.findByChargingPointId(pointId);
-        List<ChargerResponse> responseList = chargers.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(responseList);
-    }
-
-    @PutMapping("/chargers/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateCharger(@PathVariable Integer id,
-                                          @Valid @RequestBody ChargerRequest request) {
-        return chargerService.findById(id)
-                .<ResponseEntity<?>>map(existingCharger -> {
-                    try {
-                        existingCharger.setChargerCode(request.getChargerCode());
-                        existingCharger.setConnectorType(request.getConnectorType());
-                        existingCharger.setMaxPower(request.getMaxPower());
-                        // Don't update status here - use separate endpoint
-
-                        ChargingPoint point = chargingPointService.findById(request.getChargingPointId())
-                                .orElseThrow(() -> new IllegalArgumentException("Charging point not found"));
-                        existingCharger.setChargingPoint(point);
-
-                        Charger savedCharger = chargerService.updateCharger(existingCharger);
-                        return ResponseEntity.ok(convertToDto(savedCharger));
-                    } catch (IllegalArgumentException e) {
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                                .body(ApiResponse.error(e.getMessage()));
-                    }
-                })
-                .orElseGet(() ->
-                        ResponseEntity.status(HttpStatus.NOT_FOUND)
-                                .body(ApiResponse.error("Charger not found"))
-                );
-    }
-
-    @DeleteMapping("/chargers/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> deleteCharger(@PathVariable Integer id) {
+    /**
+     * Update existing charger
+     * PUT /api/chargers/{id}
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse> updateCharger(
+            @PathVariable Integer id, 
+            @RequestBody ChargerRequest request) {
         try {
-            return chargerService.findById(id)
-                    .<ResponseEntity<?>>map(charger -> {
-                        chargerService.deleteCharger(id);
-                        return ResponseEntity.ok(ApiResponse.success("Charger with ID " + id + " deleted successfully."));
-                    })
-                    .orElseGet(() ->
-                            ResponseEntity.status(HttpStatus.NOT_FOUND)
-                                    .body(ApiResponse.error("Charger not found with ID: " + id))
-                    );
+            Charger existingCharger = chargerService.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Charger not found"));
+
+            // Update fields
+            if (request.getChargerCode() != null) {
+                existingCharger.setChargerCode(request.getChargerCode());
+            }
+            if (request.getMaxPower() != null) {
+                existingCharger.setMaxPower(request.getMaxPower());
+            }
+            if (request.getConnectorType() != null) {
+                existingCharger.setConnectorType(request.getConnectorType());
+            }
+            if (request.getStatus() != null) {
+                existingCharger.setStatus(request.getStatus());
+            }
+            if (request.getChargingPointId() != null) {
+                ChargingPoint chargingPoint = chargingPointService.findById(request.getChargingPointId())
+                        .orElseThrow(() -> new RuntimeException("Charging point not found"));
+                existingCharger.setChargingPoint(chargingPoint);
+            }
+
+            Charger updatedCharger = chargerService.updateCharger(existingCharger);
+            ChargerResponse response = buildChargerResponse(updatedCharger);
+
+            return ResponseEntity.ok(ApiResponse.success("Charger updated successfully", response));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("Error updating charger: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete charger
+     * DELETE /api/chargers/{id}
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse> deleteCharger(@PathVariable Integer id) {
+        try {
+            if (!chargerService.findById(id).isPresent()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("Charger not found"));
+            }
+
+            chargerService.deleteCharger(id);
+            return ResponseEntity.ok(ApiResponse.success("Charger deleted successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Error deleting charger: " + e.getMessage()));
@@ -162,73 +180,43 @@ public class ChargerController {
     }
 
     /**
-     * Admin: Update charger status (active/inactive/maintenance)
-     * Cannot change to inactive if charger is "using"
-     * PATCH /api/chargers/{id}/status
+     * Update charger status
+     * PUT /api/chargers/{id}/status
      */
-    @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/chargers/{id}/status")
-    public ResponseEntity<?> updateChargerStatus(
+    @PutMapping("/{id}/status")
+    public ResponseEntity<ApiResponse> updateChargerStatus(
             @PathVariable Integer id,
-            @Valid @RequestBody StatusUpdateRequest request,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
+            @RequestBody Map<String, String> request) {
         try {
-            chargerService.updateStatus(id, request.getStatus());
-            return ResponseEntity.ok(
-                    ApiResponse.success("Charger status updated to " + request.getStatus())
-            );
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error(e.getMessage()));
+            String newStatus = request.get("status");
+            if (newStatus == null || newStatus.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ApiResponse.error("Status is required"));
+            }
+
+            chargerService.updateStatus(id, newStatus);
+            return ResponseEntity.ok(ApiResponse.success("Charger status updated successfully"));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("Charger not found with ID: " + id));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("Error updating status: " + e.getMessage()));
         }
     }
 
-    /**
-     * User: Start using a charger (charging session)
-     * Automatically sets charger to "using"
-     * POST /api/chargers/{id}/start
-     */
-    @PostMapping("/chargers/{id}/start")
-    public ResponseEntity<?> startUsingCharger(
-            @PathVariable Integer id,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        try {
-            chargerService.startUsingCharger(id);
-            return ResponseEntity.ok(
-                    ApiResponse.success("Charger is now in use")
-            );
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("Charger not found with ID: " + id));
-        }
-    }
+    // ==================== HELPER METHODS ====================
 
-    /**
-     * User: Stop using a charger (complete charging)
-     * Sets charger back to "active"
-     * POST /api/chargers/{id}/stop
-     */
-    @PostMapping("/chargers/{id}/stop")
-    public ResponseEntity<?> stopUsingCharger(
-            @PathVariable Integer id,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        try {
-            chargerService.stopUsingCharger(id);
-            return ResponseEntity.ok(
-                    ApiResponse.success("Charging session completed")
-            );
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("Charger not found with ID: " + id));
+    private ChargerResponse buildChargerResponse(Charger charger) {
+        ChargerResponse response = new ChargerResponse();
+        response.setId(charger.getId());
+        response.setChargerCode(charger.getChargerCode());
+        response.setMaxPower(charger.getMaxPower());
+        response.setConnectorType(charger.getConnectorType());
+        response.setStatus(charger.getStatus());
+        
+        if (charger.getChargingPoint() != null) {
+            response.setChargingPointId(charger.getChargingPoint().getId());
+            response.setChargingPointName(charger.getChargingPoint().getPointName());
         }
+        
+        return response;
     }
 }

@@ -14,6 +14,7 @@ import swp391.fa25.swp391.entity.Driver;
 import swp391.fa25.swp391.entity.Reservation;
 import swp391.fa25.swp391.entity.Vehicle;
 import swp391.fa25.swp391.service.IService.IChargingPointService;
+import swp391.fa25.swp391.service.IService.IChargerService;
 import swp391.fa25.swp391.service.IService.IDriverService;
 import swp391.fa25.swp391.service.ReservationService;
 import swp391.fa25.swp391.service.IService.IVehicleService;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
 public class DriverController {
     private final IDriverService driverService;
     private final IChargingPointService chargingPointService;
+    private final IChargerService chargerService; // ⭐ NEW: For charger operations
     private final ReservationService reservationService; //  Đổi từ Interface sang concrete class
     private final IVehicleService vehicleService;
 
@@ -58,26 +60,52 @@ public class DriverController {
             // Validate driver exists
             Driver driver = validateDriver(driverId);
 
-            // Validate charging point exists
-            ChargingPoint chargingPoint = validateChargingPoint(request.getChargingPointId());
+            // ⭐ NEW: Support both chargerId (new) and chargingPointId (backward compatibility)
+            Charger charger = null;
+            ChargingPoint chargingPoint = null;
+            
+            if (request.getChargerId() != null) {
+                // NEW FLOW: Use specific charger
+                charger = chargerService.findById(request.getChargerId())
+                        .orElseThrow(() -> new RuntimeException("Charger not found with ID: " + request.getChargerId()));
+                
+                // Validate charger is available
+                if (!"active".equalsIgnoreCase(charger.getStatus())) {
+                    throw new RuntimeException("Charger is not available for reservation");
+                }
+                
+                chargingPoint = charger.getChargingPoint();
+                
+            } else if (request.getChargingPointId() != null) {
+                // OLD FLOW: Use charging point (backward compatibility)
+                chargingPoint = validateChargingPoint(request.getChargingPointId());
+                
+                // Find first available charger in this point
+                List<Charger> availableChargers = chargerService.findByChargingPointIdAndStatus(
+                        chargingPoint.getId(), "active");
+                
+                if (availableChargers.isEmpty()) {
+                    throw new RuntimeException("No available chargers in this charging point");
+                }
+                
+                charger = availableChargers.get(0); // Auto-select first available
+                
+            } else {
+                throw new RuntimeException("Either chargerId or chargingPointId must be provided");
+            }
 
             // Validate vehicle exists
             Vehicle vehicle = validateVehicle(request.getVehicleId());
 
-            // Validate time slot availability
-            ResponseEntity<?> timeValidation = validateReservationTime(request, request.getChargingPointId());
+            // Validate time slot availability (check both charger and point)
+            Integer pointIdForValidation = chargingPoint.getId();
+            ResponseEntity<?> timeValidation = validateReservationTime(request, pointIdForValidation);
             if (timeValidation != null) {
                 return timeValidation;
             }
 
-            // Check if charging point is available
-            ResponseEntity<?> availabilityCheck = checkChargingPointAvailability(chargingPoint);
-            if (availabilityCheck != null) {
-                return availabilityCheck;
-            }
-
-            // FIX: Gọi createReservation() từ service (service tự update charging point)
-            Reservation savedReservation = createAndSaveReservation(driver, chargingPoint, vehicle, request);
+            // FIX: Gọi createReservation() từ service (service tự update charger/point status)
+            Reservation savedReservation = createAndSaveReservation(driver, chargingPoint, charger, vehicle, request);
 
             // Build response
             ReservationResponse response = buildReservationResponse(savedReservation);
@@ -261,33 +289,34 @@ public class DriverController {
 
     /**
      * Create and save a new reservation
-     * KHÔNG ĐỘNG VÀO CHARGING POINT - Service tự xử lý
+     * KHÔNG ĐỘNG VÀO CHARGING POINT/CHARGER - Service tự xử lý
      */
     private Reservation createAndSaveReservation(Driver driver, ChargingPoint chargingPoint,
-                                                 Vehicle vehicle, ReservationRequest request) {
+                                                 Charger charger, Vehicle vehicle, ReservationRequest request) {
 
         LocalDateTime startTime = LocalDateTime.now();
         LocalDateTime endTime = startTime.plusMinutes(RESERVATION_DURATION_MINUTES);
 
         // Build reservation entity
-        Reservation reservation = buildReservationEntity(driver, chargingPoint, vehicle, startTime, endTime);
+        Reservation reservation = buildReservationEntity(driver, chargingPoint, charger, vehicle, startTime, endTime);
         
-        // FIX: Gọi createReservation() - service tự update charging point
+        // FIX: Gọi createReservation() - service tự update charger status
         return reservationService.createReservation(reservation);
         
-        // REMOVED: Không tự update charging point nữa
+        // REMOVED: Không tự update charging point/charger nữa
+        // charger.setStatus("booked");
         // chargingPoint.setStatus(STATUS_BOOKED);
-        // chargingPointService.updateChargingPoint(chargingPoint);
     }
 
     /**
      * Build Reservation entity from components
      */
     private Reservation buildReservationEntity(Driver driver, ChargingPoint chargingPoint,
-                                               Vehicle vehicle, LocalDateTime startTime, LocalDateTime endTime) {
+                                               Charger charger, Vehicle vehicle, LocalDateTime startTime, LocalDateTime endTime) {
         Reservation reservation = new Reservation();
         reservation.setDriver(driver);
         reservation.setChargingPoint(chargingPoint);
+        reservation.setCharger(charger); // ⭐ NEW: Set specific charger
         reservation.setVehicle(vehicle);
         reservation.setStartTime(startTime);
         reservation.setEndTime(endTime);
@@ -301,11 +330,15 @@ public class DriverController {
      */
     private ReservationResponse buildReservationResponse(Reservation reservation) {
         ChargingPoint cp = reservation.getChargingPoint();
+        Charger charger = reservation.getCharger();
         Vehicle vehicle = reservation.getVehicle();
         
-        // Get connector type from first available charger
+        // ⭐ NEW: Get connector type from reserved charger (if exists)
         String connectorType = null;
-        if (cp != null && cp.getChargers() != null && !cp.getChargers().isEmpty()) {
+        if (charger != null) {
+            connectorType = charger.getConnectorType();
+        } else if (cp != null && cp.getChargers() != null && !cp.getChargers().isEmpty()) {
+            // Fallback: Get from first charger in point
             connectorType = cp.getChargers().get(0).getConnectorType();
         }
 
@@ -319,6 +352,7 @@ public class DriverController {
                 .status(reservation.getStatus())
                 .vehicleId(vehicle != null ? vehicle.getId().longValue() : null)
                 .chargingPointId(cp.getId())
+                .chargerId(reservation.getCharger() != null ? reservation.getCharger().getId() : null)
                 .stationId(cp.getStation() != null ? cp.getStation().getId() : null)
                 .build();
     }
