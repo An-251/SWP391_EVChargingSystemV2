@@ -5,26 +5,56 @@ import { User, Mail, Lock } from "lucide-react";
 import { registerUser, clearAuthSuccess, clearAuthError } from "../../redux/auth/authSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function SignupForm() {
   const [signupForm] = useForm();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   
   // Get auth state từ Redux
-  const { loading, error, success } = useSelector((state) => state.auth);
+  const { loading, error, success, registrationData } = useSelector((state) => state.auth);
 
   const onFinishSignup = async (values) => {
     console.log("🔑 [SIGNUP] Register form values:", values);
     dispatch(registerUser(values));
   };
 
-  // Effect để handle success message
+  // Effect để handle success message và redirect to email verification
   useEffect(() => {
     if (success) {
-      message.success("Đăng ký thành công! Vui lòng đăng nhập.");
-      signupForm.resetFields();
+      // Priority 1: Get from registrationData (backend response)
+      const emailFromResponse = registrationData?.email;
+      // Priority 2: Get from form
+      const emailFromForm = signupForm.getFieldValue('email');
+      // Use the first available email
+      const emailToSave = emailFromResponse || emailFromForm;
+      
+      console.log('🔍 SignupForm - Email from response:', emailFromResponse);
+      console.log('🔍 SignupForm - Email from form:', emailFromForm);
+      console.log('🔍 SignupForm - Final email to save:', emailToSave);
+      
+      if (!emailToSave) {
+        console.error('❌ SignupForm - No email found!');
+        message.error('Không tìm thấy email. Vui lòng đăng ký lại.');
+        return;
+      }
+      
+      message.success("Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
+      
+      // Save email to sessionStorage for verification page
+      sessionStorage.setItem('verifyEmail', emailToSave);
+      console.log('✅ SignupForm - Saved to sessionStorage:', sessionStorage.getItem('verifyEmail'));
+      
+      // Clear success state BEFORE navigation to prevent re-trigger
+      dispatch(clearAuthSuccess());
+      
+      // Navigate to email verification page
+      setTimeout(() => {
+        navigate('/verify-email', { replace: true });
+      }, 1500);
     }
-  }, [success, signupForm]);
+  }, [success, registrationData, signupForm, navigate, dispatch]);
 
   // Effect để handle error messages  
   useEffect(() => {
@@ -44,7 +74,7 @@ export default function SignupForm() {
 
   return (
     <Form
-      name={signupForm}
+      form={signupForm}
       layout="vertical"
       onFinish={onFinishSignup}
       autoComplete="off"
