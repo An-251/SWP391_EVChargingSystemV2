@@ -119,33 +119,6 @@ public class IncidentReportController {
         return ResponseEntity.status(HttpStatus.CREATED).body(savedReport);
     }
 
-    // ==================== EMPLOYEE XEM BÁO CÁO THEO FACILITY ====================
-
-    @GetMapping("/employee/{employeeId}")
-    @Operation(summary = "Xem tất cả báo cáo của employee")
-    public ResponseEntity<List<IncidentReport>> getReportsByEmployee(
-            @PathVariable Integer employeeId) {
-        List<IncidentReport> reports = incidentReportService.getReportsByEmployee(employeeId);
-        return ResponseEntity.ok(reports);
-    }
-
-    @GetMapping("/station/{stationId}")
-    @Operation(summary = "Xem tất cả báo cáo của station")
-    public ResponseEntity<List<IncidentReport>> getReportsByStation(
-            @PathVariable Integer stationId) {
-        List<IncidentReport> reports = incidentReportService.getReportsByStation(stationId);
-        return ResponseEntity.ok(reports);
-    }
-
-    @GetMapping("/station/{stationId}/status/{status}")
-    @Operation(summary = "Xem báo cáo của station theo status")
-    public ResponseEntity<List<IncidentReport>> getReportsByStationAndStatus(
-            @PathVariable Integer stationId,
-            @PathVariable String status) {
-        List<IncidentReport> reports = incidentReportService.getReportsByStationAndStatus(stationId, status);
-        return ResponseEntity.ok(reports);
-    }
-
     // ==================== XÓA BÁO CÁO ====================
 
     @DeleteMapping("/{reportId}")

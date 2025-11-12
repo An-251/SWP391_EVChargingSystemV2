@@ -114,34 +114,6 @@ public class ChargingPointController {
                 );
     }
 
-    /**
-     * Get all charging points for a specific station
-     * GET /api/charging-points/station/{stationId}
-     * Returns: List of ChargingPointResponse
-     */
-    @GetMapping("/charging-points/station/{stationId}")
-    public ResponseEntity<List<ChargingPointResponse>> getChargingPointsByStation(@PathVariable Integer stationId) {
-        List<ChargingPoint> points = chargingPointService.findByStationId(stationId);
-        List<ChargingPointResponse> responses = points.stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(responses);
-    }
-
-    /**
-     * Get all chargers for a specific charging point
-     * GET /api/charging-points/{id}/chargers
-     * Returns: Direct array of ChargerResponse (not wrapped in ApiResponse)
-     */
-    @GetMapping("/charging-points/{id}/chargers")
-    public ResponseEntity<List<ChargerResponse>> getChargersByChargingPoint(@PathVariable Integer id) {
-        List<Charger> chargers = chargerService.findByChargingPointId(id);
-        List<ChargerResponse> responses = chargers.stream()
-                .map(this::convertChargerToDto)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(responses);
-    }
-
     @PutMapping("/charging-points/{id}")
     public ResponseEntity<?> updateChargingPoint(@PathVariable Integer id,
                                                  @Valid @RequestBody ChargingPointRequest request) {

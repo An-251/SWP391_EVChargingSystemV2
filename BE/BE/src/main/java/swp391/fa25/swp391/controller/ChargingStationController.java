@@ -160,26 +160,6 @@ public class ChargingStationController {
         return ResponseEntity.ok(responseList);
     }
 
-    /**
-     * ⭐ NEW: Get stations by facility ID (for Employee portal)
-     */
-    @GetMapping("/stations/facility/{facilityId}")
-    public ResponseEntity<?> getStationsByFacility(@PathVariable Integer facilityId) {
-        try {
-            List<ChargingStation> stations = chargingStationService.findByFacilityId(facilityId);
-            List<ChargingStationResponse> responseList = stations.stream()
-                    .map(this::convertToDto)
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(ApiResponse.success(
-                    String.format("Found %d stations for facility %d", stations.size(), facilityId),
-                    responseList
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error("Error fetching stations: " + e.getMessage()));
-        }
-    }
-
     @GetMapping("/charging-stations/{id}")
     public ResponseEntity<?> getChargingStationById(@PathVariable Integer id) {
         return chargingStationService.findById(id)
