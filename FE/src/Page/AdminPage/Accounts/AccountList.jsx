@@ -76,11 +76,8 @@ export default function AccountList() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Account Management</h1>
-          <p className="text-gray-600 mt-1">Manage system users</p>
+          <p className="text-gray-600 mt-1">Manage and view system accounts</p>
         </div>
-        <button onClick={() => { setEditingItem(null); setShowModal(true); }} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
-          <span className="text-xl">+</span> Create New Account
-        </button>
       </div>
 
       <AdminSearchBar
@@ -105,7 +102,6 @@ export default function AccountList() {
         columns={columns}
         data={list}
         loading={loading}
-        onRowClick={(row) => { setEditingItem(row); setShowModal(true); }}
         pagination={{ currentPage, totalPages: pagination.totalPages, totalItems: pagination.totalElements, pageSize: pagination.size }}
         onPageChange={setCurrentPage}
         actions={(row) => (
