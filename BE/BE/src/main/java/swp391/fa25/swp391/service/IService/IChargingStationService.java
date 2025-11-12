@@ -12,6 +12,7 @@ public interface IChargingStationService {
     Optional<ChargingStation> findById(Integer id);
 
     List<ChargingStation> findAll();
+    List<ChargingStation> findByFacilityId(Integer facilityId); // ⭐ NEW
     ChargingStation updateChargingStationStatus(ChargingStation chargingStation);
     boolean existsByStationName(String stationName);
     ChargingStation save(ChargingStation chargingStation);

@@ -54,6 +54,13 @@ public class ChargingStationService implements IChargingStationService {
         return chargingStationRepository.findAll();
     }
 
+    /**
+     * ⭐ NEW: Find stations by facility ID
+     */
+    public List<ChargingStation> findByFacilityId(Integer facilityId) {
+        return chargingStationRepository.findByFacility_Id(facilityId);
+    }
+
     @Override
     @Transactional
     public ChargingStation updateChargingStationStatus(ChargingStation chargingStation) {

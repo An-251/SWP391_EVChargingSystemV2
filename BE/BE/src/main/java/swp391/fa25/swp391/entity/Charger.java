@@ -24,12 +24,12 @@ public class Charger {
     @Column(name = "CHARGER_CODE", length = 50, unique = true)
     private String chargerCode;
 
+    @Column(name = "MAX_POWER", precision = 10, scale = 2)
+    private BigDecimal maxPower;
+
     @Nationalized
     @Column(name = "CONNECTOR_TYPE", length = 50)
     private String connectorType;
-
-    @Column(name = "MAX_POWER", precision = 10, scale = 2)
-    private BigDecimal maxPower;
 
     @Nationalized
     @Column(name = "STATUS", length = 50)

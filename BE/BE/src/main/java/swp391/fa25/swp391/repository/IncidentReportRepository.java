@@ -18,6 +18,10 @@ public interface IncidentReportRepository extends JpaRepository<IncidentReport, 
     List<IncidentReport> findByEmployeeId(Integer employeeId);
     List<IncidentReport> findByReportDateBetween(Instant startDate, Instant endDate);
 
+    // Query to find incidents by station
+    @Query("SELECT ir FROM IncidentReport ir WHERE ir.station.id = :stationId")
+    List<IncidentReport> findByStationId(@Param("stationId") Integer stationId);
+
     // ==========================================================
     // (CẬP NHẬT) Sửa lại câu query để hỗ trợ lọc theo stationId
     // ==========================================================
@@ -42,7 +46,7 @@ public interface IncidentReportRepository extends JpaRepository<IncidentReport, 
             @Param("endDate") Instant endDate
     );
 
-    @Query("SELECT COUNT(ir) FROM IncidentReport ir WHERE ir.status = 'PENDING'")
+    @Query("SELECT COUNT(ir) FROM IncidentReport ir WHERE LOWER(ir.status) = 'pending'")
     Long countPendingReports();
 
     List<IncidentReport> findTop10ByOrderByReportDateDesc();

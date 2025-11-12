@@ -5,6 +5,8 @@ import lombok.Data;
 @Data
 public class EmployeeCreateReportRequest {
     private Integer pointId;
+    private Integer chargerId; // ⭐ NEW: ID của charger nếu báo cáo sự cố charger
+    private String reportTarget; // ⭐ NEW: "CHARGING_POINT" hoặc "CHARGER"
     private String description;
     private String severity; // LOW, MEDIUM, HIGH, CRITICAL
 

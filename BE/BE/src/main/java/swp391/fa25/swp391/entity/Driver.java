@@ -1,5 +1,6 @@
 package swp391.fa25.swp391.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,6 +16,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Driver {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,6 +25,7 @@ public class Driver {
 
     @OneToOne
     @JoinColumn(name = "ACCOUNT_ID")
+    @JsonIgnoreProperties({"driver", "admin", "employee", "staffAccount"})
     private Account account;
 
     @Nationalized
@@ -30,8 +33,10 @@ public class Driver {
     private String idNumber;
 
     @OneToMany(mappedBy = "driver")
+    @JsonIgnoreProperties({"driver"})
     private List<Vehicle> vehicles = new ArrayList<>();
 
     @OneToMany(mappedBy = "driver")
+    @JsonIgnoreProperties({"driver"})
     private List<PlanRegistration> planRegistrations = new ArrayList<>();
 }

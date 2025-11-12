@@ -58,27 +58,28 @@ public class Account {
 
     @Nationalized
     @Column(name = "STATUS", length = 50)
+    @ColumnDefault("'active'")
     private String status;
 
     @Nationalized
     @Column(name = "ACCOUNT_ROLE", length = 50)
-    @ColumnDefault("'ACTIVE'")
-
     private String accountRole;
 
 
 
 
     @OneToOne(mappedBy = "account", fetch = FetchType.LAZY)
+    @JsonIgnore
     private Driver driver;
 
     @OneToOne(mappedBy = "account", fetch = FetchType.LAZY)
+    @JsonIgnore
     private Admin admin;
 
     @OneToOne(mappedBy = "account", fetch = FetchType.LAZY)
+    @JsonIgnore
     private StationEmployee stationEmployee;
 
-    @OneToOne(mappedBy = "managerAccount", fetch = FetchType.LAZY)
-    private Enterprise enterprise;
+
 
 }

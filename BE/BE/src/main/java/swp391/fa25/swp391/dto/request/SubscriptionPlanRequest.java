@@ -21,6 +21,10 @@ public class SubscriptionPlanRequest {
     @Size(max = 100, message = "Plan type cannot exceed 100 characters")
     private String planType;
 
+    @NotBlank(message = "Target user type is required")
+    @Size(max = 50, message = "Target user type cannot exceed 50 characters")
+    private String targetUserType; // "Driver" or "Enterprise"
+
     @NotNull(message = "Price is required")
     @PositiveOrZero(message = "Price must be non-negative")
     private BigDecimal price;

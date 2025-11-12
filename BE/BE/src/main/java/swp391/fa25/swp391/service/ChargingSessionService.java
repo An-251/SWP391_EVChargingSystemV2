@@ -38,12 +38,14 @@ public class ChargingSessionService implements IChargingSessionService {
     private final IChargerService chargerService;
     private final ReservationService reservationService;
 
-    // Hằng số cấu hình
-    private static final BigDecimal KWH_PER_PERCENT = new BigDecimal("0.5");
-    private static final BigDecimal COST_PER_KWH = new BigDecimal("3000");
-    private static final BigDecimal START_FEE = new BigDecimal("5000"); // Phí khởi động phiên sạc
-    private static final BigDecimal OVERUSE_PENALTY_PER_MINUTE = new BigDecimal("2000"); // Phí phạt mỗi phút
-    private static final int GRACE_PERIOD_MINUTES = 5; // Thời gian ân hạn sau khi đầy pin
+    // Hằng số cấu hình - REAL EV CHARGING SYSTEM
+    private static final BigDecimal START_FEE = new BigDecimal("5000"); // Phí khởi động phiên sạc (connection fee)
+    private static final BigDecimal OVERUSE_PENALTY_PER_MINUTE = new BigDecimal("2000"); // Phí phạt mỗi phút khi xe đã đầy nhưng không rời
+    private static final int GRACE_PERIOD_MINUTES = 1; // Thời gian ân hạn sau khi đầy pin
+    
+    // Hằng số mặc định nếu không có thông tin
+    private static final BigDecimal DEFAULT_BATTERY_CAPACITY = new BigDecimal("60"); // 60 kWh (average EV)
+    private static final BigDecimal DEFAULT_PRICE_PER_KWH = new BigDecimal("3500"); // 3500 VNĐ/kWh
 
     // ChargingSession Status Constants
     private static final String STATUS_CHARGING = "charging";      // Đang sạc
@@ -83,42 +85,28 @@ public class ChargingSessionService implements IChargingSessionService {
         Charger charger = chargerService.findById(request.getChargerId())
                 .orElseThrow(() -> new RuntimeException("Charger not found with ID: " + request.getChargerId()));
 
-        //  6. XỬ LÝ 2 TRƯỜNG HỢP: SẠC QUA ĐẶT CHỖ HOẶC SẠC TRỰC TIẾP
+        //  6. XỬ LÝ SẠC QUA ĐẶT CHỖ (reservation-based charging only)
         Reservation reservation = null;
         String chargerStatus = charger.getStatus();
 
-        if (request.getReservationId() != null) {
-            //  CASE 1: SẠC QUA ĐẶT CHỖ (reservation-based charging)
-            log.info("Processing reservation-based charging with reservation ID: {}", request.getReservationId());
-
-            if (!"booked".equalsIgnoreCase(chargerStatus)) {
-                throw new RuntimeException("Charger must be in 'booked' status for reservation-based charging");
-            }
-
-            // Validate và lấy reservation
-            ChargingPoint chargingPoint = charger.getChargingPoint();
-            reservation = validateAndGetReservation(
-                    request.getReservationId(),
-                    driver.getId(),
-                    chargingPoint.getId()
-            );
-
-        } else {
-            //  CASE 2: SẠC TRỰC TIẾP - WALK-IN (direct charging without reservation)
-            log.info("Processing direct walk-in charging (no reservation)");
-
-            if (!"active".equalsIgnoreCase(chargerStatus)) {
-                if ("booked".equalsIgnoreCase(chargerStatus)) {
-                    throw new RuntimeException("This charger is currently reserved. Please use your reservation ID or choose another charger.");
-                } else if ("using".equalsIgnoreCase(chargerStatus)) {
-                    throw new RuntimeException("Charger is currently in use");
-                } else if ("maintenance".equalsIgnoreCase(chargerStatus)) {
-                    throw new RuntimeException("Charger is under maintenance");
-                } else {
-                    throw new RuntimeException("Charger must be 'active' for direct charging");
-                }
-            }
+        if (request.getReservationId() == null) {
+            throw new RuntimeException("Reservation ID is required. Please make a reservation first.");
         }
+
+        //  SẠC QUA ĐẶT CHỖ (reservation-based charging)
+        log.info("Processing reservation-based charging with reservation ID: {}", request.getReservationId());
+
+        if (!"booked".equalsIgnoreCase(chargerStatus)) {
+            throw new RuntimeException("Charger must be in 'booked' status for reservation-based charging");
+        }
+
+        // Validate và lấy reservation
+        ChargingPoint chargingPoint = charger.getChargingPoint();
+        reservation = validateAndGetReservation(
+                request.getReservationId(),
+                driver.getId(),
+                chargingPoint.getId()
+        );
 
         // 7. Kiểm tra charger có đang được sử dụng không
         Optional<ChargingSession> chargerSession =
@@ -127,8 +115,7 @@ public class ChargingSessionService implements IChargingSessionService {
             throw new RuntimeException("Charger is currently in use");
         }
 
-        // 8. Kiểm tra charging point and station status
-        ChargingPoint chargingPoint = charger.getChargingPoint();
+        // 8. Kiểm tra charging point and station status (reuse chargingPoint from line 105)
         if (chargingPoint != null && "inactive".equals(chargingPoint.getStatus())) {
             throw new RuntimeException("Charging point is inactive");
         }
@@ -188,24 +175,53 @@ public class ChargingSessionService implements IChargingSessionService {
             throw new RuntimeException("End percentage cannot be less than start percentage");
         }
 
-        // Tính toán thông tin sạc
+        // ===== TÍNH TOÁN THÔNG TIN SẠC THEO HỆ THỐNG THỰC TẾ =====
         LocalDateTime endTime = LocalDateTime.now();
         session.setEndTime(endTime);
         session.setEndPercentage(request.getEndPercentage());
 
+        // 1. Tính % pin đã sạc
         int percentageCharged = request.getEndPercentage() - session.getStartPercentage();
-        BigDecimal kwhUsed = KWH_PER_PERCENT.multiply(new BigDecimal(percentageCharged))
-                .setScale(2, RoundingMode.HALF_UP);
-
-        BigDecimal baseCost = kwhUsed.multiply(COST_PER_KWH)
+        
+        // 2. Lấy dung lượng pin xe (kWh)
+        Vehicle vehicle = session.getVehicle();
+        BigDecimal batteryCapacity = vehicle.getBatteryCapacity() != null 
+            ? vehicle.getBatteryCapacity() 
+            : DEFAULT_BATTERY_CAPACITY;
+        
+        // 3. Tính kWh thực tế đã sạc
+        // Formula: kWh = (Battery Capacity × % charged) / 100
+        // Example: 60 kWh battery, charged from 20% to 80% = 60 × 60 / 100 = 36 kWh
+        BigDecimal kwhUsed = batteryCapacity
+                .multiply(new BigDecimal(percentageCharged))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        
+        // 4. Lấy giá từ Charging Point (VNĐ/kWh)
+        Charger charger = session.getCharger();
+        ChargingPoint chargingPoint = charger.getChargingPoint();
+        BigDecimal pricePerKwh = chargingPoint.getPricePerKwh() != null 
+            ? chargingPoint.getPricePerKwh() 
+            : DEFAULT_PRICE_PER_KWH;
+        
+        // 5. Tính chi phí cơ bản
+        // Formula: Base Cost = kWh × Price per kWh
+        // Example: 36 kWh × 3500 VNĐ/kWh = 126,000 VNĐ
+        BigDecimal baseCost = kwhUsed.multiply(pricePerKwh)
                 .setScale(0, RoundingMode.HALF_UP);
+        
+        log.info("💰 Pricing calculation for session {}: Vehicle battery {}kWh, Charged {}%, kWh used: {}, Price/kWh: {}, Base cost: {}",
+                sessionId, batteryCapacity, percentageCharged, kwhUsed, pricePerKwh, baseCost);
 
-        // ⭐ TÍNH PHÍ PHẠT OVERUSE NẾU ĐÃ ĐẦY PIN NHƯNG KHÔNG DỪNG
+        // ⭐ TÍNH PHÍ PHẠT OVERUSE NẾU ĐÃ SẠC ĐẾN TARGET NHƯNG KHÔNG DỪNG
         BigDecimal overusePenalty = BigDecimal.ZERO;
         BigDecimal overuseMinutes = BigDecimal.ZERO;
         
-        if (request.getEndPercentage() >= 100) {
-            // Tính thời gian từ lúc đầy pin (target %) đến lúc dừng
+        // ✅ FIX: Kiểm tra đã đạt target percentage (không chỉ 100%)
+        // Ví dụ: Sạc từ 20% → 80%, khi đạt 80% mà không dừng thì bị phạt
+        Integer targetPercentage = session.getEndPercentage(); // Mục tiêu người dùng đặt ban đầu
+        
+        if (request.getEndPercentage() >= targetPercentage) {
+            // Tính thời gian từ lúc đạt target % đến lúc dừng
             overuseMinutes = calculateOveruseTime(session, endTime);
             
             if (overuseMinutes.compareTo(new BigDecimal(GRACE_PERIOD_MINUTES)) > 0) {
@@ -214,21 +230,24 @@ public class ChargingSessionService implements IChargingSessionService {
                 overusePenalty = penaltyMinutes.multiply(OVERUSE_PENALTY_PER_MINUTE)
                         .setScale(0, RoundingMode.HALF_UP);
                 
-                log.warn("⚠️ Overuse penalty applied! Session {}: {} minutes overtime, penalty: {} VND",
-                        sessionId, penaltyMinutes, overusePenalty);
+                log.warn("⚠️ Overuse penalty applied! Session {}: Target was {}%, reached {}%, {} minutes overtime, penalty: {} VND",
+                        sessionId, targetPercentage, request.getEndPercentage(), penaltyMinutes, overusePenalty);
             }
             
             session.setOverusedTime(overuseMinutes);
         }
 
-        // ⭐ TÍNH TỔNG CHI PHÍ = START_FEE + BASE_COST + OVERUSE_PENALTY
-        BigDecimal totalCostBeforeDiscount = session.getStartFee()
-                .add(baseCost)
-                .add(overusePenalty);
+        // ⭐ FIX: DISCOUNT CHỈ ÁP DỤNG CHO PHÍ ĐIỆN NĂNG (baseCost)
+        // Start Fee và Overuse Penalty KHÔNG được giảm giá
+        BigDecimal energyCostWithDiscount = applyPlanDiscount(session.getDriver().getId(), baseCost);
         
-        BigDecimal finalCost = applyPlanDiscount(session.getDriver().getId(), totalCostBeforeDiscount);
+        // ⭐ TÍNH TỔNG CHI PHÍ = START_FEE + (BASE_COST - DISCOUNT) + OVERUSE_PENALTY
+        BigDecimal finalCost = session.getStartFee()
+                .add(energyCostWithDiscount)
+                .add(overusePenalty);
 
         session.setKwhUsed(kwhUsed);
+        session.setOverusePenalty(overusePenalty); // ⭐ ADD: Lưu overuse penalty vào DB
         session.setCost(finalCost);
         session.setStatus(STATUS_COMPLETED);
 
@@ -237,8 +256,8 @@ public class ChargingSessionService implements IChargingSessionService {
         // Giải phóng charger
         chargerService.stopUsingCharger(session.getCharger().getId());
 
-        log.info("✅ Session {} completed. Start fee: {}, Base cost: {}, Overuse penalty: {}, Total before discount: {}, Final cost: {}",
-                sessionId, session.getStartFee(), baseCost, overusePenalty, totalCostBeforeDiscount, finalCost);
+        log.info("✅ Session {} completed. Base cost: {}, Energy cost after discount: {}, Start fee: {}, Overuse penalty: {}, Final cost: {}",
+                sessionId, baseCost, energyCostWithDiscount, session.getStartFee(), overusePenalty, finalCost);
 
         return updatedSession;
     }
@@ -338,23 +357,44 @@ public class ChargingSessionService implements IChargingSessionService {
     }
 
     /**
-     * Tính thời gian vượt quá khi đã đầy pin
+     * Tính thời gian vượt quá khi đã đầy pin - REALISTIC CALCULATION
      * @param session ChargingSession
      * @param endTime Thời gian kết thúc phiên sạc
      * @return Số phút vượt quá
      */
     private BigDecimal calculateOveruseTime(ChargingSession session, LocalDateTime endTime) {
-        // Tính thời gian cần để sạc đầy dựa trên tỉ lệ phần trăm
+        // 1. Lấy thông tin xe và charger
+        Vehicle vehicle = session.getVehicle();
+        Charger charger = session.getCharger();
+        
+        BigDecimal batteryCapacity = vehicle.getBatteryCapacity() != null 
+            ? vehicle.getBatteryCapacity() 
+            : DEFAULT_BATTERY_CAPACITY;
+        
+        BigDecimal chargerMaxPower = charger.getMaxPower(); // kW
+        
+        // 2. Tính kWh cần sạc
         int percentageCharged = session.getEndPercentage() - session.getStartPercentage();
+        BigDecimal kwhToCharge = batteryCapacity
+                .multiply(new BigDecimal(percentageCharged))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
         
-        // Giả định: 1% = 1 phút sạc (có thể điều chỉnh)
-        long estimatedMinutesToFull = percentageCharged;
+        // 3. Tính thời gian sạc thực tế (phút)
+        // Formula: Time (hours) = Energy (kWh) / Power (kW)
+        // Example: 36 kWh / 50 kW = 0.72 hours = 43.2 minutes
+        BigDecimal chargingTimeHours = kwhToCharge.divide(chargerMaxPower, 4, RoundingMode.HALF_UP);
+        BigDecimal chargingTimeMinutes = chargingTimeHours.multiply(BigDecimal.valueOf(60));
         
-        // Thời gian dự kiến đầy pin
-        LocalDateTime estimatedFullTime = session.getStartTime().plusMinutes(estimatedMinutesToFull);
+        // 4. Thời gian dự kiến hoàn thành
+        LocalDateTime estimatedFullTime = session.getStartTime()
+                .plusMinutes(chargingTimeMinutes.longValue());
         
-        // Tính thời gian vượt quá
+        // 5. Tính thời gian vượt quá
         long minutesOveruse = java.time.Duration.between(estimatedFullTime, endTime).toMinutes();
+        
+        log.info("⏱️ Charging time calculation: {}kWh at {}kW = {} hours ({} minutes). Estimated full: {}, Actual stop: {}, Overuse: {} minutes",
+                kwhToCharge, chargerMaxPower, chargingTimeHours, chargingTimeMinutes.intValue(), 
+                estimatedFullTime, endTime, minutesOveruse);
         
         // Nếu âm (dừng trước khi đầy) thì return 0
         return minutesOveruse > 0 ? new BigDecimal(minutesOveruse) : BigDecimal.ZERO;

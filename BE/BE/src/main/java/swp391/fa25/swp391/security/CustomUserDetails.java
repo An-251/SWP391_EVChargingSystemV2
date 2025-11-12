@@ -51,7 +51,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return "ACTIVE".equals(account.getStatus());
+        return "active".equalsIgnoreCase(account.getStatus());
     }
 
     public Account getAccount() {

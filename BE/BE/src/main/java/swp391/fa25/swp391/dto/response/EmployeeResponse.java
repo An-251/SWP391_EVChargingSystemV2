@@ -18,4 +18,6 @@ public class EmployeeResponse {
     private String phone;
     private String position;
     private String status;
+    private Integer facilityId;
+    private String facilityName;
 }

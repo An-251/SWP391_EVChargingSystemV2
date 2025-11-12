@@ -28,12 +28,19 @@ public class SubscriptionPlan {
     @Column(name = "PLAN_TYPE", length = 100)
     private String planType;
 
+    @Nationalized
+    @Column(name = "TARGET_USER_TYPE", length = 50)
+    private String targetUserType; // "Driver" or "Enterprise"
+
     @Column(name = "PRICE", precision = 18, scale = 2)
     private BigDecimal price;
 
     @Nationalized
     @Column(name = "VALIDITY_DAYS", length = 100)
     private String validityDays;
+
+    @Column(name = "DURATION_MONTHS")
+    private Integer durationMonths; // Duration in months for subscription
 
     @Nationalized
     @Column(name = "DESCRIPTION", columnDefinition = "nvarchar(max)")

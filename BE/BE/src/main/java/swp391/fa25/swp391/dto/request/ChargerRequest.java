@@ -18,13 +18,13 @@ public class ChargerRequest {
     @Size(max = 50, message = "Charger code cannot exceed 50 characters")
     private String chargerCode;
 
-    @NotBlank(message = "Connector type is required")
-    @Size(max = 50, message = "Connector type cannot exceed 50 characters")
-    private String connectorType;
-
     @NotNull(message = "Max power is required")
     @PositiveOrZero(message = "Max power must be non-negative")
     private BigDecimal maxPower;
+
+    @NotBlank(message = "Connector type is required")
+    @Size(max = 50, message = "Connector type cannot exceed 50 characters")
+    private String connectorType;
 
     @NotBlank(message = "Status is required")
     @Size(max = 50, message = "Status cannot exceed 50 characters")

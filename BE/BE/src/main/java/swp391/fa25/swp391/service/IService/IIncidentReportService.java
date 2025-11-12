@@ -43,5 +43,15 @@ public interface IIncidentReportService {
     // Xóa báo cáo
     void deleteReport(Integer reportId);
 
+    // Employee tạo báo cáo
     IncidentReport createReportByEmployee(EmployeeCreateReportRequest request);
+
+    // Lấy báo cáo theo employee
+    List<IncidentReport> getReportsByEmployee(Integer employeeId);
+
+    // Lấy báo cáo theo station
+    List<IncidentReport> getReportsByStation(Integer stationId);
+
+    // Lấy báo cáo theo station và status
+    List<IncidentReport> getReportsByStationAndStatus(Integer stationId, String status);
 }

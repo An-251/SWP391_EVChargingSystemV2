@@ -13,6 +13,7 @@ public interface IChargerService {
     List<Charger> findAll();
     List<Charger> findByChargingPointId(Integer chargingPointId);
     List<Charger> findByStatus(String status);
+    List<Charger> findByChargingPointIdAndStatus(Integer chargingPointId, String status); // ⭐ NEW
     Charger updateChargerStatus(Charger charger);
     void updateStatus(Integer chargerId, String newStatus);
     void startUsingCharger(Integer chargerId);

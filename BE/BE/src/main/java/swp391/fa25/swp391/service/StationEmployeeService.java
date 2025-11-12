@@ -41,6 +41,12 @@ public class StationEmployeeService implements IStationEmployeeService {
     }
 
     @Override
+    public StationEmployee findByAccountId(Integer accountId) {
+        return stationEmployeeRepository.findByAccount_Id(accountId)
+                .orElseThrow(() -> new RuntimeException("StationEmployee not found for Account ID: " + accountId));
+    }
+
+    @Override
     public List<StationEmployee> findAll() {
         return stationEmployeeRepository.findAll(); // Sửa lại: Trả về tất cả
     }
