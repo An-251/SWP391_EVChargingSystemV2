@@ -2,6 +2,7 @@ package swp391.fa25.swp391.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,7 @@ import java.util.List;
  * Controller này xử lý các yêu cầu liên quan đến việc đăng ký và quản lý
  * các gói dịch vụ (subscription plans) từ phía tài xế.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/driver/subscriptions") // Sử dụng prefix /api/driver để phân biệt API cho tài xế
 @RequiredArgsConstructor
@@ -32,9 +34,19 @@ public class PlanRegistrationController {
     @PostMapping("/register")
     public ResponseEntity<PlanRegistrationResponse> registerPlan(
             @Valid @RequestBody PlanRegistrationRequest request) {
-        PlanRegistrationResponse response = registrationService.registerPlan(request);
-        // Trả về status 201 Created vì một tài nguyên mới (đơn đăng ký) đã được tạo
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        try {
+            log.info("📥 [CONTROLLER] Received plan registration request: driverId={}, planId={}", 
+                    request.getDriverId(), request.getPlanId());
+            
+            PlanRegistrationResponse response = registrationService.registerPlan(request);
+            
+            log.info("✅ [CONTROLLER] Plan registration successful: {}", response.getMessage());
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            
+        } catch (Exception e) {
+            log.error("❌ [CONTROLLER] Plan registration failed: {}", e.getMessage(), e);
+            throw e; // Re-throw để GlobalExceptionHandler xử lý
+        }
     }
 
     /**
