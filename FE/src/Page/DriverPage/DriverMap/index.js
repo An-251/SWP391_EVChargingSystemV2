@@ -1,1 +1,2 @@
-export { default } from './DriverMap';
+import DriverMap from './DriverMap';
+export default DriverMap;
