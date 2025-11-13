@@ -12,6 +12,7 @@ public class SubscriptionPlanResponse {
     private Integer id;
     private String planName;
     private String planType;
+    private String targetUserType; // ⭐ THÊM: "Driver" or "Enterprise"
     private BigDecimal price;
     private String validityDays;
     private String description;

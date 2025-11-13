@@ -35,12 +35,12 @@ public class PaymentService {
                 .orElseThrow(() -> new RuntimeException("Invoice not found: " + invoiceId));
 
         // Check invoice đã thanh toán chưa
-        if ("PAID".equals(invoice.getStatus())) {
+        if ("paid".equalsIgnoreCase(invoice.getStatus())) {
             throw new RuntimeException("Hóa đơn đã được thanh toán");
         }
 
         // Update invoice
-        invoice.setStatus("PAID");
+        invoice.setStatus("paid");
         invoice.setPaidDate(Instant.now());
         invoice.setPaymentMethod(paymentMethod);
         invoice.setPaymentReference("PAY-" + System.currentTimeMillis());
@@ -51,8 +51,8 @@ public class PaymentService {
         Account account = invoice.getDriver().getAccount();
         boolean wasReactivated = false;
 
-        if ("SUSPENDED".equals(account.getStatus())) {
-            account.setStatus("ACTIVE");
+        if ("suspended".equalsIgnoreCase(account.getStatus())) {
+            account.setStatus("active");
             accountRepository.save(account);
             wasReactivated = true;
             log.info("Reactivated account {} after payment", account.getId());
@@ -81,7 +81,7 @@ public class PaymentService {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new RuntimeException("Invoice not found"));
 
-        if ("PAID".equals(invoice.getStatus())) {
+        if ("paid".equals(invoice.getStatus())) {
             return false;
         }
 
@@ -115,7 +115,7 @@ public class PaymentService {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new RuntimeException("Invoice not found"));
 
-        if ("PAID".equals(invoice.getStatus())) {
+        if ("paid".equals(invoice.getStatus())) {
             return false;
         }
 
@@ -134,6 +134,6 @@ public class PaymentService {
         );
         boolean beforeSuspend = now.isBefore(suspendDate);
 
-        return isPastDue && beforeSuspend && "OVERDUE".equals(invoice.getStatus());
+        return isPastDue && beforeSuspend && "overdue".equals(invoice.getStatus());
     }
 }

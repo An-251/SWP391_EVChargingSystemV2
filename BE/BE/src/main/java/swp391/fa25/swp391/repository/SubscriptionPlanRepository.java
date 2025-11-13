@@ -15,6 +15,18 @@ public interface SubscriptionPlanRepository extends JpaRepository<SubscriptionPl
      */
     List<SubscriptionPlan> findByPlanNameContaining(String keyword);
 
-
+    /**
+     * Tìm gói Basic (default)
+     */
     Optional<SubscriptionPlan> findByIsDefault(Boolean isDefault);
+
+    /**
+     * ⭐ Tìm gói Basic cho targetUserType cụ thể
+     */
+    Optional<SubscriptionPlan> findByIsDefaultAndTargetUserType(Boolean isDefault, String targetUserType);
+
+    /**
+     * ⭐ Tìm tất cả gói theo targetUserType
+     */
+    List<SubscriptionPlan> findByTargetUserType(String targetUserType);
 }

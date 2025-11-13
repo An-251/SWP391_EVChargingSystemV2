@@ -42,7 +42,7 @@ public class PaymentController {
                     .paymentReference(paidInvoice.getPaymentReference())
                     .paidDate(paidInvoice.getPaidDate())
                     .message("Thanh toán thành công! " +
-                            ("SUSPENDED".equals(paidInvoice.getDriver().getAccount().getStatus())
+                            ("suspended".equalsIgnoreCase(paidInvoice.getDriver().getAccount().getStatus())
                                     ? ""
                                     : "Tài khoản đã được kích hoạt lại."))
                     .build();

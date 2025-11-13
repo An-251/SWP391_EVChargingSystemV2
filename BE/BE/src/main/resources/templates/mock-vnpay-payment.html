@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock VNPay Payment Gateway</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        .payment-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 550px;
+            width: 100%;
+            animation: slideIn 0.5s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .logo {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        .demo-badge {
+            display: inline-block;
+            background: #ffeaa7;
+            color: #d63031;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .amount {
+            font-size: 42px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .info {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 12px 0;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .info-value {
+            font-weight: 600;
+            color: #212529;
+            font-size: 14px;
+            text-align: right;
+            max-width: 60%;
+            word-break: break-word;
+        }
+        .buttons {
+            margin-top: 30px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            margin: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            width: calc(100% - 16px);
+            max-width: 400px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .btn-cancel {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            box-shadow: 0 4px 15px rgba(238, 90, 111, 0.4);
+        }
+        .btn-cancel:hover {
+            box-shadow: 0 6px 20px rgba(238, 90, 111, 0.6);
+        }
+        .spinner {
+            display: none;
+            margin: 20px auto;
+        }
+        .loading .spinner {
+            display: block;
+        }
+        .loading .buttons {
+            display: none;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner::after {
+            content: '';
+            display: block;
+            width: 50px;
+            height: 50px;
+            margin: 0 auto;
+            border-radius: 50%;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            animation: spin 1s linear infinite;
+        }
+        .notice {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .footer {
+            margin-top: 20px;
+            color: #6c757d;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="payment-container" id="container">
+        <div class="logo">🎭 MOCK VNPAY</div>
+        <h1>Cổng Thanh Toán Demo</h1>
+        <div class="demo-badge">⚠️ MÔI TRƯỜNG DEMO</div>
+        
+        <div class="amount" id="amount" th:text="${#numbers.formatDecimal(amount / 100, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+        
+        <div class="info">
+            <div class="info-row">
+                <span class="info-label">Mã giao dịch:</span>
+                <span class="info-value" id="txnRef" th:text="${transactionId}">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Thông tin:</span>
+                <span class="info-value" id="orderInfo" th:text="${orderInfo}">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Thời gian:</span>
+                <span class="info-value" id="time">-</span>
+            </div>
+        </div>
+        
+        <div class="buttons" id="buttons">
+            <button class="btn" onclick="processPayment()">
+                ✅ Thanh toán thành công
+            </button>
+            <button class="btn btn-cancel" onclick="cancelPayment()">
+                ❌ Hủy thanh toán
+            </button>
+        </div>
+        
+        <div class="spinner"></div>
+        
+        <div class="notice">
+            ⚠️ <strong>Lưu ý:</strong> Đây là môi trường demo dành cho mục đích phát triển và testing. 
+            Không có giao dịch tiền thật được thực hiện.
+        </div>
+        
+        <div class="footer">
+            Mock VNPay Payment Gateway v1.0 | SWP391 EV Charging System
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const transactionId = /*[[${transactionId}]]*/ 'default';
+        const returnUrl = /*[[${returnUrl}]]*/ 'http://localhost:5173';
+        /*]]>*/
+        
+        // Display current time
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            document.getElementById('time').textContent = timeStr;
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+        
+        function processPayment() {
+            const container = document.getElementById('container');
+            container.classList.add('loading');
+            
+            // Simulate processing delay
+            setTimeout(() => {
+                window.location.href = `/api/vnpay/mock/callback-success?transactionId=${transactionId}`;
+            }, 2000);
+        }
+        
+        function cancelPayment() {
+            if (confirm('Bạn có chắc chắn muốn hủy thanh toán?')) {
+                window.location.href = returnUrl + '?vnp_ResponseCode=24&vnp_TxnRef=' + transactionId + '&vnp_Message=Cancelled';
+            }
+        }
+        
+        // Auto-submit after 10 seconds (optional)
+        // setTimeout(processPayment, 10000);
+    </script>
+</body>
+</html>

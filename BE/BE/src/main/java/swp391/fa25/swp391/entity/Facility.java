@@ -1,6 +1,7 @@
 
 package swp391.fa25.swp391.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -46,9 +47,11 @@ public class Facility {
 
     @ManyToOne
     @JoinColumn(name = "ADMIN_ID")
+    @JsonIgnoreProperties({"facilities", "account"})
     private Admin admin;
 
     @OneToMany(mappedBy = "facility")
+    @JsonIgnoreProperties({"facility"})
     private List<ChargingStation> chargingStations = new ArrayList<>();
 
     @Transient

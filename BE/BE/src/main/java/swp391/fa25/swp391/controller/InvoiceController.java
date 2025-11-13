@@ -95,10 +95,30 @@ public class InvoiceController {
             Invoice invoice = invoiceService.findById(id)
                     .orElseThrow(() -> new RuntimeException("Invoice not found"));
 
-            // ⭐ Map sang DTO với timeline info
-            InvoiceDetailResponse response = mapToDetailResponse(invoice);
+            // ⭐ Eager load sessions with their relationships
+            invoice.getSessions().size(); // Force Hibernate to load sessions
+            invoice.getSessions().forEach(session -> {
+                // Load charger and its relationships
+                if (session.getCharger() != null) {
+                    session.getCharger().getChargerCode(); // Load charger
+                    if (session.getCharger().getChargingPoint() != null) {
+                        session.getCharger().getChargingPoint().getPointName(); // Load charging point
+                        if (session.getCharger().getChargingPoint().getStation() != null) {
+                            session.getCharger().getChargingPoint().getStation().getStationName(); // Load station
+                            if (session.getCharger().getChargingPoint().getStation().getFacility() != null) {
+                                session.getCharger().getChargingPoint().getStation().getFacility().getFullAddress(); // Load facility
+                            }
+                        }
+                    }
+                }
+                // Load vehicle
+                if (session.getVehicle() != null) {
+                    session.getVehicle().getModel(); // Load vehicle
+                }
+            });
 
-            return ResponseEntity.ok(ApiResponse.success("Retrieved invoice", response));
+            // ⭐ Return invoice directly (FE expects invoice object, not wrapped in ApiResponse)
+            return ResponseEntity.ok(invoice);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
@@ -110,7 +130,7 @@ public class InvoiceController {
     @GetMapping("/driver/{driverId}/unpaid")
     public ResponseEntity<?> getUnpaidInvoices(@PathVariable Integer driverId) {
         try {
-            List<Invoice> invoices = invoiceService.findByDriverIdAndStatus(driverId, "UNPAID");
+            List<Invoice> invoices = invoiceService.findByDriverIdAndStatus(driverId, "unpaid");
 
             // ⭐ Map sang DTO với timeline info
             List<InvoiceDetailResponse> responses = invoices.stream()
@@ -127,7 +147,7 @@ public class InvoiceController {
     @GetMapping("/driver/{driverId}/overdue")
     public ResponseEntity<?> getOverdueInvoices(@PathVariable Integer driverId) {
         try {
-            List<Invoice> invoices = invoiceService.findByDriverIdAndStatus(driverId, "OVERDUE");
+            List<Invoice> invoices = invoiceService.findByDriverIdAndStatus(driverId, "overdue");
 
             // ⭐ Map sang DTO với timeline info
             List<InvoiceDetailResponse> responses = invoices.stream()
@@ -166,13 +186,13 @@ public class InvoiceController {
     }
 
     /**
-     * ⭐ Lấy current invoice của driver (invoice UNPAID/OVERDUE gần nhất)
+     * ⭐ Lấy current invoice của driver (invoice unpaid/overdue gần nhất)
      */
     @GetMapping("/driver/{driverId}/current")
     public ResponseEntity<?> getCurrentInvoice(@PathVariable Integer driverId) {
         try {
-            // Lấy UNPAID invoices
-            List<Invoice> unpaidInvoices = invoiceService.findByDriverIdAndStatus(driverId, "UNPAID");
+            // Lấy unpaid invoices
+            List<Invoice> unpaidInvoices = invoiceService.findByDriverIdAndStatus(driverId, "unpaid");
 
             if (!unpaidInvoices.isEmpty()) {
                 // Lấy invoice mới nhất
@@ -187,8 +207,8 @@ public class InvoiceController {
                 }
             }
 
-            // Nếu không có UNPAID, check OVERDUE
-            List<Invoice> overdueInvoices = invoiceService.findByDriverIdAndStatus(driverId, "OVERDUE");
+            // Nếu không có unpaid, check overdue
+            List<Invoice> overdueInvoices = invoiceService.findByDriverIdAndStatus(driverId, "overdue");
 
             if (!overdueInvoices.isEmpty()) {
                 Invoice overdueInvoice = overdueInvoices.stream()
@@ -217,8 +237,8 @@ public class InvoiceController {
     @GetMapping("/driver/{driverId}/needs-payment")
     public ResponseEntity<?> checkNeedsPayment(@PathVariable Integer driverId) {
         try {
-            boolean hasUnpaid = invoiceService.existsByDriverIdAndStatus(driverId, "UNPAID");
-            boolean hasOverdue = invoiceService.existsByDriverIdAndStatus(driverId, "OVERDUE");
+            boolean hasUnpaid = invoiceService.existsByDriverIdAndStatus(driverId, "unpaid");
+            boolean hasOverdue = invoiceService.existsByDriverIdAndStatus(driverId, "overdue");
 
             boolean needsPayment = hasUnpaid || hasOverdue;
 
@@ -385,7 +405,7 @@ public class InvoiceController {
             daysUntilSuspension = secondsUntilSuspend / (24 * 60 * 60);
 
             // Status message
-            if ("PAID".equals(invoice.getStatus())) {
+            if ("paid".equals(invoice.getStatus())) {
                 statusMessage = "Đã thanh toán";
             } else if (daysUntilDue > 0) {
                 statusMessage = String.format("Còn %d ngày để thanh toán", daysUntilDue);
@@ -397,12 +417,12 @@ public class InvoiceController {
             }
 
             // Warning message
-            if ("OVERDUE".equals(invoice.getStatus()) && daysUntilSuspension > 0) {
+            if ("overdue".equals(invoice.getStatus()) && daysUntilSuspension > 0) {
                 warningMessage = String.format(
                         "⚠️ Tài khoản sẽ bị khóa sau %d ngày nếu không thanh toán",
                         daysUntilSuspension
                 );
-            } else if ("OVERDUE".equals(invoice.getStatus()) && daysUntilSuspension <= 0) {
+            } else if ("overdue".equals(invoice.getStatus()) && daysUntilSuspension <= 0) {
                 warningMessage = "🔒 Tài khoản đã bị khóa. Vui lòng thanh toán để mở khóa.";
             } else if (daysUntilDue <= 3 && daysUntilDue > 0) {
                 warningMessage = "⏰ Hóa đơn sắp đến hạn. Vui lòng thanh toán sớm.";
@@ -417,7 +437,7 @@ public class InvoiceController {
         }
 
         // Check account status
-        Boolean isAccountSuspended = "SUSPENDED".equals(
+        Boolean isAccountSuspended = "suspended".equalsIgnoreCase(
                 invoice.getDriver().getAccount().getStatus()
         );
         
