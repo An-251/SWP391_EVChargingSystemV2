@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Card, Button, Spin, message, Descriptions, Divider, Tag, Result } from 'antd';
 import { 
   CheckCircle, 
@@ -10,32 +10,39 @@ import {
   Battery, 
   Calendar,
   CreditCard,
-  DollarSign
+  DollarSign,
+  AlertTriangle
 } from 'lucide-react';
 import api from '../../../configs/config-axios';
 
 const SessionCompleted = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // ⭐ Get estimated cost from navigation (from ActiveSession)
+  const sessionDataFromNav = location.state?.sessionData;
   
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchSessionDetails();
-  }, [sessionId]);
+    // ⭐ Use navigation state if available, otherwise fetch from API
+    if (sessionDataFromNav) {
+      setSession(sessionDataFromNav);
+      setLoading(false);
+    } else {
+      fetchSessionDetails();
+    }
+  }, [sessionId, sessionDataFromNav]);
 
   const fetchSessionDetails = async () => {
     try {
-      console.log('📊 [SESSION COMPLETED] Fetching session ID:', sessionId);
       const response = await api.get(`/charging-sessions/${sessionId}`);
-      console.log('📊 [SESSION COMPLETED] Response:', response.data);
       
-      // Backend có thể trả về wrapped hoặc direct entity
+      // Backend returns complete session with subscription info
       const sessionData = response.data?.data || response.data;
       setSession(sessionData);
-      
-      console.log('✅ [SESSION COMPLETED] Session loaded:', sessionData);
     } catch (error) {
       console.error('❌ [SESSION COMPLETED] Error:', error);
       message.error('Không thể tải thông tin phiên sạc');
@@ -61,15 +68,45 @@ const SessionCompleted = () => {
     return parseFloat(amount).toLocaleString('vi-VN');
   };
 
+  // ⭐ FIXED: Calculate duration in seconds for demo (100x faster)
   const calculateDuration = () => {
     if (!session?.startTime || !session?.endTime) return 'N/A';
     const start = new Date(session.startTime);
     const end = new Date(session.endTime);
     const durationMs = end - start;
-    const minutes = Math.floor(durationMs / 60000);
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+    const totalSeconds = Math.floor(durationMs / 1000);
+    
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    // Display in seconds for demo
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+  
+  // ⭐ Calculate actual time (100x slower)
+  const calculateActualDuration = () => {
+    if (!session?.startTime || !session?.endTime) return 'N/A';
+    const start = new Date(session.startTime);
+    const end = new Date(session.endTime);
+    const durationMs = end - start;
+    const totalSeconds = Math.floor(durationMs / 1000);
+    const actualSeconds = totalSeconds * 100; // 100x slower
+    
+    const hours = Math.floor(actualSeconds / 3600);
+    const minutes = Math.floor((actualSeconds % 3600) / 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else {
+      return `${minutes}m`;
+    }
   };
 
   if (loading) {
@@ -129,6 +166,32 @@ const SessionCompleted = () => {
             </div>
           </div>
 
+          {/* ⭐ NEW: Charging Mode Badge (Walk-in / Reservation) */}
+          <div className="flex justify-center items-center space-x-2 mb-6">
+            <Tag 
+              color={session.reservation ? 'green' : 'blue'} 
+              className="text-sm px-4 py-1"
+            >
+              {session.reservation ? (
+                <>
+                  <Calendar size={14} className="inline mr-1" />
+                  Sạc qua đặt chỗ (Reservation)
+                </>
+              ) : (
+                <>
+                  <Zap size={14} className="inline mr-1" />
+                  Sạc trực tiếp (Walk-in)
+                </>
+              )}
+            </Tag>
+            
+            {session.reservation && (
+              <Tag color="purple">
+                Reservation ID: {session.reservation.id || session.reservation}
+              </Tag>
+            )}
+          </div>
+
           {/* Session Information */}
           <div className="space-y-6">
             {/* Session ID & Date */}
@@ -179,8 +242,12 @@ const SessionCompleted = () => {
                     </Tag>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Cổng sạc</p>
-                    <p className="text-base font-medium text-gray-900">{session.chargingPointName || 'Point #1'}</p>
+                    <p className="text-sm text-gray-600 mb-1">Charger</p>
+                    <p className="text-base font-medium text-gray-900">{session.charger?.chargerCode || session.chargingPointName || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Công suất</p>
+                    <p className="text-base font-medium text-gray-900">{session.charger?.maxPower || 'N/A'} kW</p>
                   </div>
                 </div>
               </div>
@@ -207,9 +274,12 @@ const SessionCompleted = () => {
               <div className="bg-purple-50 p-4 rounded-lg">
                 <div className="flex items-center space-x-2 mb-2">
                   <Clock className="w-5 h-5 text-purple-600" />
-                  <span className="text-sm text-gray-600">Thời gian</span>
+                  <span className="text-sm text-gray-600">Thời gian sạc</span>
                 </div>
                 <p className="text-lg font-bold text-purple-900">{calculateDuration()}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  (Demo 100x - Thực tế: {calculateActualDuration()})
+                </p>
               </div>
             </div>
 
@@ -238,23 +308,83 @@ const SessionCompleted = () => {
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Chi phí phiên sạc</h3>
               
               <div className="space-y-3">
-                {/* Energy Cost */}
-                <div className="flex items-start justify-between p-3 bg-white rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                      <Zap className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Điện năng</p>
-                      <p className="text-xs text-gray-500">
-                        {parseFloat(session.kwhUsed || 0).toFixed(2)} kWh × {formatCurrency(4200)} đ/kWh
+                {/* Start Fee */}
+                {(() => {
+                  const startFee = parseFloat(session.startFee || 5000);
+                  
+                  return (
+                    <div className="flex items-start justify-between p-3 bg-white rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <Zap className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Phí khởi động</p>
+                          <p className="text-xs text-gray-500">Phí cố định mỗi phiên sạc</p>
+                        </div>
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {formatCurrency(startFee)} đ
                       </p>
                     </div>
+                  );
+                })()}
+                
+                {/* Energy Cost */}
+                {(() => {
+                  const kwhUsed = parseFloat(session.kwhUsed || 0);
+                  
+                  // ⭐ FIX: Get pricePerKwh from session response (BE đã lấy từ chargingPoint.pricePerKwh)
+                  const pricePerKwh = parseFloat(session.pricePerKwh || 3000);
+                  
+                  // ⭐ Calculate energy cost (kWh * price)
+                  const energyCost = kwhUsed * pricePerKwh;
+                  
+                  return (
+                    <div className="flex items-start justify-between p-3 bg-white rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                          <Zap className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Điện năng</p>
+                          <p className="text-xs text-gray-500">
+                            {kwhUsed.toFixed(2)} kWh × {pricePerKwh.toLocaleString('vi-VN')} đ/kWh
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900">
+                        {formatCurrency(energyCost)} đ
+                      </p>
+                    </div>
+                  );
+                })()}
+
+                {/* ⭐ NEW: Overuse Penalty (if exists) */}
+                {session.overusedTime && parseFloat(session.overusedTime) > 0 && (
+                  <div className="flex items-start justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                        <AlertTriangle className="w-5 h-5 text-red-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-red-900">Phí phạt quá giờ</p>
+                        <p className="text-xs text-red-600">
+                          {parseFloat(session.overusedTime).toFixed(0)} phút overtime
+                          {parseFloat(session.overusedTime) > 5 && (
+                            <span> (sau grace period 5 phút)</span>
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          💡 Pin đã đầy 100% nhưng không dừng sạc ngay
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-lg font-semibold text-red-700">
+                      +{formatCurrency(session.overusePenalty || 0)} đ
+                    </p>
                   </div>
-                  <p className="text-lg font-semibold text-gray-900">
-                    {formatCurrency(parseFloat(session.kwhUsed || 0) * 4200)} đ
-                  </p>
-                </div>
+                )}
 
                 {/* Idle Fee */}
                 {session.idleFee && parseFloat(session.idleFee) > 0 && (
@@ -278,42 +408,102 @@ const SessionCompleted = () => {
 
                 <Divider className="my-3" />
 
-                {/* Subtotal */}
-                <div className="flex justify-between items-center px-3">
-                  <p className="text-base text-gray-700">Tạm tính</p>
-                  <p className="text-lg font-semibold text-gray-900">
-                    {formatCurrency(session.cost || 0)} đ
-                  </p>
-                </div>
+                {/* ⭐ SIMPLIFIED: Use data from BE response directly */}
+                {(() => {
+                  const finalCost = parseFloat(session.cost || 0);
+                  const startFee = parseFloat(session.startFee || 5000);
+                  const overusePenalty = parseFloat(session.overusePenalty || 0);
+                  const pricePerKwh = parseFloat(session.pricePerKwh || 3000);
+                  
+                  // ⭐ NEW: Get cost breakdown from BE
+                  const energyCostBeforeDiscount = parseFloat(session.energyCostBeforeDiscount || 0);
+                  const energyCostAfterDiscount = parseFloat(session.energyCostAfterDiscount || 0);
+                  const discountRate = parseFloat(session.discountRate || 0);
+                  const subscriptionPlanName = session.subscriptionPlanName;
+                  
+                  const hasDiscount = discountRate > 0 && subscriptionPlanName;
+                  const discountAmount = energyCostBeforeDiscount - energyCostAfterDiscount;
+                  
+                  return (
+                    <>
+                      {/* Start Fee */}
+                      <div className="flex justify-between items-center px-3 pt-2">
+                        <p className="text-sm font-medium text-gray-600">Phí khởi động</p>
+                        <p className="text-base font-semibold text-gray-700">
+                          {formatCurrency(startFee)} đ
+                        </p>
+                      </div>
+                      
+                      {/* Energy Cost (before discount) */}
+                      <div className="flex justify-between items-center px-3 pt-2 border-t border-gray-200">
+                        <p className="text-sm font-medium text-gray-600">
+                          Chi phí điện năng
+                          <span className="text-xs text-gray-500 ml-1">
+                            ({pricePerKwh.toLocaleString('vi-VN')} đ/kWh)
+                          </span>
+                        </p>
+                        <p className="text-base font-semibold text-gray-700">
+                          {formatCurrency(energyCostBeforeDiscount)} đ
+                        </p>
+                      </div>
+                      
+                      {/* Discount (if has subscription) */}
+                      {hasDiscount && (
+                        <div className="flex justify-between items-center px-3 bg-green-50 py-2 rounded mt-2">
+                          <div className="flex items-center space-x-2">
+                            <CreditCard className="w-4 h-4 text-green-600" />
+                            <p className="text-sm text-green-700 font-medium">
+                              Giảm giá {discountRate}% ({subscriptionPlanName})
+                            </p>
+                          </div>
+                          <p className="text-base font-semibold text-green-600">
+                            -{formatCurrency(discountAmount)} đ
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Show when NO subscription */}
+                      {!hasDiscount && (
+                        <div className="flex justify-between items-center px-3 py-2 bg-yellow-50 rounded mt-2">
+                          <p className="text-sm text-gray-600">
+                            💡 Không có gói subscription (giảm giá 0%)
+                          </p>
+                          <p className="text-sm text-gray-600">0 đ</p>
+                        </div>
+                      )}
 
-                {/* Discount (if subscription) */}
-                <div className="flex justify-between items-center px-3">
-                  <div className="flex items-center space-x-2">
-                    <CreditCard className="w-4 h-4 text-green-600" />
-                    <p className="text-sm text-green-700">Giảm giá (Gói đăng ký)</p>
-                  </div>
-                  <p className="text-base font-semibold text-green-600">-25,000 đ</p>
-                </div>
+                      {/* Overuse Penalty */}
+                      {overusePenalty > 0 && (
+                        <div className="flex justify-between items-center px-3 pt-2 border-t border-gray-200 mt-2">
+                          <div className="flex items-center space-x-2">
+                            <AlertTriangle className="w-4 h-4 text-orange-600" />
+                            <p className="text-sm font-medium text-orange-700">Phí phạt quá thời gian</p>
+                          </div>
+                          <p className="text-base font-semibold text-orange-600">
+                            +{formatCurrency(overusePenalty)} đ
+                          </p>
+                        </div>
+                      )}
 
-                {/* VAT */}
-                <div className="flex justify-between items-center px-3">
-                  <p className="text-sm text-gray-600">VAT (10%)</p>
-                  <p className="text-base font-medium text-gray-700">
-                    {formatCurrency((parseFloat(session.cost || 0) - 25000) * 0.1)} đ
-                  </p>
-                </div>
+                      <Divider className="my-3" />
 
-                <Divider className="my-3" />
-
-                {/* Total */}
-                <div className="bg-gradient-to-r from-green-100 to-blue-100 p-4 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <p className="text-lg font-semibold text-gray-800">Tổng chi phí</p>
-                    <p className="text-3xl font-bold text-blue-700">
-                      {formatCurrency((parseFloat(session.cost || 0) - 25000) * 1.1)} đ
-                    </p>
-                  </div>
-                </div>
+                      {/* Total Cost */}
+                      <div className="bg-gradient-to-r from-green-100 to-blue-100 p-4 rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <p className="text-lg font-semibold text-gray-800">
+                            Tổng chi phí {hasDiscount && <span className="text-green-600">(Đã giảm giá)</span>}
+                          </p>
+                          <p className="text-3xl font-bold text-blue-700">
+                            {formatCurrency(finalCost)} đ
+                          </p>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          💡 Công thức: Phí khởi động ({formatCurrency(startFee)}) + Điện năng sau giảm giá ({formatCurrency(energyCostAfterDiscount)}) {overusePenalty > 0 && `+ Phí phạt (${formatCurrency(overusePenalty)})`}
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
@@ -329,9 +519,43 @@ const SessionCompleted = () => {
                     Chi phí phiên sạc này sẽ được tổng hợp vào <span className="font-semibold">hóa đơn cuối tháng</span>. 
                     Hóa đơn sẽ được gửi vào ngày 1 hàng tháng và bạn có <span className="font-semibold">7 ngày</span> để thanh toán.
                   </p>
+                  {session?.subscriptionPlanName ? (
+                    <p className="text-sm text-green-700 mt-2">
+                      ✅ Bạn đang sử dụng gói <span className="font-semibold">{session.subscriptionPlanName}</span> với giảm giá {session.discountRate}%
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-600 mt-2">
+                      💡 Bạn chưa có gói subscription. <a href="/driver/select-subscription" className="text-blue-600 underline">Đăng ký ngay</a> để được giảm giá!
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
+
+            {/* ⭐ UPDATED: Overuse Warning (if penalty applied) */}
+            {session.overusePenalty && parseFloat(session.overusePenalty) > 0 && (
+              <div className="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-r-lg mt-4">
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-orange-800 mb-1">
+                      ⚠️ Phí phạt quá thời gian
+                    </p>
+                    <p className="text-sm text-orange-700">
+                      Bạn đã để xe sạc quá <strong>{parseFloat(session.overusedTime || 0).toFixed(0)} phút</strong> sau khi đạt mức pin mục tiêu ({session.endPercentage}%). 
+                      Phí phạt: <strong className="text-orange-800">{formatCurrency(session.overusePenalty || 0)} đ</strong>
+                    </p>
+                    <p className="text-sm text-gray-600 mt-2">
+                      💡 <strong>Mẹo:</strong> Khi pin đạt mức mục tiêu, bạn có <strong>5 phút ân hạn</strong> để dừng session miễn phí. 
+                      Sau đó sẽ tính <strong>2,000 đ/phút</strong> phí chiếm chỗ.
+                    </p>
+                    <p className="text-sm text-blue-600 mt-2">
+                      ✅ <strong>Khuyến nghị:</strong> Dừng ngay khi pin đạt mục tiêu để tránh phí phạt và giải phóng trạm cho người khác.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Battery Progress */}
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl">
