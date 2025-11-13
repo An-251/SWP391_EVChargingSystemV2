@@ -16,10 +16,15 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ReservationRequest {
 
-    @NotNull(message = "Charging point ID is required")
+    // ⭐ DEPRECATED: Keep for backward compatibility
     private Integer chargingPointId;
+    
+    // ⭐ NEW: Specific charger to reserve (preferred)
+    private Integer chargerId;
+    
     @NotNull(message = "Vehicle ID is required")
     private Long vehicleId;
+    
     @NotNull(message = "Duration is required")
     @Positive(message = "Duration must be positive")
     private Integer durationMinutes; // Duration in minutes (e.g., 30, 60, 120)

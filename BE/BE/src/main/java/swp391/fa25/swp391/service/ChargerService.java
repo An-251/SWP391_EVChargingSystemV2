@@ -68,6 +68,13 @@ public class ChargerService implements IChargerService {
     }
 
     @Override
+    public List<Charger> findByChargingPointIdAndStatus(Integer chargingPointId, String status) {
+        return chargerRepository.findByChargingPointId(chargingPointId).stream()
+                .filter(charger -> status.equalsIgnoreCase(charger.getStatus()))
+                .toList();
+    }
+
+    @Override
     @Transactional
     public Charger updateChargerStatus(Charger charger) {
         return chargerRepository.save(charger);
@@ -114,7 +121,7 @@ public class ChargerService implements IChargerService {
         Charger charger = findById(chargerId)
                 .orElseThrow(() -> new IllegalArgumentException("Charger not found"));
 
-        // Validate current status - accept both ACTIVE (walk-in) and BOOKED (reservation)
+        // Validate current status - accept BOOKED (reservation only)
         if (!STATUS_ACTIVE.equals(charger.getStatus()) && !STATUS_BOOKED.equals(charger.getStatus())) {
             throw new IllegalStateException(
                     "Charger must be 'active' or 'booked' to start using. Current status: " + charger.getStatus()
@@ -126,9 +133,12 @@ public class ChargerService implements IChargerService {
             throw new IllegalStateException("Charger is not associated with any charging point");
         }
 
-        if (!STATUS_ACTIVE.equals(chargingPoint.getStatus()) && !STATUS_USING.equals(chargingPoint.getStatus())) {
+        // ⭐ UPDATED: Allow "booked" status (when there's a valid reservation)
+        if (!STATUS_ACTIVE.equals(chargingPoint.getStatus()) 
+            && !STATUS_USING.equals(chargingPoint.getStatus())
+            && !STATUS_BOOKED.equals(chargingPoint.getStatus())) {
             throw new IllegalStateException(
-                    "Charging point must be 'active' to use. Current status: " + chargingPoint.getStatus()
+                    "Charging point must be 'active', 'booked', or 'using' to start session. Current status: " + chargingPoint.getStatus()
             );
         }
 

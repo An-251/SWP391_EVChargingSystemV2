@@ -98,11 +98,4 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
             LocalDateTime startTime,
             LocalDateTime endTime
     );
-
-    List<ChargingSession> findByVehicleIdAndStatusAndEndTimeBetweenAndEnterpriseInvoiceIsNull(
-            Integer vehicleId,
-            String status,
-            LocalDateTime startTime,
-            LocalDateTime endTime
-    );
 }

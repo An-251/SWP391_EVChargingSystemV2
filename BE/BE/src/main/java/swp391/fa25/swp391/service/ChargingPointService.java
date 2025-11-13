@@ -59,6 +59,13 @@ public class ChargingPointService implements IChargingPointService {
         return chargingPointRepository.findAll();
     }
 
+    /**
+     * Find all charging points by station ID
+     */
+    public List<ChargingPoint> findByStationId(Integer stationId) {
+        return chargingPointRepository.findByStationId(stationId);
+    }
+
     @Override
     @Transactional
     public ChargingPoint updateChargingPointStatus(ChargingPoint chargingPoint) {

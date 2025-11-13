@@ -1,6 +1,7 @@
 
 package swp391.fa25.swp391.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class ChargingSession {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,6 +40,9 @@ public class ChargingSession {
     @Column(name = "START_FEE", precision = 18, scale = 2)
     private BigDecimal startFee;
 
+    @Column(name = "OVERUSE_PENALTY", precision = 18, scale = 2)
+    private BigDecimal overusePenalty; // ⭐ ADD: Phí phạt khi sạc quá thời gian
+
     @Nationalized
     @Column(name = "STATUS", length = 50)
     private String status;
@@ -50,18 +55,22 @@ public class ChargingSession {
 
     @ManyToOne
     @JoinColumn(name = "DRIVER_ID")
+    @JsonIgnoreProperties({"vehicles", "account", "chargingSessions", "invoices", "planRegistrations"})
     private Driver driver;
 
     @ManyToOne
     @JoinColumn(name = "VEHICLE_ID")
+    @JsonIgnoreProperties({"driver", "chargingSessions"})
     private Vehicle vehicle;
 
     @ManyToOne
     @JoinColumn(name = "CHARGER_ID")
+    @JsonIgnoreProperties({"chargingSessions", "chargingPoint"})
     private Charger charger;
 
     @ManyToOne
     @JoinColumn(name = "INVOICE_ID")
+    @JsonIgnoreProperties({"driver", "sessions", "planAtBilling"})
     private Invoice invoice;
     @OneToOne(optional = true)
     @JoinColumn(name = "RESERVATION_ID", referencedColumnName = "id")
@@ -74,9 +83,5 @@ public class ChargingSession {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ENDED_BY_EMPLOYEE_ID")
     private StationEmployee endedByEmployee; // Nhân viên trạm đã KẾT THÚC
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ENT_INVOICE_ID")
-    private EnterpriseInvoice enterpriseInvoice; // Liên kết tới Hóa đơn Doanh nghiệp
 
 }

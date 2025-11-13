@@ -5,8 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import swp391.fa25.swp391.entity.Charger;
 import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.Reservation;
+import swp391.fa25.swp391.repository.ChargerRepository;
 import swp391.fa25.swp391.repository.ChargingPointRepository;
 import swp391.fa25.swp391.repository.ReservationRepository;
 import swp391.fa25.swp391.service.IService.IReservationService;
@@ -21,6 +23,7 @@ public class ReservationService implements IReservationService {
 
     private final ReservationRepository reservationRepository;
     private final ChargingPointRepository chargingPointRepository;
+    private final ChargerRepository chargerRepository; // ⭐ NEW
 
     // Reservation Status Constants
     private static final String STATUS_ACTIVE = "active";         // Đã đặt chỗ (point = booked)
@@ -38,10 +41,24 @@ public class ReservationService implements IReservationService {
     @Transactional
     public Reservation createReservation(Reservation reservation) {
         ChargingPoint chargingPoint = reservation.getChargingPoint();
+        Charger charger = reservation.getCharger();
         
-        // Kiểm tra charging point có available không
-        if (!POINT_STATUS_ACTIVE.equals(chargingPoint.getStatus())) {
-            throw new RuntimeException("Charging point is not available");
+        // ⭐ NEW: Validate charger if provided
+        if (charger != null) {
+            // Kiểm tra charger có available không
+            if (!"active".equalsIgnoreCase(charger.getStatus())) {
+                throw new RuntimeException("Charger is not available for reservation");
+            }
+            
+            // Kiểm tra charger thuộc charging point này
+            if (!charger.getChargingPoint().getId().equals(chargingPoint.getId())) {
+                throw new RuntimeException("Charger does not belong to this charging point");
+            }
+        } else {
+            // Backward compatibility: Kiểm tra charging point có available không
+            if (!POINT_STATUS_ACTIVE.equals(chargingPoint.getStatus())) {
+                throw new RuntimeException("Charging point is not available");
+            }
         }
         
         // Set start_time = NOW, end_time = start_time + duration
@@ -66,6 +83,11 @@ public class ReservationService implements IReservationService {
         reservation.setStatus(STATUS_ACTIVE);
         Reservation savedReservation = reservationRepository.save(reservation);
         
+        // ⭐ NEW: Đánh dấu charger là BOOKED (nếu có)
+        if (charger != null) {
+            reserveCharger(charger);
+        }
+        
         // Đánh dấu charging point là BOOKED
         reserveChargingPointOnly(chargingPoint);
         
@@ -89,7 +111,7 @@ public class ReservationService implements IReservationService {
     @Override
     @Transactional
     public Reservation register(Reservation reservation) {
-        return createReservation(reservation); // ✅ Đã return kết quả
+        return createReservation(reservation);
     }
 
     @Override
@@ -144,6 +166,11 @@ public class ReservationService implements IReservationService {
         // Cập nhật status thành CANCELLED
         reservation.setStatus(STATUS_CANCELLED);
         Reservation savedReservation = reservationRepository.save(reservation);
+        
+        // ⭐ NEW: Nhả charger về ACTIVE (nếu có)
+        if (reservation.getCharger() != null) {
+            releaseCharger(reservation.getCharger());
+        }
         
         // Nhả charging point về ACTIVE
         releaseChargingPointOnly(reservation.getChargingPoint());
@@ -207,6 +234,11 @@ public class ReservationService implements IReservationService {
                 reservation.setStatus(STATUS_EXPIRED);
                 reservationRepository.save(reservation);
                 
+                // ⭐ NEW: Nhả charger về ACTIVE (nếu có)
+                if (reservation.getCharger() != null) {
+                    releaseCharger(reservation.getCharger());
+                }
+                
                 // Nhả charging point về ACTIVE
                 ChargingPoint chargingPoint = reservation.getChargingPoint();
                 if (chargingPoint != null) {
@@ -223,6 +255,33 @@ public class ReservationService implements IReservationService {
     }
 
     // ==================== Helper Methods ====================
+
+    /**
+     * ⭐ NEW: Đánh dấu Charger thành BOOKED (khi tạo reservation ACTIVE)
+     */
+    private void reserveCharger(Charger charger) {
+        if (charger == null) return;
+        
+        charger.setStatus("booked");
+        chargerRepository.save(charger);
+        log.info("Set Charger {} to booked", charger.getId());
+    }
+    
+    /**
+     * ⭐ NEW: Nhả Charger về ACTIVE (khi reservation EXPIRED/CANCELLED)
+     */
+    private void releaseCharger(Charger charger) {
+        if (charger == null) return;
+        
+        log.info("Releasing Charger {}, current status: {}", charger.getId(), charger.getStatus());
+        
+        // Chỉ nhả về ACTIVE nếu đang ở trạng thái BOOKED
+        if ("booked".equalsIgnoreCase(charger.getStatus())) {
+            charger.setStatus("active");
+            chargerRepository.save(charger);
+            log.info("Released Charger {} to active", charger.getId());
+        }
+    }
 
     /**
      * Đánh dấu ChargingPoint thành BOOKED (khi tạo reservation ACTIVE)

@@ -21,7 +21,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
         List<Reservation> findByStatusAndEndTimeBefore(String status, LocalDateTime endTime);
 
         // ⭐ Tìm reservations sắp hết hạn (trong 5 phút)
-        @Query("SELECT r FROM Reservation r WHERE r.status = 'ACTIVE' " +
+        @Query("SELECT r FROM Reservation r WHERE LOWER(r.status) = 'active' " +
                 "AND r.endTime BETWEEN :now AND :fiveMinutesLater")
         List<Reservation> findExpiringReservations(
                 @Param("now") Instant now,
@@ -116,7 +116,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      * (Overlapping reservations)
      */
     @Query("SELECT r FROM Reservation r WHERE r.chargingPoint.id = :chargingPointId " +
-            "AND r.status = 'ACTIVE' " +
+            "AND LOWER(r.status) = 'active' " +
             "AND r.startTime < :endTime " +
             "AND r.endTime > :startTime")
     List<Reservation> findConflictingReservations(
@@ -130,7 +130,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      */
     @Query("SELECT r FROM Reservation r WHERE r.driver.id = :driverId " +
             "AND r.startTime > :currentTime " +
-            "AND r.status = 'ACTIVE' " +
+            "AND LOWER(r.status) = 'active' " +
             "ORDER BY r.startTime ASC")
     List<Reservation> findUpcomingReservationsByDriver(
             @Param("driverId") Integer driverId,
@@ -141,7 +141,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      * Tìm reservation đang diễn ra của driver (ACTIVE và trong khoảng thời gian)
      */
     @Query("SELECT r FROM Reservation r WHERE r.driver.id = :driverId " +
-            "AND r.status = 'ACTIVE' " +
+            "AND LOWER(r.status) = 'active' " +
             "AND r.startTime <= :currentTime " +
             "AND r.endTime >= :currentTime")
     Optional<Reservation> findActiveReservationByDriver(
@@ -153,7 +153,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      * Tìm reservation đã quá hạn chưa hoàn thành
      */
     @Query("SELECT r FROM Reservation r WHERE r.endTime < :currentTime " +
-            "AND r.status = 'ACTIVE'")
+            "AND LOWER(r.status) = 'active'")
     List<Reservation> findExpiredActiveReservations(@Param("currentTime") LocalDateTime currentTime);
 
     /**

@@ -1,5 +1,6 @@
 package swp391.fa25.swp391.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -28,11 +29,17 @@ public class Reservation {
     
     @ManyToOne
     @JoinColumn(name = "driver_id")
+    @JsonIgnoreProperties({"vehicles", "planRegistrations", "account"})
     private Driver driver;
     
     @ManyToOne
     @JoinColumn(name = "charging_point_id")
     private ChargingPoint chargingPoint;
+    
+    // ⭐ NEW: Thêm quan hệ với Charger (specific charger được đặt)
+    @ManyToOne
+    @JoinColumn(name = "charger_id")
+    private Charger charger;
     
     // ⭐ Thêm quan hệ với Vehicle
     @ManyToOne
