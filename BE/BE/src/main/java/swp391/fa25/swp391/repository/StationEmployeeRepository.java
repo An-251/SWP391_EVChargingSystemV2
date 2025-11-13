@@ -18,4 +18,14 @@ public interface StationEmployeeRepository extends JpaRepository<StationEmployee
      * Tìm StationEmployee theo Account
      */
     Optional<StationEmployee> findByAccount(Account account);
+
+    /**
+     * Tìm StationEmployee theo Account ID
+     */
+    Optional<StationEmployee> findByAccount_Id(Integer accountId);
+
+    /**
+     * Tìm tất cả StationEmployee theo Facility ID
+     */
+    List<StationEmployee> findByFacilityId(Integer facilityId);
 }
