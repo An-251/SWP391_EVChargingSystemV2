@@ -1,26 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Modal, Form, InputNumber, message, Empty, Tag, Spin, Timeline } from 'antd';
-import { Calendar, Clock, MapPin, Zap, Trash2, CheckCircle, XCircle, QrCode } from 'lucide-react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { startSession } from '../../../redux/session/sessionSlice';
-import QRScanner from '../components/QRScanner';
-import api from '../../../configs/config-axios';
+import { Calendar, Clock, MapPin, Zap, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import api from '../../../configs/config-axios'; // FIXED: Use api instance instead of axios
 import moment from 'moment';
 
 const DriverReservations = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedStation, setSelectedStation] = useState(null);
-  const [showQRScanner, setShowQRScanner] = useState(false);
-  const [selectedReservation, setSelectedReservation] = useState(null);
-  const [startingSession, setStartingSession] = useState(false);
   const [form] = Form.useForm();
 
-  const { user } = useSelector((state) => state.auth);
+  // FIXED: Use 'currentUser' key to match authSlice
+  const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
 
   useEffect(() => {
     fetchReservations();
@@ -32,16 +24,11 @@ const DriverReservations = () => {
       // FIXED: Use api instance (token auto-added by interceptor)
       const response = await api.get(`/drivers/${user.driverId}/reservations`);
 
-      console.log('📋 [RESERVATIONS] Full response:', response.data);
-      
       if (response.data) {
-        const reservationList = response.data.reservations || [];
-        console.log('📋 [RESERVATIONS] Reservations list:', reservationList);
-        console.log('📋 [RESERVATIONS] First reservation status:', reservationList[0]?.status);
-        setReservations(reservationList);
+        setReservations(response.data.reservations || []);
       }
     } catch (error) {
-      console.error('❌ [RESERVATIONS] Error fetching:', error);
+      console.error('Error fetching reservations:', error);
     } finally {
       setLoading(false);
     }
@@ -84,98 +71,19 @@ const DriverReservations = () => {
       cancelText: 'Quay lại',
       onOk: async () => {
         try {
-          // FIXED: Use api instance (no need for manual token)
-          await api.delete(`/drivers/reservations/${reservationId}`);
+          // ⭐ BE requires driverId as @RequestParam for validation
+          await api.delete(`/drivers/reservations/${reservationId}?driverId=${user.driverId}`);
           message.success('Đã hủy đặt chỗ');
           fetchReservations();
         } catch (error) {
-          message.error('Không thể hủy đặt chỗ');
+          const errorMessage = typeof error.response?.data === 'string' 
+            ? error.response.data 
+            : error.response?.data?.message || 'Không thể hủy đặt chỗ';
+          message.error(errorMessage);
         }
       }
     });
   };
-
-  // 🆕 Handle start charging - Show QR scanner first
-  const handleStartCharging = (reservation) => {
-    setSelectedReservation(reservation);
-    setShowQRScanner(true);
-  };
-
-  // 🆕 Handle QR scan success - Start charging immediately (no vehicle selection modal)
-  const handleQRScanSuccess = async (scanData) => {
-    console.log('✅ [QR] Scan successful:', scanData);
-    setShowQRScanner(false);
-    
-    // Verify driver ID matches
-    if (scanData.driverId !== user?.driverId) {
-      message.error('Mã QR không khớp với tài khoản của bạn!');
-      setSelectedReservation(null);
-      return;
-    }
-
-    if (!selectedReservation) {
-      message.error('Không tìm thấy thông tin đặt chỗ!');
-      return;
-    }
-
-    // Get reservation data from localStorage (includes vehicleId and chargingPointId)
-    const mapping = JSON.parse(localStorage.getItem('reservationMapping') || '{}');
-    const reservationData = mapping[selectedReservation.reservationId];
-    
-    console.log('📋 [QR] Retrieved reservation data:', reservationData);
-    
-    if (!reservationData || !reservationData.chargingPointId || !reservationData.vehicleId) {
-      message.error('Không tìm thấy thông tin đặt chỗ! Vui lòng đặt lại.');
-      setSelectedReservation(null);
-      return;
-    }
-
-    message.success('Xác thực thành công! Đang bắt đầu phiên sạc...');
-    
-    // Start charging immediately with saved vehicle
-    const requestData = {
-      driverId: user?.driverId,
-      chargingPointId: reservationData.chargingPointId,
-      vehicleId: reservationData.vehicleId,
-      startPercentage: 0, // Default start percentage
-    };
-
-    console.log('🚀 [START CHARGING] Request data:', requestData);
-
-    try {
-      setStartingSession(true);
-      await dispatch(startSession(requestData)).unwrap();
-      
-      // 🆕 Cancel/Complete the reservation after successfully starting charging session
-      try {
-        console.log('🔄 [RESERVATIONS] Cancelling used reservation:', selectedReservation.reservationId);
-        await api.delete(`/drivers/reservations/${selectedReservation.reservationId}`);
-        console.log('✅ [RESERVATIONS] Reservation cancelled successfully');
-      } catch (cancelError) {
-        console.warn('⚠️ [RESERVATIONS] Could not cancel reservation:', cancelError);
-        // Don't fail the whole process if cancel fails
-      }
-      
-      // 🆕 Remove this reservation from localStorage mapping
-      const mapping = JSON.parse(localStorage.getItem('reservationMapping') || '{}');
-      delete mapping[selectedReservation.reservationId];
-      localStorage.setItem('reservationMapping', JSON.stringify(mapping));
-      console.log('🗑️ [RESERVATIONS] Removed used reservation from mapping');
-      
-      message.success('Đã bắt đầu phiên sạc! 🎉');
-      setSelectedReservation(null);
-      
-      // Navigate to active session (no need to fetch reservations, will auto-filter CANCELLED)
-      navigate('/driver/session');
-    } catch (error) {
-      console.error('❌ [START CHARGING] Error:', error);
-      message.error(error || 'Không thể bắt đầu phiên sạc!');
-    } finally {
-      setStartingSession(false);
-    }
-  };
-
-
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -212,17 +120,8 @@ const DriverReservations = () => {
     return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
   };
 
-  // Filter reservations - handle both uppercase and lowercase status
-  const activeReservations = reservations.filter(r => 
-    r.status?.toUpperCase() === 'ACTIVE'
-  );
-  const pastReservations = reservations.filter(r => 
-    r.status?.toUpperCase() !== 'ACTIVE'
-  );
-  
-  console.log('📋 [RESERVATIONS] Total reservations:', reservations.length);
-  console.log('📋 [RESERVATIONS] Active reservations:', activeReservations.length);
-  console.log('📋 [RESERVATIONS] Active list:', activeReservations);
+  const activeReservations = reservations.filter(r => r.status === 'active');
+  const pastReservations = reservations.filter(r => r.status !== 'active');
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -237,24 +136,6 @@ const DriverReservations = () => {
           <div className="flex items-center justify-center h-64">
             <Spin size="large" tip="Đang tải..." />
           </div>
-        ) : reservations.length === 0 ? (
-          <Card className="shadow-lg">
-            <Empty
-              description={
-                <div className="space-y-2">
-                  <p className="text-gray-600">Bạn chưa có đặt chỗ nào</p>
-                  <Button 
-                    type="primary" 
-                    onClick={() => navigate('/driver')}
-                    className="mt-4"
-                  >
-                    Đặt trạm sạc ngay
-                  </Button>
-                </div>
-              }
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            />
-          </Card>
         ) : (
           <div className="space-y-6">
             {/* Active Reservations */}
@@ -330,26 +211,14 @@ const DriverReservations = () => {
                         </div>
 
                         {/* Actions */}
-                        <div className="space-y-2">
-                          <Button
-                            type="primary"
-                            block
-                            size="large"
-                            icon={<CheckCircle size={20} />}
-                            onClick={() => handleStartCharging(reservation)}
-                            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 font-semibold h-12"
-                          >
-                            ✓ Tôi đã tới nơi - Bắt đầu sạc
-                          </Button>
-                          <Button
-                            danger
-                            block
-                            icon={<Trash2 size={18} />}
-                            onClick={() => handleCancelReservation(reservation.reservationId)}
-                          >
-                            Hủy Đặt Chỗ
-                          </Button>
-                        </div>
+                        <Button
+                          danger
+                          block
+                          icon={<Trash2 size={18} />}
+                          onClick={() => handleCancelReservation(reservation.reservationId)}
+                        >
+                          Hủy Đặt Chỗ
+                        </Button>
                       </div>
                     </Card>
                   ))}
@@ -504,18 +373,6 @@ const DriverReservations = () => {
             </div>
           </Form>
         </Modal>
-
-        {/* QR Scanner Modal */}
-        <QRScanner
-          isOpen={showQRScanner}
-          onClose={() => {
-            setShowQRScanner(false);
-            setSelectedReservation(null);
-          }}
-          onScanSuccess={handleQRScanSuccess}
-          expectedDriverId={user?.driverId}
-        />
-
       </div>
     </div>
   );

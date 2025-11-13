@@ -13,14 +13,21 @@ const initialState = {
 
 /**
  * Fetch all available subscription plans for drivers to choose from
+ * ⭐ Updated to filter by user role (Driver or Enterprise)
  */
 export const fetchAvailablePlans = createAsyncThunk(
   "subscription/fetchAvailablePlans",
-  async (_, { rejectWithValue }) => {
+  async (userRole, { rejectWithValue }) => {
     try {
-      console.log("🚀 [FETCH_PLANS] Fetching available subscription plans...");
+      console.log("🚀 [FETCH_PLANS] Fetching available subscription plans for role:", userRole);
       
-      const response = await api.get("/subscriptions/profile");
+      // ⭐ Determine which plans to fetch based on user role
+      const targetUserType = userRole || 'Driver'; // Default to Driver if not specified
+      const endpoint = `/subscriptions/for/${targetUserType}`;
+      
+      console.log("🌐 [FETCH_PLANS] API endpoint:", endpoint);
+      
+      const response = await api.get(endpoint);
       
       console.log("✅ [FETCH_PLANS] Response received:", response);
       console.log("📥 [FETCH_PLANS] Response data:", response.data);
@@ -28,7 +35,7 @@ export const fetchAvailablePlans = createAsyncThunk(
       // Backend returns array of SubscriptionPlanResponse
       const plans = response.data.data || response.data || [];
       
-      console.log(`💾 [FETCH_PLANS] Fetched ${plans.length} plans`);
+      console.log(`💾 [FETCH_PLANS] Fetched ${plans.length} plans for ${targetUserType}`);
       
       return plans;
     } catch (error) {
@@ -39,6 +46,8 @@ export const fetchAvailablePlans = createAsyncThunk(
       
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
+      } else if (typeof error.response?.data === 'string') {
+        errorMessage = error.response.data;
       }
       
       return rejectWithValue(errorMessage);
@@ -51,15 +60,15 @@ export const fetchAvailablePlans = createAsyncThunk(
  */
 export const registerForPlan = createAsyncThunk(
   "subscription/registerForPlan",
-  async ({ planId, driverId, paymentMethod }, { rejectWithValue }) => {
+  async ({ planId, driverId }, { rejectWithValue }) => {
     try {
       console.log("🚀 [REGISTER_PLAN] Starting plan registration...");
-      console.log("📤 [REGISTER_PLAN] Request data:", { planId, driverId, paymentMethod });
+      console.log("📤 [REGISTER_PLAN] Request data:", { planId, driverId });
       
       const requestData = {
         planId,
-        driverId,
-        paymentMethod: paymentMethod || "VNPAY"
+        driverId
+        // Direct registration - no payment method needed
       };
       
       const response = await api.post("/driver/subscriptions/register", requestData);
@@ -101,31 +110,21 @@ export const checkSubscriptionStatus = createAsyncThunk(
   "subscription/checkSubscriptionStatus",
   async (driverId, { rejectWithValue }) => {
     try {
-      console.log("🚀 [CHECK_SUBSCRIPTION] Checking subscription status for driver:", driverId);
-      
       if (!driverId) {
-        console.log("⚠️ [CHECK_SUBSCRIPTION] No driverId provided, skipping check");
         return null;
       }
       
       const response = await api.get(`/driver/subscriptions/my-subscription?driverId=${driverId}`);
       
-      console.log("✅ [CHECK_SUBSCRIPTION] Response received:", response);
-      console.log("📥 [CHECK_SUBSCRIPTION] Response data:", response.data);
-      
       // Backend returns PlanRegistrationResponse or null if no subscription
       const subscription = response.data.data || response.data;
-      
-      console.log("💾 [CHECK_SUBSCRIPTION] Current subscription:", subscription);
       
       return subscription;
     } catch (error) {
       console.error("❌ [CHECK_SUBSCRIPTION] Error occurred:", error);
-      console.error("📄 [CHECK_SUBSCRIPTION] Error response:", error.response?.data);
       
       // If 404, it means no active subscription - this is not really an error
       if (error.response?.status === 404) {
-        console.log("ℹ️ [CHECK_SUBSCRIPTION] Driver has no active subscription");
         return null;
       }
       
@@ -249,8 +248,25 @@ const subscriptionSlice = createSlice({
       })
       .addCase(registerForPlan.fulfilled, (state, action) => {
         state.loading = false;
-        state.currentSubscription = action.payload;
+        
+        // Transform flat response to nested structure
+        if (action.payload && action.payload.planName) {
+          state.currentSubscription = {
+            ...action.payload,
+            plan: {
+              planName: action.payload.planName,
+              planType: action.payload.planType || 'BASIC',
+              discountRate: action.payload.discountRate || 0,
+              description: action.payload.description || action.payload.message || ''
+            }
+          };
+        } else {
+          state.currentSubscription = action.payload;
+        }
+        
+        // ⭐ IMPORTANT: Mark as having active subscription AND completed check
         state.hasActiveSubscription = true;
+        state.subscriptionCheckCompleted = true; // ⭐ ADD THIS
         state.error = null;
       })
       .addCase(registerForPlan.rejected, (state, action) => {
@@ -266,9 +282,26 @@ const subscriptionSlice = createSlice({
       })
       .addCase(checkSubscriptionStatus.fulfilled, (state, action) => {
         state.loading = false;
-        state.currentSubscription = action.payload;
+        
+        // Transform flat response to nested structure for FE compatibility
+        // BE now returns: { planName, planType, discountRate, description, startDate, endDate, status, ... }
+        // FE expects: { plan: { planName, planType, ... }, startDate, endDate, status }
+        if (action.payload && action.payload.planName) {
+          state.currentSubscription = {
+            ...action.payload,
+            plan: {
+              planName: action.payload.planName,
+              planType: action.payload.planType || 'BASIC',
+              discountRate: action.payload.discountRate || 0,
+              description: action.payload.description || action.payload.message || ''
+            }
+          };
+        } else {
+          state.currentSubscription = action.payload;
+        }
+        
         state.hasActiveSubscription = !!action.payload && 
-          (action.payload.status === 'ACTIVE' || action.payload.status === 'PENDING');
+          (action.payload.status?.toLowerCase() === 'active' || action.payload.status?.toLowerCase() === 'pending');
         state.subscriptionCheckCompleted = true;
         state.error = null;
       })

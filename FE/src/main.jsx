@@ -9,12 +9,13 @@ import { Provider } from "react-redux";
 import store from "./redux/store.js";
 
 createRoot(document.getElementById("root")).render(
-  <StrictMode>
+  // Temporarily disabled StrictMode to fix infinite loop issue
+  // <StrictMode>
     <Provider store={store}>
       <BrowserRouter>
         <App />
         <ToastContainer position="top-right" autoClose={3000} />
       </BrowserRouter>
     </Provider>
-  </StrictMode>
+  // </StrictMode>
 );

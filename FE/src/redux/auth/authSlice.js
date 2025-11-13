@@ -11,6 +11,7 @@ const initialState = {
   notificationMessage: null,
   notificationType: null, // 'success', 'error', 'info', 'warning'
   success: false,
+  registrationData: null, // NEW: Store registration response data
 };
 
 export const loginUser = createAsyncThunk("loginUser", async (values, { rejectWithValue }) => {
@@ -87,47 +88,7 @@ export const registerUser = createAsyncThunk("registerUser", async (values, { re
     
     // BE trả về: { success, message, data: { message, id, username, email, role, token, driverId } }
     const registrationResult = response.data.data;
-    const driverId = registrationResult?.driverId;
-    console.log("🚗 [REGISTER] Driver ID created:", driverId);
-
-    // 🆕 Tự động gán gói Basic cho driver mới
-    if (driverId) {
-      try {
-        console.log("📦 [REGISTER] Auto-assigning Basic plan to driver:", driverId);
-        
-        // Lấy gói Basic - Correct API path
-        const plansResponse = await api.get("/api/subscriptions/profile");
-        console.log("📦 [REGISTER] Plans response:", plansResponse.data);
-        
-        const plans = plansResponse.data?.data || plansResponse.data;
-        const basicPlan = plans.find(plan => 
-          plan.isDefault === true || 
-          plan.planName?.toLowerCase().includes('basic') ||
-          plan.planType?.toLowerCase().includes('basic')
-        ) || plans[0]; // Fallback to first plan
-        
-        if (basicPlan) {
-          console.log("📦 [REGISTER] Found Basic plan:", basicPlan);
-          console.log("📦 [REGISTER] Plan ID:", basicPlan.id || basicPlan.planId);
-          
-          // Đăng ký driver vào gói Basic - Correct API path
-          const planRegisterResponse = await api.post("/api/driver/subscriptions/register", {
-            driverId: driverId,
-            planId: basicPlan.id || basicPlan.planId
-          });
-          
-          console.log("✅ [REGISTER] Successfully assigned Basic plan to driver");
-          console.log("✅ [REGISTER] Plan registration response:", planRegisterResponse.data);
-        } else {
-          console.warn("⚠️ [REGISTER] No Basic plan found, skipping auto-assignment");
-        }
-      } catch (planError) {
-        console.error("❌ [REGISTER] Failed to assign Basic plan:", planError);
-        console.error("❌ [REGISTER] Error details:", planError.response?.data);
-        // Không throw error vì đăng ký account vẫn thành công
-        // User có thể tự đăng ký gói sau
-      }
-    }
+    console.log("🚗 [REGISTER] Driver ID created:", registrationResult?.driverId);
 
     return response.data;
   } catch (error) {
@@ -424,6 +385,12 @@ const authSlice = createSlice({
       state.notificationMessage = null;
       state.notificationType = null;
     },
+    setUser: (state, action) => {
+      state.user = action.payload;
+      if (action.payload) {
+        localStorage.setItem("currentUser", JSON.stringify(action.payload));
+      }
+    },
     logout: (state) => {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("currentUser");
@@ -441,6 +408,7 @@ const authSlice = createSlice({
     },
     clearAuthSuccess: (state) => {
       state.success = false;
+      state.registrationData = null;
     },
     clearAuthError: (state) => {
       state.error = null;
@@ -476,19 +444,22 @@ const authSlice = createSlice({
         state.loading = true;
         state.error = null;
         state.success = false;
+        state.registrationData = null;
       })
       .addCase(registerUser.fulfilled, (state, action) => {
         console.log("✅ [REDUX] registerUser.fulfilled - payload:", action.payload);
         state.loading = false;
         state.error = null;
         state.success = true;
-        console.log("✅ [REDUX] Registration successful");
+        state.registrationData = action.payload.data; // Store the registration data (includes email)
+        console.log("✅ [REDUX] Registration successful - email:", action.payload.data?.email);
       })
       .addCase(registerUser.rejected, (state, action) => {
         console.log("❌ [REDUX] registerUser.rejected - error:", action.payload);
         state.loading = false;
         state.error = action.payload;
         state.success = false;
+        state.registrationData = null;
       })
       
       // Cases for initializeAuth thunk - these are also important!
@@ -619,7 +590,8 @@ export const {
   logout,
   clearAuthError,
   clearAuthSuccess,
-  finishAuthInitialization, // <-- NEWLY EXPORTED
+  finishAuthInitialization,
+  setUser,
 } = authSlice.actions;
 
 export default authSlice.reducer;

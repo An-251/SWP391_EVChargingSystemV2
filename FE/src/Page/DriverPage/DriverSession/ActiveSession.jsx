@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, Slider, Button, Statistic, Progress, message, Modal, Spin, Alert } from 'antd';
 import { 
   Zap, 
@@ -12,108 +12,201 @@ import {
   XCircle,
   CheckCircle,
   AlertCircle,
-  QrCode
+  AlertTriangle
 } from 'lucide-react';
 import { 
   fetchActiveSession, 
   stopSession, 
   cancelSession 
 } from '../../../redux/session/sessionSlice';
-import QRScanner from '../components/QRScanner';
 import api from '../../../configs/config-axios';
+import { getSubscriptionDiscountRate } from '../../../utils/chargingCalculations'; // ⭐ FIX: Import discount helper
 
 const { confirm } = Modal;
 
 const ActiveSession = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const { user } = useSelector((state) => state.auth);
+  const { currentSubscription } = useSelector((state) => state.subscription); // ⭐ FIX: Get subscription from Redux
   const { activeSession, hasActiveSession, loading, error } = useSelector(
     (state) => state.session
   );
 
-  const [endPercentage, setEndPercentage] = useState(80);
+  const [currentBatteryPercent, setCurrentBatteryPercent] = useState(0); // Simulate charging progress
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [realTimeCost, setRealTimeCost] = useState(0); // ⭐ Real-time cost state
+  
+  // ⭐ NEW: Overuse penalty tracking
+  const [isFullyCharged, setIsFullyCharged] = useState(false);
+  const [fullChargeTime, setFullChargeTime] = useState(null);
+  const [overtimeMinutes, setOvertimeMinutes] = useState(0);
+  const [overusePenalty, setOverusePenalty] = useState(0);
+  
+  const START_FEE = 5000;
+  const OVERUSE_PENALTY_PER_MINUTE = 2000;
+  const GRACE_PERIOD_MINUTES = 5;
+  
+  // Get session from navigation state (if just started)
+  const sessionFromNav = location.state?.session;
+  const estimatedTimeMinutes = location.state?.estimatedTimeMinutes; // ⭐ Get estimated time from navigation
+  const estimatedCostFromNav = location.state?.estimatedCost; // ⭐ Get estimated cost from navigation
+  
+  // Use session from navigation or Redux
+  const currentSession = sessionFromNav || activeSession;
+  const hasSession = !!sessionFromNav || hasActiveSession;
+  
+  // Target battery from backend or navigation
+  const targetBattery = location.state?.targetBattery || currentSession?.endPercentage || currentSession?.targetPercentage || 80;
+  const startBattery = location.state?.startBattery || currentSession?.startPercentage || 20;
+  
+  // ⭐ Calculate charging duration in SECONDS (from estimated minutes or default)
+  // ⭐ SPEED UP 100x for testing: Divide by 100
+  const chargingDurationSeconds = estimatedTimeMinutes 
+    ? (estimatedTimeMinutes * 60) / 100 // Convert minutes to seconds, then 100x faster
+    : 6; // Default 6 seconds (10 minutes / 100)
 
-  // Fetch active session on mount (only if not already in Redux store)
+  // Fetch active session on mount (only if no session from navigation)
   useEffect(() => {
-    if (user?.driverId) {
-      // Check if we already have active session in Redux store
-      if (hasActiveSession && activeSession) {
-        console.log('✅ [ActiveSession] Using existing session from Redux store:', activeSession.sessionId);
-        return; // Don't fetch if we already have one
-      }
-      
-      console.log('🔍 [ActiveSession] Fetching active session for driver:', user.driverId);
+    if (!sessionFromNav && user?.driverId) {
       dispatch(fetchActiveSession(user.driverId));
     }
-  }, [user?.driverId, dispatch]); // Remove activeSession and hasActiveSession from deps to avoid re-fetch
+  }, [sessionFromNav, user, dispatch]);
 
-  // Log session data for debugging
+  // Calculate elapsed time AND simulate battery charging progress
   useEffect(() => {
-    if (activeSession) {
-      console.log('📊 [ActiveSession] Session data:', activeSession);
-      console.log('🆔 [ActiveSession] Session ID:', activeSession.sessionId || activeSession.id);
-    }
-  }, [activeSession]);
-
-  // Calculate elapsed time
-  useEffect(() => {
-    if (activeSession?.startTime) {
+    if (currentSession?.startTime) {
       const interval = setInterval(() => {
-        const start = new Date(activeSession.startTime);
+        const start = new Date(currentSession.startTime);
         const now = new Date();
         const elapsed = Math.floor((now - start) / 1000); // in seconds
         setElapsedTime(elapsed);
+        
+        // ⭐ FIXED: Use REAL estimated time from StartCharging calculation
+        // Calculate progress based on actual estimated duration
+        const batteryRange = targetBattery - startBattery;
+        const progressPercent = Math.min((elapsed / chargingDurationSeconds) * 100, 100);
+        const currentBattery = startBattery + (batteryRange * progressPercent / 100);
+        
+        const newBatteryPercent = Math.min(Math.round(currentBattery), targetBattery);
+        setCurrentBatteryPercent(newBatteryPercent);
+        
+        // ⭐ Log progress with real-time cost calculation
+        if (elapsed % 5 === 0) { // Log every 5 seconds
+          const percentCharged = newBatteryPercent - startBattery;
+          const batteryCapacity = currentSession.vehicle?.batteryCapacity || 60;
+          // ⭐ CHANGED: charger.chargingPoint.pricePerKwh (charger has FK to chargingPoint)
+          const pricePerKwh = currentSession.charger?.chargingPoint?.pricePerKwh || currentSession.pricePerKwh || 3000;
+          const kwhUsed = (percentCharged / 100) * batteryCapacity;
+          const currentCost = Math.round(kwhUsed * pricePerKwh);
+          
+          console.log(`⚡ [ActiveSession] Progress: ${elapsed}s/${chargingDurationSeconds}s (${Math.round(progressPercent)}%) - Battery: ${newBatteryPercent}% - Cost: ${currentCost.toLocaleString('vi-VN')} đ`);
+        }
       }, 1000);
 
       return () => clearInterval(interval);
     }
-  }, [activeSession]);
+  }, [currentSession, startBattery, targetBattery, chargingDurationSeconds]);
 
-  // Auto-refresh active session every 30 seconds
+  // Auto-refresh active session every 30 seconds (skip if using nav session)
   useEffect(() => {
-    if (hasActiveSession && user?.driverId) {
+    if (!sessionFromNav && hasActiveSession && user?.driverId) {
       const interval = setInterval(() => {
+        console.log('🔄 [ActiveSession] Auto-refreshing session...');
         dispatch(fetchActiveSession(user.driverId));
       }, 30000);
 
       return () => clearInterval(interval);
     }
-  }, [hasActiveSession, user, dispatch]);
+  }, [sessionFromNav, hasActiveSession, user, dispatch]);
 
-  // Set initial end percentage
+  // Set initial battery percentage
   useEffect(() => {
-    if (activeSession?.startPercentage) {
-      setEndPercentage(Math.min(activeSession.startPercentage + 60, 100));
+    if (currentSession?.startPercentage) {
+      setCurrentBatteryPercent(currentSession.startPercentage);
     }
-  }, [activeSession]);
+  }, [currentSession]);
 
-  const handleStopCharging = () => {
+  // ⭐ FIXED: Track when battery reaches TARGET percentage (not just 100%)
+  useEffect(() => {
+    if (currentBatteryPercent >= targetBattery && !isFullyCharged) {
+      setIsFullyCharged(true);
+      setFullChargeTime(Date.now());
+      message.warning({
+        content: `⚠️ Pin đã đạt mục tiêu ${targetBattery}%! Bạn có ${GRACE_PERIOD_MINUTES} phút miễn phí để dừng session.`,
+        duration: 5,
+      });
+    }
+  }, [currentBatteryPercent, isFullyCharged, targetBattery]);
+
+  // ⭐ FIXED: Overuse timer (starts after reaching TARGET percentage)
+  useEffect(() => {
+    if (!isFullyCharged || !fullChargeTime) return;
+    
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const elapsedMs = now - fullChargeTime;
+      const elapsedMinutes = Math.floor(elapsedMs / 60000);
+      
+      setOvertimeMinutes(elapsedMinutes);
+      
+      // Calculate penalty (after grace period)
+      if (elapsedMinutes > GRACE_PERIOD_MINUTES) {
+        const penaltyMinutes = elapsedMinutes - GRACE_PERIOD_MINUTES;
+        const penalty = penaltyMinutes * OVERUSE_PENALTY_PER_MINUTE;
+        setOverusePenalty(penalty);
+        
+        // Show warning every minute after grace period
+        if (penaltyMinutes % 1 === 0 && penaltyMinutes > 0) {
+          message.error({
+            content: `🚨 Phí phạt đậu quá giờ: +${penalty.toLocaleString()} đ (${penaltyMinutes} phút quá ${GRACE_PERIOD_MINUTES} phút miễn phí)`,
+            duration: 3,
+          });
+        }
+      }
+    }, 1000); // Update every second
+    
+    return () => clearInterval(interval);
+  }, [isFullyCharged, fullChargeTime, targetBattery]);
+
+  const handleCompleteCharging = () => {
     // BE uses 'sessionId' not 'id'
-    const sessionId = activeSession?.sessionId || activeSession?.id;
+    const sessionId = currentSession?.sessionId || currentSession?.id;
     
     if (!sessionId) {
-      console.error('❌ [STOP SESSION] No session ID found in:', activeSession);
+      console.error('❌ [STOP SESSION] No session ID found in:', currentSession);
       message.error('Không tìm thấy ID phiên sạc! Vui lòng refresh trang.');
       return;
     }
 
+    // Check if charging is complete (reached target or close enough)
+    const isChargingComplete = currentBatteryPercent >= targetBattery - 1;
+    
+    if (!isChargingComplete) {
+      Modal.warning({
+        title: 'Chưa sạc đầy',
+        content: `Pin hiện tại: ${currentBatteryPercent}%. Mục tiêu: ${targetBattery}%. Vui lòng đợi đến khi sạc đầy!`,
+        okText: 'Đã hiểu',
+      });
+      return;
+    }
+
     confirm({
-      title: 'Dừng phiên sạc?',
+      title: 'Hoàn thành phiên sạc?',
       icon: <CheckCircle className="text-green-500" />,
-      content: `Bạn có chắc muốn dừng phiên sạc? Pin hiện tại: ${endPercentage}%`,
-      okText: 'Dừng sạc',
+      content: `Pin đã đạt ${currentBatteryPercent}%. Xác nhận hoàn thành phiên sạc?`,
+      okText: 'Hoàn thành',
       cancelText: 'Hủy',
       okButtonProps: { className: 'bg-green-500 hover:bg-green-600' },
       onOk: async () => {
         try {
-          console.log('🔄 Stopping session:', { sessionId, endPercentage });
+          console.log('🔄 Stopping session:', { sessionId, endPercentage: currentBatteryPercent });
           const result = await dispatch(
             stopSession({
               sessionId: sessionId,
-              endPercentage: endPercentage,
+              endPercentage: currentBatteryPercent,
             })
           ).unwrap();
           console.log('✅ Session stopped successfully:', result);
@@ -123,7 +216,9 @@ const ActiveSession = () => {
           
           setTimeout(() => {
             console.log('🚀 [NAVIGATE] Redirecting to session completed page');
-            navigate(`/driver/session/${sessionId}/completed`);
+            navigate(`/driver/session/${sessionId}/completed`, {
+              state: { sessionData: result }
+            });
           }, 1500);
         } catch (error) {
           console.error('❌ Failed to stop session:', error);
@@ -137,10 +232,10 @@ const ActiveSession = () => {
   // Handle cancel (emergency)
   const handleCancelSession = () => {
     // BE uses 'sessionId' not 'id'
-    const sessionId = activeSession?.sessionId || activeSession?.id;
+    const sessionId = currentSession?.sessionId || currentSession?.id;
     
     if (!sessionId) {
-      console.error('❌ [CANCEL SESSION] No session ID found in:', activeSession);
+      console.error('❌ [CANCEL SESSION] No session ID found in:', currentSession);
       message.error('Không tìm thấy ID phiên sạc! Vui lòng refresh trang.');
       return;
     }
@@ -180,11 +275,35 @@ const ActiveSession = () => {
     }
   };
 
-  // Calculate estimated cost (simplified - actual should come from BE)
-  const estimatedCost = activeSession?.cost || 0;
+  // ⭐ FIXED: Calculate REAL-TIME cost - Discount CHỈ áp dụng cho điện năng
+  useEffect(() => {
+    if (!currentSession) {
+      setRealTimeCost(estimatedCostFromNav || 0);
+      return;
+    }
+    
+    // Get real data - FIXED: prioritize nested charger object
+    const batteryCapacity = currentSession.vehicle?.batteryCapacity || currentSession.batteryCapacity || 60;
+    // ⭐ FIX: Get pricePerKwh from charger.chargingPoint.pricePerKwh (from DB)
+    const pricePerKwh = currentSession.charger?.chargingPoint?.pricePerKwh || 3000;
+    const startPercent = startBattery;
+    const currentPercent = currentBatteryPercent;
+    
+    // Calculate kWh used so far
+    const percentCharged = currentPercent - startPercent;
+    const kwhUsed = (percentCharged / 100) * batteryCapacity;
+    
+    // ⭐ FIX: Match Backend formula - Discount CHỈ cho điện năng, KHÔNG cho start fee và overuse penalty
+    const energyCost = kwhUsed * pricePerKwh;
+    const discountRate = getSubscriptionDiscountRate(currentSubscription);
+    const energyCostAfterDiscount = energyCost - ((energyCost * discountRate) / 100);
+    const totalCost = START_FEE + energyCostAfterDiscount + overusePenalty;
+    
+    setRealTimeCost(Math.round(totalCost));
+  }, [currentBatteryPercent, currentSession, startBattery, estimatedCostFromNav, overusePenalty, currentSubscription]);
 
-  // Loading state
-  if (loading) {
+  // Loading state (only show if no nav session and loading from API)
+  if (!sessionFromNav && loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Spin size="large" tip="Đang tải phiên sạc..." />
@@ -193,7 +312,7 @@ const ActiveSession = () => {
   }
 
   // No active session
-  if (!hasActiveSession || !activeSession) {
+  if (!hasSession || !currentSession) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <Card className="w-96 text-center shadow-xl">
@@ -239,9 +358,13 @@ const ActiveSession = () => {
     );
   }
 
-  const batteryProgress = activeSession.startPercentage 
-    ? ((endPercentage - activeSession.startPercentage) / (100 - activeSession.startPercentage)) * 100
+  // Calculate charging progress percentage
+  const chargingProgress = startBattery 
+    ? ((currentBatteryPercent - startBattery) / (targetBattery - startBattery)) * 100
     : 0;
+  
+  // Check if charging is complete
+  const isChargingComplete = currentBatteryPercent >= targetBattery - 1;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-6">
@@ -252,7 +375,7 @@ const ActiveSession = () => {
             ⚡ Phiên sạc đang hoạt động
           </h1>
           <p className="text-gray-600">
-            {activeSession.stationName || 'Trạm sạc'}
+            {currentSession.stationName || 'Trạm sạc'}
           </p>
         </div>
 
@@ -262,48 +385,127 @@ const ActiveSession = () => {
             <div className="text-center mb-8">
               <Progress
                 type="circle"
-                percent={endPercentage}
+                percent={currentBatteryPercent}
                 size={200}
-                strokeColor={{
-                  '0%': '#52c41a',
-                  '100%': '#1890ff',
-                }}
+                strokeColor={
+                  isChargingComplete
+                    ? { '0%': '#52c41a', '100%': '#52c41a' } // Green when complete
+                    : { '0%': '#1890ff', '100%': '#52c41a' } // Blue to green gradient
+                }
                 format={() => (
                   <div>
-                    <div className="text-4xl font-bold text-gray-800">{endPercentage}%</div>
-                    <div className="text-sm text-gray-500 mt-2">Pin hiện tại</div>
+                    <div className="text-4xl font-bold text-gray-800">
+                      {currentBatteryPercent}%
+                    </div>
+                    <div className="text-sm text-gray-500 mt-2">
+                      {isChargingComplete ? '✅ Đã đầy' : '🔋 Đang sạc'}
+                    </div>
                   </div>
                 )}
               />
             </div>
 
-            {/* Battery Slider */}
+            {/* Charging Progress Bar */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Điều chỉnh mức pin mong muốn
-              </label>
-              <Slider
-                min={activeSession.startPercentage || 0}
-                max={100}
-                value={endPercentage}
-                onChange={setEndPercentage}
-                marks={{
-                  [activeSession.startPercentage || 0]: `${activeSession.startPercentage}%`,
-                  100: '100%',
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-700">
+                  Tiến trình sạc
+                </span>
+                <span className="text-sm font-bold text-blue-600">
+                  {Math.round(chargingProgress)}%
+                </span>
+              </div>
+              <Progress 
+                percent={chargingProgress} 
+                status={isChargingComplete ? 'success' : 'active'}
+                strokeColor={{
+                  '0%': '#1890ff',
+                  '100%': '#52c41a',
                 }}
               />
+              <div className="flex justify-between text-xs text-gray-500 mt-2">
+                <span>Bắt đầu: {startBattery}%</span>
+                <span>Mục tiêu: {targetBattery}%</span>
+              </div>
             </div>
+
+            {/* Completion Status */}
+            {isChargingComplete && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+                <CheckCircle className="inline mr-2 text-green-600" size={20} />
+                <span className="text-green-700 font-semibold">
+                  Sạc hoàn tất! Bạn có thể nhấn "Hoàn thành" để kết thúc phiên sạc.
+                </span>
+              </div>
+            )}
+
+            {/* ⭐ NEW: Overuse Warning */}
+            {isFullyCharged && (
+              <div className={`mb-4 p-4 rounded-lg border-2 ${
+                overtimeMinutes > GRACE_PERIOD_MINUTES 
+                  ? 'bg-red-100 border-red-300 animate-pulse' 
+                  : 'bg-yellow-100 border-yellow-300'
+              }`}>
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle 
+                    className={`${
+                      overtimeMinutes > GRACE_PERIOD_MINUTES ? 'text-red-600' : 'text-yellow-600'
+                    } flex-shrink-0`} 
+                    size={24} 
+                  />
+                  <div className="flex-1">
+                    <p className={`font-semibold text-sm mb-1 ${
+                      overtimeMinutes > GRACE_PERIOD_MINUTES ? 'text-red-800' : 'text-yellow-800'
+                    }`}>
+                      {overtimeMinutes <= GRACE_PERIOD_MINUTES 
+                        ? '⏰ Pin đã đầy 100%' 
+                        : '🚨 Đang tính phí phạt quá giờ!'}
+                    </p>
+                    <p className="text-xs text-gray-700 mb-2">
+                      Thời gian overtime: <strong>{overtimeMinutes} phút</strong>
+                      {overtimeMinutes <= GRACE_PERIOD_MINUTES && (
+                        <span className="ml-2 text-green-600 font-semibold">
+                          (Còn {GRACE_PERIOD_MINUTES - overtimeMinutes} phút miễn phí)
+                        </span>
+                      )}
+                    </p>
+                    {overusePenalty > 0 && (
+                      <p className="text-sm font-bold text-red-700 bg-white px-3 py-1 rounded">
+                        Phí phạt: +{overusePenalty.toLocaleString('vi-VN')} đ
+                      </p>
+                    )}
+                    {overtimeMinutes <= GRACE_PERIOD_MINUTES && (
+                      <p className="text-xs text-blue-600 mt-2">
+                        💡 Hãy hoàn thành ngay để tránh phí phạt!
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-4 mt-8">
               <Button
                 type="primary"
+                danger={isFullyCharged && overtimeMinutes > GRACE_PERIOD_MINUTES}
                 size="large"
                 icon={<CheckCircle size={20} />}
-                onClick={handleStopCharging}
-                className="bg-gradient-to-r from-green-500 to-blue-500 h-14"
+                onClick={handleCompleteCharging}
+                disabled={!isChargingComplete}
+                className={`h-14 ${
+                  isFullyCharged && overtimeMinutes > GRACE_PERIOD_MINUTES
+                    ? 'animate-pulse bg-red-600 hover:bg-red-700'
+                    : isChargingComplete
+                    ? 'bg-gradient-to-r from-green-500 to-blue-500'
+                    : 'bg-gray-300'
+                }`}
               >
-                Dừng sạc
+                {isFullyCharged && overtimeMinutes > GRACE_PERIOD_MINUTES 
+                  ? '🚨 Dừng ngay để tránh phí phạt!'
+                  : isChargingComplete 
+                  ? 'Hoàn thành' 
+                  : 'Đang sạc...'}
               </Button>
               <Button
                 danger
@@ -321,11 +523,29 @@ const ActiveSession = () => {
           <div className="space-y-6">
             {/* Time Stats */}
             <Card className="shadow-lg">
-              <Statistic
-                title={<span className="flex items-center"><Clock className="mr-2" size={16} />Thời gian đã sạc</span>}
-                value={formatElapsedTime(elapsedTime)}
-                valueStyle={{ color: '#1890ff' }}
-              />
+              <div className="space-y-4">
+                <Statistic
+                  title={<span className="flex items-center"><Clock className="mr-2" size={16} />Thời gian đã sạc</span>}
+                  value={formatElapsedTime(elapsedTime)}
+                  valueStyle={{ color: '#1890ff' }}
+                />
+                
+                {/* ⭐ NEW: Show remaining time */}
+                {estimatedTimeMinutes && (
+                  <div className="pt-4 border-t border-gray-200">
+                    <div className="text-sm text-gray-500 mb-1">Thời gian còn lại (dự kiến)</div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {formatElapsedTime(Math.max(0, chargingDurationSeconds - elapsedTime))}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      Tổng: {formatElapsedTime(chargingDurationSeconds)} (Demo tăng tốc 100x)
+                    </div>
+                    <div className="text-xs text-blue-500 mt-1">
+                      ⚡ Thực tế: {Math.round(estimatedTimeMinutes)} phút
+                    </div>
+                  </div>
+                )}
+              </div>
             </Card>
 
             {/* Vehicle Info */}
@@ -337,11 +557,11 @@ const ActiveSession = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tên xe:</span>
-                  <span className="font-medium">{activeSession.vehicleModel || 'N/A'}</span>
+                  <span className="font-medium">{currentSession.vehicleModel || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Biển số:</span>
-                  <span className="font-medium">{activeSession.licensePlate || 'N/A'}</span>
+                  <span className="font-medium">{currentSession.licensePlate || 'N/A'}</span>
                 </div>
               </div>
             </Card>
@@ -354,28 +574,18 @@ const ActiveSession = () => {
               </h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Tên trạm:</span>
-                  <span className="font-medium">{activeSession.stationName || 'N/A'}</span>
+                  <span className="text-gray-600">Trạm sạc:</span>
+                  <span className="font-medium">{currentSession.stationName || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Cổng sạc:</span>
-                  <span className="font-medium">{activeSession.chargingPointName || 'N/A'}</span>
+                  <span className="text-gray-600">Charger:</span>
+                  <span className="font-medium">{currentSession.charger?.chargerCode || currentSession.chargingPointName || 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Loại cổng:</span>
-                  <span className="font-medium">{activeSession.connectorType || 'N/A'}</span>
+                  <span className="font-medium">{currentSession.charger?.connectorType || currentSession.connectorType || 'N/A'}</span>
                 </div>
               </div>
-            </Card>
-
-            {/* Cost Estimate */}
-            <Card className="shadow-lg bg-gradient-to-br from-green-50 to-blue-50">
-              <Statistic
-                title={<span className="flex items-center"><DollarSign className="mr-2" size={16} />Chi phí ước tính</span>}
-                value={estimatedCost}
-                suffix="VNĐ"
-                valueStyle={{ color: '#52c41a', fontSize: '24px' }}
-              />
             </Card>
           </div>
         </div>
