@@ -57,7 +57,6 @@ export default function MapPicker({ latitude, longitude, onChange }) {
           });
         },
         (error) => {
-          console.error('Error getting location:', error);
           alert('Unable to get your current location. Please ensure location access is enabled.');
         }
       );
