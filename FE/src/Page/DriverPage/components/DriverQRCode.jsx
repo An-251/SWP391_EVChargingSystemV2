@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Download, QrCode } from 'lucide-react';
+import { Download, QrCode, RefreshCw } from 'lucide-react';
 import { Button, message, Card } from 'antd';
 
 /**
@@ -9,17 +9,23 @@ import { Button, message, Card } from 'antd';
  */
 const DriverQRCode = ({ driverId, driverName, size = 200, showDownload = true }) => {
   const qrRef = useRef(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  // Generate QR data theo format giống BE
-  const generateQRData = () => {
+  // ✅ Generate QR data một lần duy nhất, không thay đổi khi component re-render
+  // Chỉ tạo lại khi driverId hoặc refreshKey thay đổi
+  const qrValue = useMemo(() => {
     const timestamp = Math.floor(Date.now() / 1000);
     const qrData = `EV_CHARGING|DRIVER|${driverId}|${timestamp}`;
     
     // Encode base64 để match với BE format
     return btoa(qrData);
-  };
+  }, [driverId, refreshKey]); // ✅ Chỉ tạo lại khi driverId hoặc refreshKey thay đổi
 
-  const qrValue = generateQRData();
+  // Hàm để tạo lại QR code mới
+  const handleRefreshQR = () => {
+    setRefreshKey(prev => prev + 1);
+    message.success('Đã tạo mã QR mới!');
+  };
 
   // Download QR code as image
   const handleDownload = () => {
@@ -95,17 +101,33 @@ const DriverQRCode = ({ driverId, driverName, size = 200, showDownload = true })
           </p>
         </div>
 
-        {/* Download Button */}
+        {/* Action Buttons */}
         {showDownload && (
-          <Button
-            type="primary"
-            icon={<Download className="w-4 h-4" />}
-            onClick={handleDownload}
-            className="w-full max-w-xs"
-          >
-            Tải xuống QR Code
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full max-w-xs">
+            <Button
+              icon={<RefreshCw className="w-4 h-4" />}
+              onClick={handleRefreshQR}
+              className="flex-1"
+            >
+              Tạo lại QR
+            </Button>
+            <Button
+              type="primary"
+              icon={<Download className="w-4 h-4" />}
+              onClick={handleDownload}
+              className="flex-1"
+            >
+              Tải xuống
+            </Button>
+          </div>
         )}
+
+        {/* Expiry Info */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 max-w-md">
+          <p className="text-xs text-yellow-900 text-center">
+            ⏰ QR code có hiệu lực trong 24 giờ. Nếu hết hạn, click &quot;Tạo lại QR&quot;.
+          </p>
+        </div>
       </div>
     </Card>
   );
