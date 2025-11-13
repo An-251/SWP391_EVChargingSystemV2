@@ -1,5 +1,6 @@
 import React from 'react';
 import { MapPin, Zap, Star, Clock, Navigation, Heart, Calendar } from 'lucide-react';
+import { CHARGING_POINT_STATUS } from '../../../../constants/statusConstants';
 
 const StationPopup = ({ station, onBook, onGetDirections, onToggleFavorite, isFavorite }) => {
   // Calculate rating display
@@ -20,7 +21,7 @@ const StationPopup = ({ station, onBook, onGetDirections, onToggleFavorite, isFa
 
   // Get available slots count (Backend uses lowercase status)
   const availableSlots = station.chargingPoints?.filter(
-    point => point.status === 'active'
+    point => (point.status || '').toLowerCase() === CHARGING_POINT_STATUS.ACTIVE
   ).length || 0;
   
   const totalSlots = station.chargingPoints?.length || 0;
@@ -170,33 +171,33 @@ const StationPopup = ({ station, onBook, onGetDirections, onToggleFavorite, isFa
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex items-center space-x-2 pt-3 border-t border-gray-200">
-          <button
-            onClick={onGetDirections}
-            className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <Navigation size={16} />
-            <span className="text-sm font-medium">Directions</span>
-          </button>
           
+          {/* Reservation Button - Secondary Action */}
           <button
             onClick={onBook}
             disabled={availableSlots === 0}
-            className={`flex-1 flex items-center justify-center space-x-1 px-3 py-2 rounded-lg transition-all ${
+            className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-semibold transition-all ${
               availableSlots > 0
-                ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 shadow-md'
+                ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 shadow-md hover:shadow-lg'
                 : 'bg-gray-200 text-gray-500 cursor-not-allowed'
             }`}
           >
-            <Calendar size={16} />
-            <span className="text-sm font-medium">
-              {availableSlots > 0 ? 'Book Now' : 'Fully Booked'}
+            <Calendar size={18} />
+            <span className="text-sm">
+              {availableSlots > 0 ? '📅 Đặt trạm ngay' : 'Fully Booked'}
             </span>
+          </button>
+          
+          {/* Directions Button */}
+          <button
+            onClick={onGetDirections}
+            className="w-full flex items-center justify-center space-x-2 px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <Navigation size={16} />
+            <span className="text-sm font-medium">Chỉ đường</span>
           </button>
         </div>
       </div>
-    </div>
   );
 };
 
