@@ -1,25 +1,20 @@
-import 'bootstrap/dist/css/bootstrap.min.css';
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
-import Home from "./Page/HomePage/Home";
 import { useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { initializeAuth } from "./redux/auth/authSlice";
-import backgroundMusic from "./assets/backgroundmusic.mp3";
-
-import StaffSession from "./Page/Staff/StaffSession/Session";
 import LoginPage from "./Page/AuthPage/Login";
-import StaffLayout from "./Layout/Staff/StaffLayout";
-import StaffHome from "./Page/Staff/StaffHome/Home";
+import ForgotPassword from "./Page/AuthPage/ForgotPassword";
+import VerifyEmail from "./Page/AuthPage/VerifyEmail";
+import FirstAdminRegistration from "./Page/AuthPage/FirstAdminRegistration";
 import DriverPage from "./Page/DriverPage";
 import DriverProfile from "./Page/DriverPage/DriverProfile";
 import DriverVehicles from "./Page/DriverPage/DriverVehicles";
-import DriverReservations from "./Page/DriverPage/DriverReservations/DriverReservations";
-import ActiveSession from "./Page/DriverPage/DriverSession/ActiveSession";
-import SessionHistory from "./Page/DriverPage/DriverSession/SessionHistory";
-import SessionCompleted from "./Page/DriverPage/DriverSession/SessionCompleted";
-import InvoicePayment from "./Page/DriverPage/DriverInvoice/InvoicePayment";
-import SubscriptionSelectionPage from "./Page/DriverPage/SubscriptionSelection/SubscriptionSelectionPage";
+import { ActiveSession, SessionHistory, SessionCompleted } from "./Page/DriverPage/DriverSession";
+import { InvoiceList as DriverInvoiceList, InvoiceDetail as DriverInvoiceDetail } from "./Page/DriverPage/DriverInvoice";
+import SubscriptionSelectionPage from "./Page/DriverPage/SubscriptionSelection";
+import { ActiveReservations, ReservationHistory, StartCharging } from "./Page/DriverPage/DriverReservations";
+import MySubscription from "./Page/DriverPage/DriverSubscription";
 import RoleBasedRoute from "./Components/RoleBasedRoute";
 import SubscriptionGuard from "./Components/SubscriptionGuard";
 import AdminLayout from "./Layout/Admin/AdminLayout";
@@ -27,13 +22,28 @@ import {
   Dashboard,
   FacilityList, 
   StationList, 
-  ChargingPointList, 
+  ChargingPointList,
+  ChargersList,
   AccountList,
   AdminRegistration, 
   SubscriptionList,
+  InvoiceList,
+  AdminInvoicesDashboard,
+  AdminInvoiceDetail,
   Reports
 } from "./Page/AdminPage";
+import AdminIncidents from "./Page/AdminPage/Incidents";
+import AdminEmployees from "./Page/AdminPage/Employees";
+import EmployeeLayout from "./Layout/Employee/EmployeeLayout";
+import { 
+  EmployeeProfile, 
+  EmployeeMonitor 
+} from "./Page/EmployeePage";
+import EmployeeCashPayments from "./Page/EmployeePage/EmployeeCashPayments";
+import EmployeeIncidentReports from "./Page/EmployeePage/EmployeeIncidentReports";
+import VNPayCallback from "./Page/Payment/VNPayCallback";
 import ErrorBoundary from "./Components/ErrorBoundary";
+import LandingPage from "./Page/LandingPage/LandingPage";
 
 // Error boundary component for Map
 function MapErrorBoundary({ children }) {
@@ -71,9 +81,24 @@ function App() {
 
   return (
     <>
-      <audio ref={audioRef} src={backgroundMusic} loop />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
+          {/* First Admin Registration Route - Public */}
+          <Route
+            path="/auth/first-admin-setup"
+            element={
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
+                style={{ minHeight: "100vh" }}
+              >
+                <FirstAdminRegistration />
+              </motion.div>
+            }
+          />
+
           <Route
             path="/auth/login"
             element={
@@ -85,6 +110,39 @@ function App() {
                 style={{ minHeight: "100vh" }}
               >
                 <LoginPage />
+              </motion.div>
+            }
+          />
+
+          <Route
+            path="/forgot-password"
+            element={
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
+                style={{ minHeight: "100vh" }}
+              >
+                <ForgotPassword />
+              </motion.div>
+            }
+          />
+
+          {/* VNPay Payment Callback */}
+          <Route path="/payment/vnpay/callback" element={<VNPayCallback />} />
+
+          <Route
+            path="/verify-email"
+            element={
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
+                style={{ minHeight: "100vh" }}
+              >
+                <VerifyEmail />
               </motion.div>
             }
           />
@@ -175,28 +233,6 @@ function App() {
             } 
           />
 
-          {/* Driver Reservations Route - Protected and Subscription Guarded */}
-          <Route 
-            path="/driver/reservations" 
-            element={
-              <RoleBasedRoute allowedRoles={["Driver"]}>
-                <SubscriptionGuard>
-                  <ErrorBoundary>
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ duration: 0.5 }}
-                      style={{ minHeight: "100vh" }}
-                    >
-                      <DriverReservations />
-                    </motion.div>
-                  </ErrorBoundary>
-                </SubscriptionGuard>
-              </RoleBasedRoute>
-            } 
-          />
-
           {/* Driver Active Session Route - Protected and Subscription Guarded */}
           <Route 
             path="/driver/session" 
@@ -263,9 +299,9 @@ function App() {
             } 
           />
 
-          {/* Driver Invoice Payment Route - Protected and Subscription Guarded */}
+          {/* Driver Invoices List Route - Protected and Subscription Guarded */}
           <Route 
-            path="/driver/invoice/:invoiceId" 
+            path="/driver/invoices" 
             element={
               <RoleBasedRoute allowedRoles={["Driver"]}>
                 <SubscriptionGuard>
@@ -277,7 +313,117 @@ function App() {
                       transition={{ duration: 0.5 }}
                       style={{ minHeight: "100vh" }}
                     >
-                      <InvoicePayment />
+                      <DriverInvoiceList />
+                    </motion.div>
+                  </ErrorBoundary>
+                </SubscriptionGuard>
+              </RoleBasedRoute>
+            } 
+          />
+
+          {/* Driver Invoice Detail Route - Protected and Subscription Guarded */}
+          <Route 
+            path="/driver/invoices/:invoiceId" 
+            element={
+              <RoleBasedRoute allowedRoles={["Driver"]}>
+                <SubscriptionGuard>
+                  <ErrorBoundary>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.5 }}
+                      style={{ minHeight: "100vh" }}
+                    >
+                      <DriverInvoiceDetail />
+                    </motion.div>
+                  </ErrorBoundary>
+                </SubscriptionGuard>
+              </RoleBasedRoute>
+            } 
+          />
+
+          {/* Driver Active Reservations Route - Protected and Subscription Guarded */}
+          <Route 
+            path="/driver/reservations" 
+            element={
+              <RoleBasedRoute allowedRoles={["Driver"]}>
+                <SubscriptionGuard>
+                  <ErrorBoundary>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.5 }}
+                      style={{ minHeight: "100vh" }}
+                    >
+                      <ActiveReservations />
+                    </motion.div>
+                  </ErrorBoundary>
+                </SubscriptionGuard>
+              </RoleBasedRoute>
+            } 
+          />
+
+          {/* Driver Reservation History Route - Protected and Subscription Guarded */}
+          <Route 
+            path="/driver/reservations/history" 
+            element={
+              <RoleBasedRoute allowedRoles={["Driver"]}>
+                <SubscriptionGuard>
+                  <ErrorBoundary>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.5 }}
+                      style={{ minHeight: "100vh" }}
+                    >
+                      <ReservationHistory />
+                    </motion.div>
+                  </ErrorBoundary>
+                </SubscriptionGuard>
+              </RoleBasedRoute>
+            } 
+          />
+
+          {/* Driver Start Charging Route - Protected and Subscription Guarded */}
+          <Route 
+            path="/driver/start-charging" 
+            element={
+              <RoleBasedRoute allowedRoles={["Driver"]}>
+                <SubscriptionGuard>
+                  <ErrorBoundary>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.5 }}
+                      style={{ minHeight: "100vh" }}
+                    >
+                      <StartCharging />
+                    </motion.div>
+                  </ErrorBoundary>
+                </SubscriptionGuard>
+              </RoleBasedRoute>
+            } 
+          />
+
+          {/* Driver My Subscription Route - Protected and Subscription Guarded */}
+          <Route 
+            path="/driver/my-subscription" 
+            element={
+              <RoleBasedRoute allowedRoles={["Driver"]}>
+                <SubscriptionGuard>
+                  <ErrorBoundary>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.5 }}
+                      style={{ minHeight: "100vh" }}
+                    >
+                      <MySubscription />
                     </motion.div>
                   </ErrorBoundary>
                 </SubscriptionGuard>
@@ -298,35 +444,58 @@ function App() {
             <Route path="facilities" element={<FacilityList />} />
             <Route path="stations" element={<StationList />} />
             <Route path="charging-points" element={<ChargingPointList />} />
+            <Route path="chargers" element={<ChargersList />} />
             <Route path="accounts" element={<AccountList />} />
             <Route path="admin-registration" element={<AdminRegistration />} />
+            <Route path="employees" element={<AdminEmployees />} /> {/* NEW: Employee Management */}
             <Route path="subscriptions" element={<SubscriptionList />} />
+            <Route path="invoices" element={<AdminInvoicesDashboard />} />
+            <Route path="invoices/:id" element={<AdminInvoiceDetail />} />
+            <Route path="invoices-old" element={<InvoiceList />} /> {/* Keep old for reference */}
+            <Route path="incidents" element={<AdminIncidents />} /> {/* NEW: Incident Reports */}
             <Route path="reports" element={<Reports />} />
           </Route>
 
-          {/* Staff Routes - Protected */}
-          <Route path="/staff" element={
-            <RoleBasedRoute allowedRoles={["Staff", "StationEmployee"]}>
-              <StaffLayout />
-            </RoleBasedRoute>
-          }>
-            <Route index element={<StaffHome />} />
-            <Route path="dashboard" element={<StaffHome />} />
-            <Route path="sessions" element={<StaffSession />} />
-            <Route
-              path="map"
-              element={
-                <MapErrorBoundary>
-                  <div>Map component temporarily disabled</div>
-                </MapErrorBoundary>
-              }
-            />
+          {/* Employee Routes - Protected */}
+          <Route 
+            path="/employee" 
+            element={
+              <RoleBasedRoute allowedRoles={["STATION_EMPLOYEE"]}>
+                <ErrorBoundary>
+                  <EmployeeLayout />
+                </ErrorBoundary>
+              </RoleBasedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/employee/monitor" replace />} />
+            <Route path="monitor" element={
+              <ErrorBoundary>
+                <EmployeeMonitor />
+              </ErrorBoundary>
+            } />
+            <Route path="cash-payments" element={
+              <ErrorBoundary>
+                <EmployeeCashPayments />
+              </ErrorBoundary>
+            } />
+            <Route path="incidents" element={
+              <ErrorBoundary>
+                <EmployeeIncidentReports />
+              </ErrorBoundary>
+            } />
+            <Route path="profile" element={
+              <ErrorBoundary>
+                <EmployeeProfile />
+              </ErrorBoundary>
+            } />
           </Route>
 
-          {/* Redirect root to login if not authenticated */}
+
+
+          {/* Redirect root to landing page */}
           <Route 
             path="/" 
-            element={<Navigate to="/auth/login" replace />} 
+            element={<LandingPage />} 
           />
         </Routes>
       </AnimatePresence>
