@@ -9,10 +9,13 @@ import org.springframework.web.bind.annotation.*;
 import swp391.fa25.swp391.dto.request.ChargingPointRequest;
 import swp391.fa25.swp391.dto.request.StatusUpdateRequest;
 import swp391.fa25.swp391.dto.response.ApiResponse;
+import swp391.fa25.swp391.dto.response.ChargerResponse;
 import swp391.fa25.swp391.dto.response.ChargingPointResponse;
+import swp391.fa25.swp391.entity.Charger;
 import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.ChargingStation;
 import swp391.fa25.swp391.security.CustomUserDetails;
+import swp391.fa25.swp391.service.ChargerService;
 import swp391.fa25.swp391.service.ChargingPointService;
 
 import java.util.List;
@@ -23,31 +26,48 @@ import java.util.stream.Collectors;
 public class ChargingPointController {
 
     private final ChargingPointService chargingPointService;
+    private final ChargerService chargerService;
 
-    public ChargingPointController(ChargingPointService chargingPointService) {
+    public ChargingPointController(ChargingPointService chargingPointService, ChargerService chargerService) {
         this.chargingPointService = chargingPointService;
+        this.chargerService = chargerService;
     }
 
     // ==================== HELPER CONVERTER METHODS ====================
 
     private ChargingPointResponse convertToDto(ChargingPoint point) {
+        // Get list of chargers for this charging point
+        List<Charger> chargers = chargerService.findByChargingPointId(point.getId());
+        List<ChargerResponse> chargerResponses = chargers.stream()
+                .map(this::convertChargerToDto)
+                .collect(Collectors.toList());
+        
         return ChargingPointResponse.builder()
                 .id(point.getId())
                 .pointName(point.getPointName())
-                .connectorType(point.getConnectorType())
-                .maxPower(point.getMaxPower())
                 .status(point.getStatus())
                 .pricePerKwh(point.getPricePerKwh())
                 .stationId(point.getStation() != null ? point.getStation().getId() : null)
                 .stationName(point.getStation() != null ? point.getStation().getStationName() : null)
+                .chargers(chargerResponses)
+                .build();
+    }
+
+    private ChargerResponse convertChargerToDto(Charger charger) {
+        return ChargerResponse.builder()
+                .id(charger.getId())
+                .chargerCode(charger.getChargerCode())
+                .connectorType(charger.getConnectorType())
+                .maxPower(charger.getMaxPower())
+                .status(charger.getStatus())
+                .chargingPointId(charger.getChargingPoint() != null ? charger.getChargingPoint().getId() : null)
+                .chargingPointName(charger.getChargingPoint() != null ? charger.getChargingPoint().getPointName() : null)
                 .build();
     }
 
     private ChargingPoint convertToEntity(ChargingPointRequest request) {
         ChargingPoint point = new ChargingPoint();
         point.setPointName(request.getPointName());
-        point.setConnectorType(request.getConnectorType());
-        point.setMaxPower(request.getMaxPower());
         point.setStatus("active"); // Default status
         point.setPricePerKwh(request.getPricePerKwh());
 
@@ -94,14 +114,40 @@ public class ChargingPointController {
                 );
     }
 
+    /**
+     * Get all charging points for a specific station
+     * GET /api/charging-points/station/{stationId}
+     * Returns: List of ChargingPointResponse
+     */
+    @GetMapping("/charging-points/station/{stationId}")
+    public ResponseEntity<List<ChargingPointResponse>> getChargingPointsByStation(@PathVariable Integer stationId) {
+        List<ChargingPoint> points = chargingPointService.findByStationId(stationId);
+        List<ChargingPointResponse> responses = points.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
+    }
+
+    /**
+     * Get all chargers for a specific charging point
+     * GET /api/charging-points/{id}/chargers
+     * Returns: Direct array of ChargerResponse (not wrapped in ApiResponse)
+     */
+    @GetMapping("/charging-points/{id}/chargers")
+    public ResponseEntity<List<ChargerResponse>> getChargersByChargingPoint(@PathVariable Integer id) {
+        List<Charger> chargers = chargerService.findByChargingPointId(id);
+        List<ChargerResponse> responses = chargers.stream()
+                .map(this::convertChargerToDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
+    }
+
     @PutMapping("/charging-points/{id}")
     public ResponseEntity<?> updateChargingPoint(@PathVariable Integer id,
                                                  @Valid @RequestBody ChargingPointRequest request) {
         return chargingPointService.findById(id)
                 .<ResponseEntity<?>>map(existingPoint -> {
                     existingPoint.setPointName(request.getPointName());
-                    existingPoint.setConnectorType(request.getConnectorType());
-                    existingPoint.setMaxPower(request.getMaxPower());
                     // Don't update status here - use separate endpoint
                     existingPoint.setPricePerKwh(request.getPricePerKwh());
 
@@ -163,7 +209,7 @@ public class ChargingPointController {
 
     /**
      * User: Start using a charging point (booking)
-     * Automatically sets point to "using" and propagates to station
+     * Finds an available charger and starts using it
      * POST /api/charging-points/{id}/start
      */
     @PostMapping("/charging-points/{id}/start")
@@ -171,9 +217,18 @@ public class ChargingPointController {
             @PathVariable Integer id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
-            chargingPointService.startUsingPoint(id);
+            // Find available charger in this charging point
+            List<Charger> chargers = chargerService.findByChargingPointId(id);
+            Charger availableCharger = chargers.stream()
+                    .filter(c -> "available".equalsIgnoreCase(c.getStatus()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("No available charger at this charging point"));
+            
+            // Start using the charger
+            chargerService.startUsingCharger(availableCharger.getId());
+            
             return ResponseEntity.ok(
-                    ApiResponse.success("Charging point is now in use")
+                    ApiResponse.success("Charger " + availableCharger.getChargerCode() + " is now in use")
             );
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -186,7 +241,7 @@ public class ChargingPointController {
 
     /**
      * User: Stop using a charging point (complete charging)
-     * Sets point back to "active" and updates station if no other points are using
+     * Stops the first in-use charger found at this point
      * POST /api/charging-points/{id}/stop
      */
     @PostMapping("/charging-points/{id}/stop")
@@ -194,9 +249,18 @@ public class ChargingPointController {
             @PathVariable Integer id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
-            chargingPointService.stopUsingPoint(id);
+            // Find in-use charger in this charging point
+            List<Charger> chargers = chargerService.findByChargingPointId(id);
+            Charger inUseCharger = chargers.stream()
+                    .filter(c -> "in_use".equalsIgnoreCase(c.getStatus()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("No charger is currently in use at this charging point"));
+            
+            // Stop using the charger
+            chargerService.stopUsingCharger(inUseCharger.getId());
+            
             return ResponseEntity.ok(
-                    ApiResponse.success("Charging session completed")
+                    ApiResponse.success("Charging session completed for charger " + inUseCharger.getChargerCode())
             );
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)

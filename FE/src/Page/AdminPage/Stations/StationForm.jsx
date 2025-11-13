@@ -112,7 +112,7 @@ export default function StationForm({ station, onSuccess, onCancel }) {
       }
       onSuccess();
     } catch (error) {
-      console.error('Form submission error:', error);
+      // Error handled by Redux
     } finally {
       setSubmitting(false);
     }

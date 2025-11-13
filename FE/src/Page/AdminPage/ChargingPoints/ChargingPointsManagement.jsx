@@ -21,8 +21,6 @@ const ChargingPointsManagement = () => {
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({
     pointName: '',
-    connectorType: 'Type 2',
-    maxPower: '',
     pricePerKwh: '',
     station: null
   });
@@ -50,17 +48,13 @@ const ChargingPointsManagement = () => {
       setFormData({
         id: point.id,
         pointName: point.pointName || '',
-        connectorType: point.connectorType || '',
-        maxPower: point.maxPower || '',
         pricePerKwh: point.pricePerKwh || '',
-        station: point.station?.id || null
+        station: point.stationId || null
       });
     } else {
       setEditMode(false);
       setFormData({
         pointName: '',
-        connectorType: '',
-        maxPower: '',
         pricePerKwh: '',
         station: null
       });
@@ -77,7 +71,7 @@ const ChargingPointsManagement = () => {
     e.preventDefault();
     
     // Validate required fields
-    if (!formData.maxPower || !formData.pricePerKwh) {
+    if (!formData.pointName || !formData.pricePerKwh || !formData.station) {
       message.error('Please fill in all required fields');
       return;
     }
@@ -85,8 +79,6 @@ const ChargingPointsManagement = () => {
     // Build request matching ChargingPointRequest.java
     const submitData = {
       pointName: formData.pointName,
-      connectorType: formData.connectorType,
-      maxPower: parseFloat(formData.maxPower),  // Convert to BigDecimal
       pricePerKwh: parseFloat(formData.pricePerKwh),  // Convert to BigDecimal
       stationId: formData.station  // ✅ Flat stationId, not nested object
     };
@@ -182,10 +174,9 @@ const ChargingPointsManagement = () => {
               </div>
 
               <div className="space-y-2 text-sm text-gray-600 mb-4">
-                <div><span className="font-medium">Connector:</span> {point.connectorType}</div>
-                <div><span className="font-medium">Max Power:</span> {point.maxPower} kW</div>
                 <div><span className="font-medium">Price:</span> {point.pricePerKwh} VNĐ/kWh</div>
-                <div><span className="font-medium">Station:</span> {point.station?.stationName || 'N/A'}</div>
+                <div><span className="font-medium">Station:</span> {point.stationName || 'N/A'}</div>
+                <div><span className="font-medium">Chargers:</span> {point.chargers?.length || 0} units</div>
               </div>
 
               <div className="space-y-2 pt-2 border-t border-gray-100">
@@ -246,33 +237,6 @@ const ChargingPointsManagement = () => {
                     value={formData.pointName}
                     onChange={(e) => setFormData({ ...formData, pointName: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Connector Type</label>
-                  <select
-                    value={formData.connectorType}
-                    onChange={(e) => setFormData({ ...formData, connectorType: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="Type 2">Type 2</option>
-                    <option value="CCS">CCS</option>
-                    <option value="CHAdeMO">CHAdeMO</option>
-                    <option value="Tesla">Tesla</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Max Power (kW) *</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={formData.maxPower}
-                    onChange={(e) => setFormData({ ...formData, maxPower: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                    placeholder="e.g., 150"
                     required
                   />
                 </div>

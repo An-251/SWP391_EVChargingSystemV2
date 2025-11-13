@@ -1,1 +1,2 @@
-export { default } from './DriverPage';
+import DriverPage from './DriverPage';
+export default DriverPage;

@@ -15,14 +15,15 @@ import java.util.Optional;
  */
 @Repository
 public interface DriverRepository extends JpaRepository<Driver, Integer> {
-     Optional<Driver> findById(Integer accountId);
+    Optional<Driver> findById(Integer accountId);
     Optional<Driver> findByAccountUsername(String username);
+    Optional<Driver> findByAccountId(Integer accountId);
     /**
      * ⭐ Lấy tất cả driver có active plan
      */
     @Query("SELECT DISTINCT d FROM Driver d " +
             "JOIN d.planRegistrations pr " +
-            "WHERE pr.status = 'ACTIVE'")
+            "WHERE LOWER(pr.status) = 'active'")
     List<Driver> findAllWithActivePlan();
     List<Driver> findByAccountStatus(String status);
 }

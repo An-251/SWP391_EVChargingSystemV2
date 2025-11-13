@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import swp391.fa25.swp391.entity.ChargingStation;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -18,9 +19,9 @@ public interface ChargingStationRepository extends JpaRepository<ChargingStation
      * Phương thức này thay thế cho findByField("name", stationName) trong Service
      */
     boolean existsByStationName(String stationName);
-
+    
     /**
-     * Tìm ChargingStation theo tên trạm
+     * ⭐ NEW: Find all stations by facility ID
      */
-    Optional<ChargingStation> findByStationName(String stationName);
+    List<ChargingStation> findByFacility_Id(Integer facilityId);
 }

@@ -67,7 +67,7 @@ export default function AccountForm({ account, onSuccess, onCancel }) {
       }
       onSuccess();
     } catch (error) {
-      console.error('Error:', error);
+      // Error handled by Redux
     } finally {
       setSubmitting(false);
     }

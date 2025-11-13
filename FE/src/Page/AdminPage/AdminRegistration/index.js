@@ -1,1 +1,2 @@
-export { default } from './AdminRegistration';
+import AdminRegistration from './AdminRegistration';
+export default AdminRegistration;

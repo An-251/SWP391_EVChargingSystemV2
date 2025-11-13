@@ -27,12 +27,23 @@ public class ChargingSessionResponse {
     private String vehicleModel;
     private String licensePlate;
 
-    // Charging point info
+    // Charger info
+    private Integer chargerId;
+    private String chargerCode;
+    private String connectorType;
+    
+    // Charging point info (parent of charger)
     private Integer chargingPointId;
     private String chargingPointName;
+    
+    // Station info
+    private Integer stationId;
     private String stationName;
     private String stationAddress;
-    private String connectorType;
+    
+    // Facility info
+    private Integer facilityId;
+    private String facilityName;
 
     // Session timing
     private LocalDateTime startTime;
@@ -45,7 +56,18 @@ public class ChargingSessionResponse {
     private Integer endPercentage;
     private Integer chargedPercentage;
     private BigDecimal kwhUsed; // Điện năng tiêu thụ (kWh)
+    private BigDecimal pricePerKwh; // ⭐ ADD: Giá điện từ charging point (VND/kWh)
+    
+    // Cost breakdown
+    private BigDecimal startFee; // Phí khởi động phiên sạc (VND)
+    private BigDecimal energyCostBeforeDiscount; // ⭐ ADD: Chi phí điện năng trước giảm giá (VND)
+    private BigDecimal energyCostAfterDiscount; // ⭐ ADD: Chi phí điện năng sau giảm giá (VND)
+    private BigDecimal overusePenalty; // ⭐ ADD: Phí phạt khi sạc quá thời gian (VND)
     private BigDecimal cost; // Tổng chi phí (VND)
+    
+    // Subscription info
+    private String subscriptionPlanName; // ⭐ ADD: Tên gói subscription (VD: "Basic Plan")
+    private BigDecimal discountRate; // ⭐ ADD: % giảm giá (VD: 25 = 25%)
 
     //Reservation
     private Long reservationId;

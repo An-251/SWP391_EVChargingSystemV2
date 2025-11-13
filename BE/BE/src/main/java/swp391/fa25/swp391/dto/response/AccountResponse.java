@@ -27,5 +27,8 @@ public class AccountResponse {
     private Integer driverId;
     private Integer adminId;
     private Integer employeeId;
-    private Integer enterpriseId;
+    // Employee-specific fields (Station Employee only)
+    private Integer facilityId;
+    private String facilityName;
+    private String position;
 }

@@ -35,20 +35,21 @@ public class PlanRegistrationService {
      */
     @Transactional
     public PlanRegistration assignBasicPlanToNewDriver(Driver driver) {
-        log.info("Auto-assigning Basic plan to new driver {}", driver.getId());
+        log.info("Auto-assigning Basic Driver plan to new driver {}", driver.getId());
 
-        SubscriptionPlan basicPlan = planRepository.findByIsDefault(true)
-                .orElseThrow(() -> new RuntimeException("Basic plan not found. Please create one first."));
+        // ⭐ Lấy Basic plan dành cho Driver
+        SubscriptionPlan basicPlan = planRepository.findByIsDefaultAndTargetUserType(true, "Driver")
+                .orElseThrow(() -> new RuntimeException("Basic plan for Driver not found. Please create one first."));
 
         PlanRegistration registration = new PlanRegistration();
         registration.setDriver(driver);
         registration.setPlan(basicPlan);
         registration.setStartDate(LocalDate.now());
         registration.setEndDate(LocalDate.now().plusYears(100)); // Permanent
-        registration.setStatus("ACTIVE");
+        registration.setStatus("active");
 
         PlanRegistration saved = registrationRepository.save(registration);
-        log.info("Assigned Basic plan to driver {}", driver.getId());
+        log.info("Assigned Basic Driver plan to driver {}", driver.getId());
 
         return saved;
     }
@@ -67,6 +68,17 @@ public class PlanRegistrationService {
         SubscriptionPlan plan = planRepository.findById(request.getPlanId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy gói dịch vụ với ID: " + request.getPlanId()));
 
+        // ⭐ Validation: Check account role matches plan targetUserType
+        String accountRole = driver.getAccount().getAccountRole();
+        log.info("Validating plan registration - Account Role: {}, Plan Target: {}", 
+                accountRole, plan.getTargetUserType());
+        
+        // ⭐ Skip validation if accountRole is null (old data) - allow for Driver
+        if (accountRole != null && !plan.getTargetUserType().equalsIgnoreCase(accountRole)) {
+            throw new RuntimeException("Gói " + plan.getPlanName() + " chỉ dành cho " + plan.getTargetUserType() + 
+                    ". Tài khoản của bạn là " + accountRole);
+        }
+
         // 2. Check current active plan
         Optional<PlanRegistration> existingActive = registrationRepository
                 .findActiveByDriverId(request.getDriverId(), LocalDate.now());
@@ -76,7 +88,7 @@ public class PlanRegistrationService {
 
             // Nếu đang ở Basic → cho phép upgrade
             if (Boolean.TRUE.equals(current.getPlan().getIsDefault())) {
-                current.setStatus("CANCELLED");
+                current.setStatus("cancelled");
                 current.setEndDate(LocalDate.now());
                 registrationRepository.save(current);
                 log.info("Cancelled Basic plan for driver {}", driver.getId());
@@ -97,7 +109,7 @@ public class PlanRegistrationService {
         registration.setPlan(plan);
         registration.setStartDate(startDate);
         registration.setEndDate(endDate);
-        registration.setStatus("ACTIVE");
+        registration.setStatus("active");
 
         PlanRegistration savedRegistration = registrationRepository.save(registration);
         log.info("Driver {} successfully registered plan {}", driver.getId(), plan.getPlanName());
@@ -108,7 +120,7 @@ public class PlanRegistrationService {
                 .planName(plan.getPlanName())
                 .startDate(startDate.format(dateFormatter))
                 .endDate(endDate.format(dateFormatter))
-                .status("ACTIVE")
+                .status("active")
                 .totalPaid(plan.getPrice())
                 .message("Đăng ký gói " + plan.getPlanName() + " thành công!")
                 .build();
@@ -136,7 +148,7 @@ public class PlanRegistrationService {
         }
 
         // Expire current plan
-        active.setStatus("CANCELLED");
+        active.setStatus("cancelled");
         active.setEndDate(LocalDate.now());
         registrationRepository.save(active);
 
@@ -151,7 +163,7 @@ public class PlanRegistrationService {
         return PlanRegistrationResponse.builder()
                 .registrationId(active.getId())
                 .planName(active.getPlan().getPlanName())
-                .status("CANCELLED")
+                .status("cancelled")
                 .message("Đã hủy gói dịch vụ. Tài khoản của bạn đã được chuyển về gói Basic.")
                 .build();
     }
@@ -199,13 +211,5 @@ public class PlanRegistrationService {
                         .totalPaid(reg.getPlan().getPrice())
                         .build())
                 .collect(Collectors.toList());
-    }
-
-    /**
-     * ⭐ HELPER: Lấy active plan của driver (dùng cho session/invoice)
-     */
-    @Transactional(readOnly = true)
-    public Optional<PlanRegistration> getActiveRegistration(Integer driverId) {
-        return registrationRepository.findActiveByDriverId(driverId, LocalDate.now());
     }
 }

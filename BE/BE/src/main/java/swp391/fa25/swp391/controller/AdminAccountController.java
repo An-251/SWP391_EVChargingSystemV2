@@ -47,6 +47,70 @@ public class AdminAccountController {
         }
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse> updateAccount(@PathVariable Integer id, @RequestBody Account accountUpdate) {
+        try {
+            // findById returns Optional<Account>, need to unwrap it
+            Account existingAccount = accountService.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Account not found"));
+
+            // Update only allowed fields
+            if (accountUpdate.getFullName() != null) {
+                existingAccount.setFullName(accountUpdate.getFullName());
+            }
+            if (accountUpdate.getEmail() != null) {
+                existingAccount.setEmail(accountUpdate.getEmail());
+            }
+            if (accountUpdate.getPhone() != null) {
+                existingAccount.setPhone(accountUpdate.getPhone());
+            }
+            if (accountUpdate.getDob() != null) {
+                existingAccount.setDob(accountUpdate.getDob());
+            }
+            if (accountUpdate.getGender() != null) {
+                existingAccount.setGender(accountUpdate.getGender());
+            }
+            if (accountUpdate.getStatus() != null) {
+                // Convert status to lowercase for consistency
+                existingAccount.setStatus(accountUpdate.getStatus().toLowerCase());
+            }
+
+            Account updatedAccount = accountService.save(existingAccount);
+            AccountResponse response = buildFullAccountResponse(updatedAccount);
+
+            return ResponseEntity.ok(ApiResponse.success("Account updated successfully", response));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error updating account: " + e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/{id}/toggle-status")
+    public ResponseEntity<ApiResponse> toggleAccountStatus(@PathVariable Integer id) {
+        try {
+            Account account = accountService.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Account not found"));
+
+            // Toggle status: active <-> locked (lowercase)
+            String newStatus = "active".equalsIgnoreCase(account.getStatus()) ? "locked" : "active";
+            account.setStatus(newStatus);
+
+            Account updatedAccount = accountService.save(account);
+            AccountResponse response = buildFullAccountResponse(updatedAccount);
+
+            return ResponseEntity.ok(ApiResponse.success("Account status updated", response));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error toggling account status: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/employees")
     public ResponseEntity<?> createEmployee(@Valid @RequestBody CreateEmployeeRequest request) {
         try {

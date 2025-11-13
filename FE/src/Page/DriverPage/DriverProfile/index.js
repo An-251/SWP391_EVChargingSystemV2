@@ -1,1 +1,2 @@
-export { default } from './DriverProfile';
+import DriverProfile from './DriverProfile';
+export default DriverProfile;

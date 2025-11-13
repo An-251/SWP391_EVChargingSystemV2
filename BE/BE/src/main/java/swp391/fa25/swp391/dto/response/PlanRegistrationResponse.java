@@ -17,6 +17,9 @@ import java.math.BigDecimal;
 public class PlanRegistrationResponse {
     private Integer registrationId;
     private String planName;
+    private String planType;  // BASIC, STANDARD, PREMIUM
+    private BigDecimal discountRate; // Tỷ lệ giảm giá (0-100)
+    private String description; // Mô tả gói
     private String startDate; // Trả về dạng String đã định dạng (dd/MM/yyyy)
     private String endDate;   // Trả về dạng String đã định dạng (dd/MM/yyyy)
     private String status;    // ACTIVE, CANCELLED, EXPIRED

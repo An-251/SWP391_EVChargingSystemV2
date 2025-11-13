@@ -61,12 +61,12 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
     Optional<ChargingSession> findActiveSessionByDriverId(@Param("driverId") Integer driverId);
 
     /**
-     * Tìm session ĐANG ACTIVE tại charging point (status = using)
-     * Kiểm tra charging point có đang được sử dụng không
+     * Tìm session ĐANG ACTIVE tại charger (status = using)
+     * Kiểm tra charger có đang được sử dụng không
      */
     @Query("SELECT cs FROM ChargingSession cs " +
-            "WHERE cs.chargingPoint.id = :chargingPointId AND cs.status = 'using'")
-    Optional<ChargingSession> findActiveSessionByChargingPointId(@Param("chargingPointId") Integer chargingPointId);
+            "WHERE cs.charger.id = :chargerId AND cs.status = 'using'")
+    Optional<ChargingSession> findActiveSessionByChargerId(@Param("chargerId") Integer chargerId);
 
 
     /**
@@ -90,15 +90,6 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
             @Param("driverId") Integer driverId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
-
-    @Query("SELECT cs FROM ChargingSession cs WHERE cs.driver.id = :driverId " +
-            "AND cs.startTime >= :startDate AND cs.startTime <= :endDate " +
-            "AND cs.status = 'inactive' AND cs.cost > 0")
-    List<ChargingSession> findCompletedSessionsByDriverAndDateRange(
-            @Param("driverId") Integer driverId,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
-    );
     /**
      * ⭐ Đếm số session chưa có invoice trong khoảng thời gian
      */
@@ -107,23 +98,4 @@ public interface ChargingSessionRepository extends JpaRepository<ChargingSession
             LocalDateTime startTime,
             LocalDateTime endTime
     );
-
-    /**
-     * ⭐ Lấy tất cả session chưa có invoice trong khoảng thời gian
-     */
-    List<ChargingSession> findByDriverIdAndInvoiceIsNullAndStartTimeBetween(
-            Integer driverId,
-            LocalDateTime startTime,
-            LocalDateTime endTime
-    );
-
-    /**
-     * ⭐ Đếm tất cả session chưa có invoice của driver (không giới hạn thời gian)
-     */
-    long countByDriverIdAndInvoiceIsNull(Integer driverId);
-
-    /**
-     * ⭐ Lấy tất cả session chưa có invoice của driver
-     */
-    List<ChargingSession> findByDriverIdAndInvoiceIsNull(Integer driverId);
 }

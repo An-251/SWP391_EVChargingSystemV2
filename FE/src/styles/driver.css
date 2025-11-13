@@ -1,0 +1,155 @@
+/* Driver Page Specific Styles */
+
+/* Driver Layout */
+.driver-layout {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.driver-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Driver Header */
+.driver-header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+/* Driver Cards */
+.driver-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.driver-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Driver Buttons */
+.driver-btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.driver-btn-primary:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Driver Table */
+.driver-table {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.driver-table .ant-table-thead > tr > th {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 600;
+}
+
+/* Driver Status Tags */
+.driver-status-active {
+  background: #52c41a;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.driver-status-pending {
+  background: #faad14;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.driver-status-completed {
+  background: #1890ff;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+/* Driver Forms */
+.driver-form {
+  background: white;
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.driver-form .ant-form-item-label > label {
+  font-weight: 600;
+  color: #333;
+}
+
+.driver-form .ant-input,
+.driver-form .ant-input-number,
+.driver-form .ant-select-selector {
+  border-radius: 8px;
+  border: 2px solid #e8e8e8;
+  transition: all 0.3s ease;
+}
+
+.driver-form .ant-input:focus,
+.driver-form .ant-input-number-focused,
+.driver-form .ant-select-focused .ant-select-selector {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+/* Driver Modals */
+.driver-modal .ant-modal-content {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.driver-modal .ant-modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px 24px;
+}
+
+.driver-modal .ant-modal-title {
+  color: white;
+  font-weight: 600;
+}
+
+.driver-modal .ant-modal-close {
+  color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .driver-container {
+    padding: 12px;
+  }
+
+  .driver-card {
+    padding: 16px;
+  }
+
+  .driver-form {
+    padding: 20px;
+  }
+}

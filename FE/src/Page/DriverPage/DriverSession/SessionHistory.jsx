@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Table, Card, Statistic, Button, Select, Tag, Empty } from 'antd';
 import { Clock, Zap, DollarSign, MapPin, Battery, CheckCircle, Eye } from 'lucide-react';
 import { fetchAllSessions, fetchTotalCost } from '../../../redux/session/sessionSlice';
+import { SESSION_STATUS } from '../../../constants/statusConstants';
 
 const { Option } = Select;
 
@@ -24,26 +25,18 @@ const SessionHistory = () => {
     }
   }, [user, dispatch]);
 
-  // Helper: Tính computed status từ session data
-  // Backend chỉ dùng 3 status: active, using, inactive
-  // - using = đang sạc
-  // - inactive + cost > 0 = hoàn thành (completed)
-  // - inactive + cost = 0 = đã hủy (cancelled)
-  const getComputedStatus = (session) => {
-    if (session.status === 'using') return 'using';
-    if (session.status === 'inactive') {
-      return (session.cost && parseFloat(session.cost) > 0) ? 'completed' : 'cancelled';
-    }
-    return session.status;
+  // Get session status (normalize to lowercase)
+  const getStatus = (session) => {
+    return (session.status || '').toLowerCase();
   };
 
-  // Filter sessions by computed status
+  // Filter sessions by status
   const filteredSessions = statusFilter === 'ALL'
     ? sessions
-    : sessions.filter((s) => getComputedStatus(s) === statusFilter);
+    : sessions.filter((s) => getStatus(s) === statusFilter);
 
   // Calculate statistics (chỉ session hoàn thành)
-  const completedSessions = sessions.filter((s) => getComputedStatus(s) === 'completed');
+  const completedSessions = sessions.filter((s) => getStatus(s) === SESSION_STATUS.COMPLETED);
   const totalEnergy = completedSessions.reduce((sum, s) => sum + (parseFloat(s.kwhUsed) || 0), 0);
 
   // Handle view session details
@@ -121,18 +114,16 @@ const SessionHistory = () => {
       dataIndex: 'status',
       key: 'status',
       render: (_, record) => {
-        const computedStatus = getComputedStatus(record);
-        const colors = {
-          completed: 'green',
-          using: 'blue',
-          cancelled: 'red',
+        const status = getStatus(record);
+        const statusConfig = {
+          [SESSION_STATUS.CHARGING]: { color: 'blue', label: 'Đang sạc' },
+          [SESSION_STATUS.COMPLETED]: { color: 'green', label: 'Hoàn thành' },
+          [SESSION_STATUS.CANCELLED]: { color: 'red', label: 'Đã hủy' },
+          [SESSION_STATUS.FAILED]: { color: 'orange', label: 'Thất bại' },
+          [SESSION_STATUS.INTERRUPTED]: { color: 'volcano', label: 'Bị gián đoạn' },
         };
-        const labels = {
-          completed: 'Hoàn thành',
-          using: 'Đang sạc',
-          cancelled: 'Đã hủy',
-        };
-        return <Tag color={colors[computedStatus] || 'default'}>{labels[computedStatus] || computedStatus}</Tag>;
+        const config = statusConfig[status] || { color: 'default', label: status };
+        return <Tag color={config.color}>{config.label}</Tag>;
       },
     },
     {
@@ -212,9 +203,11 @@ const SessionHistory = () => {
               style={{ width: 200 }}
             >
               <Option value="ALL">Tất cả</Option>
-              <Option value="completed">Hoàn thành</Option>
-              <Option value="cancelled">Đã hủy</Option>
-              <Option value="using">Đang sạc</Option>
+              <Option value={SESSION_STATUS.CHARGING}>Đang sạc</Option>
+              <Option value={SESSION_STATUS.COMPLETED}>Hoàn thành</Option>
+              <Option value={SESSION_STATUS.CANCELLED}>Đã hủy</Option>
+              <Option value={SESSION_STATUS.FAILED}>Thất bại</Option>
+              <Option value={SESSION_STATUS.INTERRUPTED}>Bị gián đoạn</Option>
             </Select>
           </div>
 

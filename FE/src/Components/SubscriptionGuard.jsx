@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Spin } from 'antd';
@@ -14,86 +14,99 @@ const SubscriptionGuard = ({ children }) => {
   const dispatch = useDispatch();
   
   const { user, isAuthenticated } = useSelector((state) => state.auth);
-  const { hasActiveSubscription, subscriptionCheckCompleted, loading } = useSelector(
-    (state) => state.subscription
-  );
+  const { 
+    hasActiveSubscription, 
+    subscriptionCheckCompleted, 
+    loading,
+    activeSubscription 
+  } = useSelector((state) => state.subscription);
   
   const [isChecking, setIsChecking] = useState(true);
+  
+  // ⭐ Use ref to prevent multiple checks AND redirects
+  const hasCheckedRef = useRef(false);
+  const hasRedirectedRef = useRef(false); // ⭐ NEW: Track if already redirected
+  
+  // Extract stable values
+  const driverId = user?.driverId;
+  const userRole = user?.role;
+
+  // ⭐ Reset redirect flag when subscription status changes from false to true
+  useEffect(() => {
+    if (hasActiveSubscription && hasRedirectedRef.current) {
+      console.log('✅ [SUBSCRIPTION_GUARD] Subscription acquired, clearing redirect flag');
+      hasRedirectedRef.current = false;
+    }
+  }, [hasActiveSubscription]);
 
   useEffect(() => {
     const checkSubscription = async () => {
-      console.log("🔒 [SUBSCRIPTION_GUARD] Checking subscription status...");
-      console.log("👤 [SUBSCRIPTION_GUARD] User:", user);
-      console.log("🔑 [SUBSCRIPTION_GUARD] isAuthenticated:", isAuthenticated);
+      // Only check ONCE using ref
+      if (hasCheckedRef.current) {
+        return;
+      }
 
-      // Only check for drivers
-      if (!isAuthenticated || !user) {
-        console.log("⚠️ [SUBSCRIPTION_GUARD] User not authenticated, redirecting to login");
+      // Only check for authenticated drivers
+      if (!isAuthenticated || !userRole) {
         setIsChecking(false);
         return;
       }
 
-      // Only check for driver role
-      if (user.role !== 'Driver') {
-        console.log("ℹ️ [SUBSCRIPTION_GUARD] User is not a driver, skipping subscription check");
+      // Skip if not a driver (Admin, Staff, Enterprise don't need subscription check)
+      if (userRole !== 'Driver') {
         setIsChecking(false);
+        hasCheckedRef.current = true;
         return;
       }
 
-      // If already checked, don't check again
+      // If already checked by Redux, use that
       if (subscriptionCheckCompleted) {
-        console.log("✅ [SUBSCRIPTION_GUARD] Subscription already checked");
         setIsChecking(false);
-        
-        // If no active subscription, redirect to selection page
-        if (!hasActiveSubscription && location.pathname !== '/driver/select-subscription') {
-          console.log("❌ [SUBSCRIPTION_GUARD] No active subscription, redirecting to selection page");
-          navigate('/driver/select-subscription', { replace: true });
-        }
+        hasCheckedRef.current = true;
         return;
       }
 
-      // Check subscription status via API
-      if (user.driverId) {
-        console.log("🔍 [SUBSCRIPTION_GUARD] Checking subscription for driverId:", user.driverId);
-        
+      // Check subscription via API
+      if (driverId) {
         try {
-          await dispatch(checkSubscriptionStatus(user.driverId)).unwrap();
-          console.log("✅ [SUBSCRIPTION_GUARD] Subscription check completed");
+          await dispatch(checkSubscriptionStatus(driverId)).unwrap();
         } catch (error) {
-          console.error("❌ [SUBSCRIPTION_GUARD] Subscription check failed:", error);
+          console.error("❌ [SUBSCRIPTION_GUARD] Check failed:", error);
         } finally {
           setIsChecking(false);
+          hasCheckedRef.current = true;
         }
       } else {
-        console.warn("⚠️ [SUBSCRIPTION_GUARD] No driverId found in user object");
         setIsChecking(false);
+        hasCheckedRef.current = true;
       }
     };
 
     checkSubscription();
-  }, [dispatch, user, isAuthenticated, subscriptionCheckCompleted, navigate, location.pathname, hasActiveSubscription]);
+  }, [dispatch, driverId, userRole, isAuthenticated, subscriptionCheckCompleted]);
 
   // Redirect to selection page if driver doesn't have active subscription
+  // ⭐ CRITICAL: Only run ONCE on initial check, not on every route change
   useEffect(() => {
-    if (
-      !isChecking &&
-      subscriptionCheckCompleted &&
-      user?.role === 'Driver' &&
-      !hasActiveSubscription &&
-      location.pathname !== '/driver/select-subscription'
-    ) {
-      console.log("🚫 [SUBSCRIPTION_GUARD] Access denied - No active subscription");
-      console.log("🔄 [SUBSCRIPTION_GUARD] Redirecting to subscription selection page");
-      navigate('/driver/select-subscription', { replace: true });
+    // Only check redirect after initial check is done
+    if (!isChecking && subscriptionCheckCompleted && hasCheckedRef.current) {
+      const isDriver = userRole === 'Driver';
+      const isOnSelectionPage = location.pathname === '/driver/select-subscription';
+      
+      // ⭐ IMPORTANT: Only redirect if we haven't already redirected AND user needs subscription
+      if (isDriver && !hasActiveSubscription && !isOnSelectionPage && !hasRedirectedRef.current) {
+        console.log('🚨 [SUBSCRIPTION_GUARD] Redirecting to selection page');
+        hasRedirectedRef.current = true; // ⭐ Mark as redirected
+        navigate('/driver/select-subscription', { replace: true });
+      }
     }
   }, [
     isChecking,
     subscriptionCheckCompleted,
-    user,
+    userRole,
     hasActiveSubscription,
     navigate,
-    location.pathname,
+    // ⭐ REMOVED location.pathname from dependencies to prevent re-run on navigation
   ]);
 
   // Show loading spinner while checking
@@ -114,14 +127,25 @@ const SubscriptionGuard = ({ children }) => {
   }
 
   // Allow access if:
-  // 1. User is not a driver (admin/staff)
+  // 1. User is not a driver (admin/staff/enterprise)
   // 2. Driver has active subscription
   // 3. Currently on subscription selection page
-  if (
+  const shouldAllowAccess = 
     user?.role !== 'Driver' ||
     hasActiveSubscription ||
-    location.pathname === '/driver/select-subscription'
-  ) {
+    location.pathname === '/driver/select-subscription';
+
+  // ⭐ Debug logging
+    console.log('🛡️ [SUBSCRIPTION_GUARD] Access check:', {
+      role: user?.role,
+      hasActiveSubscription,
+      currentPath: location.pathname,
+      shouldAllowAccess,
+      hasRedirected: hasRedirectedRef.current,
+      isChecking,
+      subscriptionCheckCompleted,
+      activeSubscription,
+    });  if (shouldAllowAccess) {
     return <>{children}</>;
   }
 

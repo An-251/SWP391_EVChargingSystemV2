@@ -5,6 +5,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.dto.response.InvoiceDetailResponse;
+import swp391.fa25.swp391.entity.Charger;
+import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.Driver;
 import swp391.fa25.swp391.entity.Invoice;
 import swp391.fa25.swp391.service.InvoiceService;
@@ -13,6 +15,7 @@ import swp391.fa25.swp391.service.IService.IInvoiceService;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -46,6 +49,29 @@ public class InvoiceController {
         }
     }
 
+    /**
+     * ⭐ Admin endpoint to get all invoices
+     */
+    @GetMapping("/admin/all")
+    public ResponseEntity<?> getAllInvoicesForAdmin() {
+        try {
+            List<Invoice> invoices = invoiceService.findAll();
+            
+            // ⭐ Map to DTO to avoid circular reference
+            List<InvoiceDetailResponse> responses = invoices.stream()
+                    .map(this::mapToDetailResponse)
+                    .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(ApiResponse.success(
+                    String.format("Found %d invoices", invoices.size()), 
+                    responses
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Error: " + e.getMessage()));
+        }
+    }
+
     @GetMapping("/driver/{driverId}")
     public ResponseEntity<?> getInvoicesByDriver(@PathVariable Integer driverId) {
         try {
@@ -69,10 +95,30 @@ public class InvoiceController {
             Invoice invoice = invoiceService.findById(id)
                     .orElseThrow(() -> new RuntimeException("Invoice not found"));
 
-            // ⭐ Map sang DTO với timeline info
-            InvoiceDetailResponse response = mapToDetailResponse(invoice);
+            // ⭐ Eager load sessions with their relationships
+            invoice.getSessions().size(); // Force Hibernate to load sessions
+            invoice.getSessions().forEach(session -> {
+                // Load charger and its relationships
+                if (session.getCharger() != null) {
+                    session.getCharger().getChargerCode(); // Load charger
+                    if (session.getCharger().getChargingPoint() != null) {
+                        session.getCharger().getChargingPoint().getPointName(); // Load charging point
+                        if (session.getCharger().getChargingPoint().getStation() != null) {
+                            session.getCharger().getChargingPoint().getStation().getStationName(); // Load station
+                            if (session.getCharger().getChargingPoint().getStation().getFacility() != null) {
+                                session.getCharger().getChargingPoint().getStation().getFacility().getFullAddress(); // Load facility
+                            }
+                        }
+                    }
+                }
+                // Load vehicle
+                if (session.getVehicle() != null) {
+                    session.getVehicle().getModel(); // Load vehicle
+                }
+            });
 
-            return ResponseEntity.ok(ApiResponse.success("Retrieved invoice", response));
+            // ⭐ Return invoice directly (FE expects invoice object, not wrapped in ApiResponse)
+            return ResponseEntity.ok(invoice);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
@@ -84,7 +130,7 @@ public class InvoiceController {
     @GetMapping("/driver/{driverId}/unpaid")
     public ResponseEntity<?> getUnpaidInvoices(@PathVariable Integer driverId) {
         try {
-            List<Invoice> invoices = invoiceService.findByDriverIdAndStatus(driverId, "UNPAID");
+            List<Invoice> invoices = invoiceService.findByDriverIdAndStatus(driverId, "unpaid");
 
             // ⭐ Map sang DTO với timeline info
             List<InvoiceDetailResponse> responses = invoices.stream()
@@ -101,7 +147,7 @@ public class InvoiceController {
     @GetMapping("/driver/{driverId}/overdue")
     public ResponseEntity<?> getOverdueInvoices(@PathVariable Integer driverId) {
         try {
-            List<Invoice> invoices = invoiceService.findByDriverIdAndStatus(driverId, "OVERDUE");
+            List<Invoice> invoices = invoiceService.findByDriverIdAndStatus(driverId, "overdue");
 
             // ⭐ Map sang DTO với timeline info
             List<InvoiceDetailResponse> responses = invoices.stream()
@@ -140,13 +186,13 @@ public class InvoiceController {
     }
 
     /**
-     * ⭐ Lấy current invoice của driver (invoice UNPAID/OVERDUE gần nhất)
+     * ⭐ Lấy current invoice của driver (invoice unpaid/overdue gần nhất)
      */
     @GetMapping("/driver/{driverId}/current")
     public ResponseEntity<?> getCurrentInvoice(@PathVariable Integer driverId) {
         try {
-            // Lấy UNPAID invoices
-            List<Invoice> unpaidInvoices = invoiceService.findByDriverIdAndStatus(driverId, "UNPAID");
+            // Lấy unpaid invoices
+            List<Invoice> unpaidInvoices = invoiceService.findByDriverIdAndStatus(driverId, "unpaid");
 
             if (!unpaidInvoices.isEmpty()) {
                 // Lấy invoice mới nhất
@@ -161,8 +207,8 @@ public class InvoiceController {
                 }
             }
 
-            // Nếu không có UNPAID, check OVERDUE
-            List<Invoice> overdueInvoices = invoiceService.findByDriverIdAndStatus(driverId, "OVERDUE");
+            // Nếu không có unpaid, check overdue
+            List<Invoice> overdueInvoices = invoiceService.findByDriverIdAndStatus(driverId, "overdue");
 
             if (!overdueInvoices.isEmpty()) {
                 Invoice overdueInvoice = overdueInvoices.stream()
@@ -191,8 +237,8 @@ public class InvoiceController {
     @GetMapping("/driver/{driverId}/needs-payment")
     public ResponseEntity<?> checkNeedsPayment(@PathVariable Integer driverId) {
         try {
-            boolean hasUnpaid = invoiceService.existsByDriverIdAndStatus(driverId, "UNPAID");
-            boolean hasOverdue = invoiceService.existsByDriverIdAndStatus(driverId, "OVERDUE");
+            boolean hasUnpaid = invoiceService.existsByDriverIdAndStatus(driverId, "unpaid");
+            boolean hasOverdue = invoiceService.existsByDriverIdAndStatus(driverId, "overdue");
 
             boolean needsPayment = hasUnpaid || hasOverdue;
 
@@ -359,7 +405,7 @@ public class InvoiceController {
             daysUntilSuspension = secondsUntilSuspend / (24 * 60 * 60);
 
             // Status message
-            if ("PAID".equals(invoice.getStatus())) {
+            if ("paid".equals(invoice.getStatus())) {
                 statusMessage = "Đã thanh toán";
             } else if (daysUntilDue > 0) {
                 statusMessage = String.format("Còn %d ngày để thanh toán", daysUntilDue);
@@ -371,12 +417,12 @@ public class InvoiceController {
             }
 
             // Warning message
-            if ("OVERDUE".equals(invoice.getStatus()) && daysUntilSuspension > 0) {
+            if ("overdue".equals(invoice.getStatus()) && daysUntilSuspension > 0) {
                 warningMessage = String.format(
                         "⚠️ Tài khoản sẽ bị khóa sau %d ngày nếu không thanh toán",
                         daysUntilSuspension
                 );
-            } else if ("OVERDUE".equals(invoice.getStatus()) && daysUntilSuspension <= 0) {
+            } else if ("overdue".equals(invoice.getStatus()) && daysUntilSuspension <= 0) {
                 warningMessage = "🔒 Tài khoản đã bị khóa. Vui lòng thanh toán để mở khóa.";
             } else if (daysUntilDue <= 3 && daysUntilDue > 0) {
                 warningMessage = "⏰ Hóa đơn sắp đến hạn. Vui lòng thanh toán sớm.";
@@ -391,9 +437,61 @@ public class InvoiceController {
         }
 
         // Check account status
-        Boolean isAccountSuspended = "SUSPENDED".equals(
+        Boolean isAccountSuspended = "suspended".equalsIgnoreCase(
                 invoice.getDriver().getAccount().getStatus()
         );
+        
+        // Map charging sessions
+        java.util.List<InvoiceDetailResponse.SessionSummary> sessionSummaries = null;
+        if (invoice.getSessions() != null && !invoice.getSessions().isEmpty()) {
+            sessionSummaries = invoice.getSessions().stream()
+                    .map(session -> {
+                        String duration = null;
+                        if (session.getStartTime() != null && session.getEndTime() != null) {
+                            // Convert LocalDateTime to seconds for duration calculation
+                            java.time.Duration dur = java.time.Duration.between(
+                                    session.getStartTime(), 
+                                    session.getEndTime()
+                            );
+                            long hours = dur.toHours();
+                            long minutes = dur.toMinutesPart();
+                            duration = String.format("%d giờ %d phút", hours, minutes);
+                        }
+                        
+                        String stationName = null;
+                        String chargingPointName = null;
+                        Charger charger = session.getCharger();
+                        if (charger != null) {
+                            ChargingPoint chargingPoint = charger.getChargingPoint();
+                            if (chargingPoint != null) {
+                                chargingPointName = chargingPoint.getPointName();
+                                if (chargingPoint.getStation() != null) {
+                                    stationName = chargingPoint.getStation().getStationName();
+                                }
+                            }
+                        }
+                        
+                        // Convert LocalDateTime to Instant for response
+                        Instant startInstant = session.getStartTime() != null 
+                                ? session.getStartTime().atZone(java.time.ZoneId.systemDefault()).toInstant()
+                                : null;
+                        Instant endInstant = session.getEndTime() != null
+                                ? session.getEndTime().atZone(java.time.ZoneId.systemDefault()).toInstant()
+                                : null;
+                        
+                        return InvoiceDetailResponse.SessionSummary.builder()
+                                .id(session.getId())
+                                .startTime(startInstant)
+                                .endTime(endInstant)
+                                .duration(duration)
+                                .energyConsumed(session.getKwhUsed())
+                                .cost(session.getCost())
+                                .stationName(stationName)
+                                .chargingPointName(chargingPointName)
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+        }
 
         return InvoiceDetailResponse.builder()
                 .invoiceId(invoice.getId())
@@ -422,6 +520,7 @@ public class InvoiceController {
                 .warningMessage(warningMessage)
                 .qrCode(invoice.getQrCode())
                 .qrCodeExpired(false) // TODO: implement QR expiry check if needed
+                .sessions(sessionSummaries)
                 .build();
     }
 
@@ -433,34 +532,52 @@ public class InvoiceController {
     public ResponseEntity<?> getDriversReadyForInvoice() {
         try {
             List<Driver> allDrivers = invoiceServiceImpl.findAllActiveDrivers();
+            
+            System.out.println("========== DEBUG DRIVERS READY ==========");
+            System.out.println("Total active drivers found: " + allDrivers.size());
 
             List<InvoiceReadyResponse> readyDrivers = new ArrayList<>();
 
             for (Driver driver : allDrivers) {
+                System.out.println("\n--- Checking Driver ID: " + driver.getId() + " (" + driver.getAccount().getFullName() + ") ---");
+                
                 // Tính billing period cho từng driver
                 LocalDate billingStartDate;
                 LocalDate billingEndDate = LocalDate.now();
 
                 List<Invoice> driverInvoices = invoiceService.findByDriverId(driver.getId());
+                System.out.println("Previous invoices count: " + driverInvoices.size());
 
                 if (driverInvoices.isEmpty()) {
                     billingStartDate = driver.getAccount().getCreatedDate()
                             .atZone(ZoneId.systemDefault()).toLocalDate();
+                    System.out.println("No previous invoices - Using account creation date: " + billingStartDate);
                 } else {
                     Invoice lastInvoice = driverInvoices.stream()
                             .max((i1, i2) -> i1.getIssueDate().compareTo(i2.getIssueDate()))
                             .orElseThrow();
                     billingStartDate = lastInvoice.getBillingEndDate().plusDays(1);
+                    System.out.println("Last invoice end date: " + lastInvoice.getBillingEndDate());
+                    System.out.println("New billing start date: " + billingStartDate);
                 }
 
                 long daysSinceStart = ChronoUnit.DAYS.between(billingStartDate, billingEndDate);
+                System.out.println("Days since billing start: " + daysSinceStart);
 
                 // ⭐ SỬA: Convert LocalDate sang LocalDateTime
+                LocalDateTime startDateTime = billingStartDate.atStartOfDay();
+                LocalDateTime endDateTime = billingEndDate.atTime(23, 59, 59);
+                
+                System.out.println("Query range: " + startDateTime + " to " + endDateTime);
+                
                 long unbilledCount = invoiceServiceImpl.countUnbilledSessions(
                         driver.getId(),
-                        billingStartDate.atStartOfDay(),      // ⭐ THÊM .atStartOfDay()
-                        billingEndDate.atTime(23, 59, 59)     // ⭐ THÊM .atTime()
+                        startDateTime,
+                        endDateTime
                 );
+                
+                System.out.println("Unbilled sessions count: " + unbilledCount);
+                System.out.println("Eligible for invoice: " + (daysSinceStart >= 30 && unbilledCount > 0));
 
                 // ⭐ Chỉ thêm driver đã đủ 30 ngày VÀ có session chưa billing
                 if (daysSinceStart >= 30 && unbilledCount > 0) {
@@ -475,8 +592,15 @@ public class InvoiceController {
                             .unbilledSessionCount(unbilledCount)
                             .message("Sẵn sàng tạo invoice")
                             .build());
+                    System.out.println("✅ Driver ADDED to ready list");
+                } else {
+                    System.out.println("❌ Driver NOT added - Days: " + daysSinceStart + " >= 30? " + (daysSinceStart >= 30) + ", Count: " + unbilledCount + " > 0? " + (unbilledCount > 0));
                 }
             }
+            
+            System.out.println("\n========== FINAL RESULT ==========");
+            System.out.println("Total drivers ready: " + readyDrivers.size());
+            System.out.println("====================================\n");
 
             return ResponseEntity.ok(ApiResponse.success(
                     String.format("Found %d drivers ready for invoice", readyDrivers.size()),
@@ -544,6 +668,7 @@ public class InvoiceController {
                     .body(ApiResponse.error("Error: " + e.getMessage()));
         }
     }
+
     // ==================== DTOs ====================
 
     @lombok.Data
@@ -554,6 +679,7 @@ public class InvoiceController {
     }
 
     @lombok.Data
+    @lombok.NoArgsConstructor
     @lombok.AllArgsConstructor
     public static class PaymentStatusCheck {
         private Boolean needsPayment;

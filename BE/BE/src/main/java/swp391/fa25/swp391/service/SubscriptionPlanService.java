@@ -20,14 +20,15 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
     @Override
     @Transactional
     public SubscriptionPlan register(SubscriptionPlan subscriptionPlan) {
-        // ⭐ Validation: Chỉ có 1 plan được là default
+        // ⭐ Validation: Chỉ có 1 plan được là default cho mỗi targetUserType
         if (Boolean.TRUE.equals(subscriptionPlan.getIsDefault())) {
-            subscriptionPlanRepository.findByIsDefault(true).ifPresent(existingDefault -> {
-                throw new RuntimeException("Đã có một gói Basic. Không thể tạo thêm gói mặc định.");
-            });
+            subscriptionPlanRepository.findByIsDefaultAndTargetUserType(true, subscriptionPlan.getTargetUserType())
+                .ifPresent(existingDefault -> {
+                    throw new RuntimeException("Đã có một gói Basic cho " + subscriptionPlan.getTargetUserType() + ". Không thể tạo thêm gói mặc định.");
+                });
         }
 
-        log.info("Creating new subscription plan: {}", subscriptionPlan.getPlanName());
+        log.info("Creating new subscription plan: {} for {}", subscriptionPlan.getPlanName(), subscriptionPlan.getTargetUserType());
         return subscriptionPlanRepository.save(subscriptionPlan);
     }
 
@@ -73,5 +74,24 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
     public SubscriptionPlan getBasicPlan() {
         return subscriptionPlanRepository.findByIsDefault(true)
                 .orElseThrow(() -> new RuntimeException("Basic plan not found in database"));
+    }
+
+    // ⭐ NEW: Get Basic plan cho Driver
+    public SubscriptionPlan getBasicPlanForDriver() {
+        return subscriptionPlanRepository.findByIsDefaultAndTargetUserType(true, "Driver")
+                .orElseThrow(() -> new RuntimeException("Basic plan for Driver not found in database"));
+    }
+
+    // ⭐ NOTE: Enterprise KHÔNG có Basic plan miễn phí
+    // Enterprise must purchase paid plans only
+    // Method kept for potential future use, but will throw exception
+    public SubscriptionPlan getBasicPlanForEnterprise() {
+        return subscriptionPlanRepository.findByIsDefaultAndTargetUserType(true, "Enterprise")
+                .orElseThrow(() -> new RuntimeException("No free Basic plan for Enterprise. Enterprise users must purchase subscription plans."));
+    }
+
+    // ⭐ NEW: Get all plans by target user type
+    public List<SubscriptionPlan> findByTargetUserType(String targetUserType) {
+        return subscriptionPlanRepository.findByTargetUserType(targetUserType);
     }
 }

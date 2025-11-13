@@ -7,6 +7,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchChargingPoints, deleteChargingPoint, fetchStations, clearNotification } from '../../../redux/admin/adminSlice';
 import { AdminTable, AdminModal, AdminSearchBar, AdminLoader } from '../../../Components/Admin';
 import ChargingPointForm from './ChargingPointForm';
+import { CHARGING_POINT_STATUS } from '../../../constants/statusConstants';
 
 export default function ChargingPointList() {
   const dispatch = useDispatch();
@@ -43,16 +44,6 @@ export default function ChargingPointList() {
       sortable: true
     },
     {
-      key: 'connectorType',
-      label: 'Connector Type',
-      render: (value) => <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">{value}</span>,
-    },
-    {
-      key: 'maxPower',
-      label: 'Power',
-      render: (value) => `${value} kW`,
-    },
-    {
       key: 'pricePerKwh',
       label: 'Price/kWh',
       render: (value) => `${value?.toLocaleString('vi-VN')} VND`,
@@ -62,17 +53,17 @@ export default function ChargingPointList() {
       label: 'Status',
       render: (value) => {
         const statusLower = (value || '').toLowerCase();
+        const statusMap = {
+          [CHARGING_POINT_STATUS.ACTIVE]: { bg: 'bg-green-100', text: 'text-green-700', label: 'Active' },
+          [CHARGING_POINT_STATUS.USING]: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Using' },
+          [CHARGING_POINT_STATUS.BOOKED]: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Booked' },
+          [CHARGING_POINT_STATUS.INACTIVE]: { bg: 'bg-red-100', text: 'text-red-700', label: 'Inactive' },
+          [CHARGING_POINT_STATUS.MAINTENANCE]: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Maintenance' },
+        };
+        const config = statusMap[statusLower] || { bg: 'bg-gray-100', text: 'text-gray-700', label: statusLower };
         return (
-          <span
-            className={`px-2 py-1 rounded-full text-xs font-medium ${
-              statusLower === 'active'
-                ? 'bg-green-100 text-green-700'
-                : statusLower === 'using'
-                ? 'bg-blue-100 text-blue-700'
-                : 'bg-red-100 text-red-700'
-            }`}
-          >
-            {statusLower === 'active' ? 'Active' : statusLower === 'using' ? 'Using' : 'Inactive'}
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
+            {config.label}
           </span>
         );
       },

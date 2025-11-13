@@ -24,7 +24,7 @@ public interface IChargingSessionService {
     Optional<ChargingSession> findById(Integer id);
     ChargingSession getSessionById(Integer id);
     Optional<ChargingSession> findActiveSessionByDriverId(Integer driverId);
-    Optional<ChargingSession> findActiveSessionByChargingPointId(Integer chargingPointId);
+    Optional<ChargingSession> findActiveSessionByChargerId(Integer chargerId);
     List<ChargingSession> findByDriverId(Integer driverId);
     List<ChargingSession> findByStatus(String status);
 

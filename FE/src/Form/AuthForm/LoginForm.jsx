@@ -1,16 +1,21 @@
 /* eslint-disable react/prop-types */
-import { Form, Input, Button, Checkbox, message } from "antd";
+import { Form, Input, Button, Checkbox, message, Divider, Modal } from "antd";
 import { useForm } from "antd/es/form/Form";
-import { User, Lock } from "lucide-react";
+import { User, Lock, Building2 } from "lucide-react";
+import { GoogleOutlined } from "@ant-design/icons";
 import { loginUser } from "../../redux/auth/authSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "../../configs/firebase";
+import api from "../../configs/config-axios";
 
 export default function LoginForm() {
   const [loginForm] = useForm(); // ✅ destructure
   const dispatch = useDispatch(); // Sử dụng useDispatch để dispatch action
   const navigate = useNavigate();
+  const [socialLoading, setSocialLoading] = useState(false);
   
   // Get auth state từ Redux
   const { isAuthenticated, loading, error, user } = useSelector((state) => state.auth);
@@ -21,33 +26,139 @@ export default function LoginForm() {
     dispatch(loginUser(values)); // Dispatch action login với values từ form
   };
 
-  // Effect để handle navigation sau khi login thành công
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      console.log("✅ Login successful, user role:", user.role);
-      message.success("Đăng nhập thành công!");
+  // Handle Google Login
+  const handleGoogleLogin = async () => {
+    try {
+      setSocialLoading(true);
+      console.log("🔵 Starting Google login...");
       
-      // Navigation based on user role
-      switch(user.role) {
-        case "Staff":
-        case "StationEmployee":
-          navigate("/staff/dashboard");
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      console.log("✅ Google authentication successful:", user.email);
+      
+      // Get Firebase ID token
+      const idToken = await user.getIdToken();
+      
+      // Send to backend for verification and account creation/login
+      const response = await api.post('/auth/social-login', {
+        provider: 'GOOGLE',
+        idToken: idToken,
+        email: user.email,
+        fullName: user.displayName,
+        photoURL: user.photoURL
+      });
+      
+      if (response.data.success) {
+        const { token, account } = response.data.data;
+        console.log("✅ Backend response - account:", account);
+        message.success(`Chào mừng ${user.displayName}!`);
+        
+        // Store token and user info (cùng format với regular login)
+        localStorage.setItem('accessToken', token);
+        localStorage.setItem('currentUser', JSON.stringify(account));
+        
+        // Navigate based on role
+        const userRole = account.role?.toUpperCase();
+        console.log("✅ User role:", userRole);
+        
+        // Force navigation with window.location for immediate effect
+        switch(userRole) {
+          case "DRIVER":
+            window.location.href = "/driver";
+            break;
+          case "ADMIN":
+            window.location.href = "/admin";
+            break;
+          case "STAFF":
+          case "STATIONEMPLOYEE":
+          case "STATION_EMPLOYEE":
+            window.location.href = "/employee/monitor";
+            break;
+          default:
+            window.location.href = "/driver";
+        }
+      }
+    } catch (error) {
+      console.error("❌ Google login error:", error);
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+        message.warning('Đăng nhập bị hủy');
+      } else if (error.code === 'auth/popup-blocked') {
+        message.error('Popup bị chặn. Vui lòng cho phép popup và thử lại.');
+      } else {
+        message.error(error.response?.data?.message || 'Đăng nhập Google thất bại');
+      }
+    } finally {
+      setSocialLoading(false);
+    }
+  };
+
+
+
+  // Effect để handle navigation sau khi login thành công (chỉ cho regular login, không cho social login)
+  useEffect(() => {
+    if (isAuthenticated && user && !socialLoading) {
+      console.log("✅ Login successful, user role:", user.role);
+      
+      // Check for pending Enterprise registration
+      const pendingEnterprise = sessionStorage.getItem('pendingEnterpriseRegistration');
+      
+      if (pendingEnterprise === 'true' && user.role?.toUpperCase() === 'DRIVER') {
+        // Show modal to complete Enterprise registration
+        Modal.confirm({
+          title: (
+            <div className="flex items-center gap-2">
+              <Building2 size={20} className="text-blue-500" />
+              <span>Hoàn Tất Đăng Ký Doanh Nghiệp</span>
+            </div>
+          ),
+          content: (
+            <div className="py-2">
+              <p className="mb-2">Bạn đã đăng ký tài khoản Driver thành công! 🎉</p>
+              <p className="text-slate-600">
+                Bây giờ hãy hoàn tất đăng ký doanh nghiệp để Admin có thể phê duyệt và chuyển đổi tài khoản của bạn.
+              </p>
+            </div>
+          ),
+          okText: 'Đăng Ký Doanh Nghiệp',
+          cancelText: 'Để Sau',
+          okButtonProps: { type: 'primary', size: 'large' },
+          cancelButtonProps: { size: 'large' },
+          onOk: () => {
+            sessionStorage.removeItem('pendingEnterpriseRegistration');
+            navigate('/driver/enterprise-registration');
+          },
+          onCancel: () => {
+            // Keep the flag for next login
+            message.info('Bạn có thể đăng ký doanh nghiệp bất cứ lúc nào từ trang Driver');
+            navigate('/driver');
+          }
+        });
+        return; // Don't do normal navigation
+      }
+      
+      // Navigation based on user role (support both formats)
+      const roleUpper = user.role?.toUpperCase();
+      
+      switch(roleUpper) {
+        case "STAFF":
+        case "STATIONEMPLOYEE":
+        case "STATION_EMPLOYEE":
+          navigate("/employee/monitor");
           break;
-        case "Admin":
+        case "ADMIN":
           navigate("/admin");
           break;
-        case "Driver":
+        case "DRIVER":
           navigate("/driver");
           break;
-        case "Enterprise":
-          navigate("/enterprise/dashboard");
-          break;
         default:
-          console.warn("Unknown role:", user.role, "redirecting to staff dashboard");
-          navigate("/staff/dashboard");
+          console.warn("Unknown role:", user.role, "redirecting to driver page");
+          navigate("/driver");
       }
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, socialLoading]);
 
   // Effect để handle error messages
   useEffect(() => {
@@ -125,13 +236,29 @@ export default function LoginForm() {
       </Form.Item>
 
       <div className="text-center">
+        {/* ✅ Backend endpoints now available! */}
         <a
-          href="#"
+          href="/forgot-password"
           className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
         >
           Forgot your password?
         </a>
       </div>
+
+      <Divider className="my-6">
+        <span className="text-slate-400 text-sm">Or continue with</span>
+      </Divider>
+
+      <Button
+        icon={<GoogleOutlined />}
+        size="large"
+        onClick={handleGoogleLogin}
+        loading={socialLoading}
+        disabled={loading || socialLoading}
+        className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700"
+      >
+        Continue with Google
+      </Button>
     </Form>
   );
 }

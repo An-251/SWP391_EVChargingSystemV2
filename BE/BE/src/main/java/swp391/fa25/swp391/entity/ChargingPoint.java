@@ -25,13 +25,6 @@ public class ChargingPoint {
     private String pointName;
 
     @Nationalized
-    @Column(name = "CONNECTOR_TYPE", length = 50)
-    private String connectorType;
-
-    @Column(name = "MAX_POWER", precision = 10, scale = 2)
-    private BigDecimal maxPower;
-
-    @Nationalized
     @Column(name = "STATUS", length = 50)
     private String status;
 
@@ -42,6 +35,6 @@ public class ChargingPoint {
     @JoinColumn(name = "STATION_ID")
     private ChargingStation station;
 
-    @OneToMany(mappedBy = "chargingPoint")
-    private List<ChargingSession> chargingSessions = new ArrayList<>() ;
+    @OneToMany(mappedBy = "chargingPoint", cascade = CascadeType.ALL)
+    private List<Charger> chargers = new ArrayList<>();
 }

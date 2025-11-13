@@ -64,18 +64,6 @@ public class FacilityService implements IFacilityService {
         return facilityRepository.findByAddressContaining(address);
     }
 
-    public List<Facility> findByAddress(String address) {
-        return facilityRepository.findByAddressContaining(address);
-    }
-
-    public List<ChargingStation> getChargingStationsByFacilityId(Integer facilityId) {
-        Optional<Facility> facility = facilityRepository.findById(facilityId);
-        if (facility.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return facility.get().getChargingStations();
-    }
-
     @Override
     public Facility save(Facility facility) {
         return facilityRepository.save(facility);
@@ -115,5 +103,35 @@ public class FacilityService implements IFacilityService {
         }
         return facility.getChargingStations().stream()
                 .anyMatch(station -> STATUS_USING.equals(station.getStatus()));
+    }
+
+    /**
+     * ⭐ NEW: Auto-update facility status based on its stations
+     * Called automatically when station status changes
+     */
+    @Transactional
+    public void updateFacilityStatusBasedOnStations(Facility facility) {
+        if (facility == null || facility.getChargingStations() == null) {
+            return;
+        }
+
+        // Nếu facility đang INACTIVE (do admin set), không tự động update
+        if (STATUS_INACTIVE.equals(facility.getStatus())) {
+            return;
+        }
+
+        boolean anyStationUsing = hasAnyStationUsing(facility);
+
+        String oldStatus = facility.getStatus();
+
+        // ⭐ Logic: Nếu có station USING → facility = USING
+        if (anyStationUsing && !STATUS_USING.equals(facility.getStatus())) {
+            facility.setStatus(STATUS_USING);
+            facilityRepository.save(facility);
+        } else if (!anyStationUsing && STATUS_USING.equals(facility.getStatus())) {
+            // Revert to active if no stations are using
+            facility.setStatus(STATUS_ACTIVE);
+            facilityRepository.save(facility);
+        }
     }
 }

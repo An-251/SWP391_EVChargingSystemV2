@@ -1,5 +1,6 @@
 package swp391.fa25.swp391.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -25,7 +26,8 @@ public class Admin {
     private Account account;
 
 
-    @OneToMany(mappedBy = "admin") // "admin" là tên trường Admin trong Facility.java
-    private List<Facility> facilities = new ArrayList<>(); // Bạn cần import List và ArrayList
+    @OneToMany(mappedBy = "admin")
+    @JsonIgnoreProperties({"admin"})
+    private List<Facility> facilities = new ArrayList<>();
 
 }

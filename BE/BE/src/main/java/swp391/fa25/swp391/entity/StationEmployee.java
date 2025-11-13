@@ -17,11 +17,15 @@ public class StationEmployee {
     @Column(name = "EMPLOYEE_ID")
     private Integer id;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "ACCOUNT_ID")
     private Account account;
 
     @Nationalized
     @Column(name = "POSITION", length = 100)
     private String position;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "FACILITY_ID")
+    private Facility facility;
 }

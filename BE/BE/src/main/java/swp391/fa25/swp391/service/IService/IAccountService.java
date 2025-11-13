@@ -8,7 +8,7 @@ import java.util.Optional;
 public interface IAccountService {
     Account register(Account account);
     boolean login(String username, String password);
-    public Account updateAccount(Account account) ;
+    Account updateAccount(Account account) ;
 
     List<Account> findByEmail(String email);
     List<Account> findByUsername(String username);
@@ -16,9 +16,7 @@ public interface IAccountService {
     List<Account> findAll();
     boolean deleteAccount(String username);
 
-    boolean existsByUsername(String username);
     boolean existsByEmail(String email);
     boolean deleteAccountById(Integer id);
-    boolean existsByRole(String role);
-
+    Account save(Account account);
 }

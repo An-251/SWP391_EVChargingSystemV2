@@ -24,6 +24,12 @@ public class AccountService implements IAccountService {
         this.passwordEncoder = passwordEncoder;
         this.accountRepository = accountRepository;
     }
+
+    @Override
+    public Account save(Account account) {
+        return accountRepository.save(account);
+    }
+
     @Override
     @Transactional
     public Account register(Account account) {
@@ -76,23 +82,12 @@ public class AccountService implements IAccountService {
         return accountRepository.findAllByUsername(username);
     }
 
-
-    @Override
-    public boolean existsByUsername(String username) {
-        // Dùng existsByUsername tự sinh của JpaRepository
-        return accountRepository.existsByUsername(username);
-    }
-
     @Override
     public boolean existsByEmail(String email) {
         // Dùng existsByEmail tự sinh của JpaRepository
         return accountRepository.existsByEmail(email);
     }
 
-    @Override
-    public boolean existsByRole(String role) {
-        return accountRepository.existsByAccountRole(role);
-    }
     @Override
     public Optional<Account> findById(Integer id) {
         // Dùng findById tự sinh của JpaRepository

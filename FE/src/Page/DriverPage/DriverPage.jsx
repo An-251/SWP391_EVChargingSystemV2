@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Route } from 'lucide-react';
 import { message } from 'antd';
+import '../../styles/driver.css'; // Driver specific styles
 
 import { logoutUser } from '../../redux/auth/authSlice';
 import { fetchStations, setSelectedStation as setReduxSelectedStation } from '../../redux/station/stationSlice';

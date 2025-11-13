@@ -20,11 +20,6 @@ public interface AccountRepository extends JpaRepository<Account, Integer> {
     Optional<Account> findByUsername(String username);
 
     /**
-     * Tìm Account theo email
-     */
-    Optional<Account> findByEmail(String email);
-
-    /**
      * Tìm tất cả accounts theo username (vì login trong AccountService.java dùng List)
      */
     List<Account> findAllByUsername(String username);
@@ -33,6 +28,11 @@ public interface AccountRepository extends JpaRepository<Account, Integer> {
      * Tìm tất cả accounts theo email (vì findByEmail trong AccountService.java dùng List)
      */
     List<Account> findAllByEmail(String email);
+
+    /**
+     * Tìm Account theo email (trả về Optional)
+     */
+    Optional<Account> findByEmail(String email);
 
     /**
      * Kiểm tra Account có tồn tại theo username
@@ -52,4 +52,9 @@ public interface AccountRepository extends JpaRepository<Account, Integer> {
     Long deleteByUsername(String username);
 
     boolean existsByAccountRole(String role);
+
+    /**
+     * ⭐ Find Account by ID (for EnterpriseRegistrationService)
+     */
+    Optional<Account> findById(Integer id);
 }

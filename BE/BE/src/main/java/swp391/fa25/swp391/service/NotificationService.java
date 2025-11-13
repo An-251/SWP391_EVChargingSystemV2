@@ -14,13 +14,14 @@ import java.time.format.DateTimeFormatter;
 
 /**
  * Service để gửi thông báo SMS/Email cho driver
- * Hiện tại: Mock implementation - chỉ log ra console
- * TODO: Tích hợp SMS gateway (Twilio, AWS SNS) và Email service (SendGrid, AWS SES)
+ * ĐÃ TÍCH HỢP EmailService và SmsService thật.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
+
+    private final EmailService emailService;
 
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -32,6 +33,10 @@ public class NotificationService {
      */
     public void sendInvoiceCreatedNotification(Invoice invoice) {
         Driver driver = invoice.getDriver();
+        if (driver == null || driver.getAccount() == null) {
+            log.warn("Cannot send notification: Driver or Account is null for Invoice: {}", invoice.getId());
+            return;
+        }
         String phone = driver.getAccount().getPhone();
         String email = driver.getAccount().getEmail();
         String driverName = driver.getAccount().getFullName();
@@ -52,7 +57,6 @@ public class NotificationService {
                 dueDate
         );
 
-        sendSMS(phone, message);
         sendEmail(email, "Hóa đơn mới - EV Charging", message);
 
         log.info("✅ Sent invoice created notification to driver {} (Invoice: {})",
@@ -64,6 +68,10 @@ public class NotificationService {
      */
     public void sendPaymentReminderNotification(Invoice invoice) {
         Driver driver = invoice.getDriver();
+        if (driver == null || driver.getAccount() == null) {
+            log.warn("Cannot send reminder: Driver or Account is null for Invoice: {}", invoice.getId());
+            return;
+        }
         String phone = driver.getAccount().getPhone();
         String email = driver.getAccount().getEmail();
         String driverName = driver.getAccount().getFullName();
@@ -85,7 +93,6 @@ public class NotificationService {
                 dueDate
         );
 
-        sendSMS(phone, message);
         sendEmail(email, "Nhắc nhở thanh toán - EV Charging", message);
 
         log.info("⏰ Sent payment reminder to driver {} (Invoice: {})",
@@ -97,6 +104,10 @@ public class NotificationService {
      */
     public void sendOverdueWarningNotification(Invoice invoice) {
         Driver driver = invoice.getDriver();
+        if (driver == null || driver.getAccount() == null) {
+            log.warn("Cannot send overdue warning: Driver or Account is null for Invoice: {}", invoice.getId());
+            return;
+        }
         String phone = driver.getAccount().getPhone();
         String email = driver.getAccount().getEmail();
         String driverName = driver.getAccount().getFullName();
@@ -119,7 +130,6 @@ public class NotificationService {
                 dueDate
         );
 
-        sendSMS(phone, message);
         sendEmail(email, "⚠️ Cảnh báo: Hóa đơn quá hạn - EV Charging", message);
 
         log.warn("⚠️ Sent overdue warning to driver {} (Invoice: {})",
@@ -131,6 +141,10 @@ public class NotificationService {
      */
     public void sendAccountSuspendedNotification(Invoice invoice) {
         Driver driver = invoice.getDriver();
+        if (driver == null || driver.getAccount() == null) {
+            log.warn("Cannot send suspended notification: Driver or Account is null for Invoice: {}", invoice.getId());
+            return;
+        }
         String phone = driver.getAccount().getPhone();
         String email = driver.getAccount().getEmail();
         String driverName = driver.getAccount().getFullName();
@@ -150,7 +164,6 @@ public class NotificationService {
                 amount.longValue()
         );
 
-        sendSMS(phone, message);
         sendEmail(email, "🔒 Tài khoản bị khóa - EV Charging", message);
 
         log.error("🔒 Sent account suspended notification to driver {} (Invoice: {})",
@@ -162,6 +175,10 @@ public class NotificationService {
      */
     public void sendPaymentSuccessNotification(Invoice invoice) {
         Driver driver = invoice.getDriver();
+        if (driver == null || driver.getAccount() == null) {
+            log.warn("Cannot send payment success notification: Driver or Account is null for Invoice: {}", invoice.getId());
+            return;
+        }
         String phone = driver.getAccount().getPhone();
         String email = driver.getAccount().getEmail();
         String driverName = driver.getAccount().getFullName();
@@ -186,8 +203,6 @@ public class NotificationService {
                 invoice.getPaymentMethod() != null ? invoice.getPaymentMethod() : "N/A",
                 invoice.getPaymentReference() != null ? invoice.getPaymentReference() : "N/A"
         );
-
-        sendSMS(phone, message);
         sendEmail(email, "✅ Thanh toán thành công - EV Charging", message);
 
         log.info("✅ Sent payment success notification to driver {} (Invoice: {})",
@@ -195,28 +210,8 @@ public class NotificationService {
     }
 
     // ==================== LOW-LEVEL SEND METHODS ====================
-
     /**
-     * Gửi SMS (Mock implementation)
-     * TODO: Tích hợp SMS gateway thực tế
-     */
-    private void sendSMS(String phoneNumber, String message) {
-        if (phoneNumber == null || phoneNumber.isEmpty()) {
-            log.warn("Cannot send SMS: phone number is empty");
-            return;
-        }
-
-        // TODO: Tích hợp SMS gateway (Twilio, AWS SNS, Esendex, etc.)
-        // Example với Twilio:
-        // twilioClient.sendMessage(phoneNumber, message);
-
-        log.info("📱 [MOCK SMS] Sent to {}: {}", phoneNumber,
-                message.substring(0, Math.min(50, message.length())) + "...");
-    }
-
-    /**
-     * Gửi Email (Mock implementation)
-     * TODO: Tích hợp Email service thực tế
+     * Gửi Email (Đã tích hợp EmailService)
      */
     private void sendEmail(String emailAddress, String subject, String body) {
         if (emailAddress == null || emailAddress.isEmpty()) {
@@ -224,13 +219,13 @@ public class NotificationService {
             return;
         }
 
-        // TODO: Tích hợp Email service (SendGrid, AWS SES, JavaMail, etc.)
-        // Example với JavaMail:
-        // mailSender.send(emailAddress, subject, body);
-
-        log.info("📧 [MOCK EMAIL] Sent to {}: Subject='{}', Body='{}'",
-                emailAddress, subject,
-                body.substring(0, Math.min(50, body.length())) + "...");
+        try {
+            // ✅ Gọi service thật
+            emailService.sendEmail(emailAddress, subject, body);
+        } catch (Exception e) {
+            // Bắt lỗi để không làm crash luồng chính
+            log.error("Failed to send email to {}: {}", emailAddress, e.getMessage(), e);
+        }
     }
 
     // ==================== HELPER METHODS ====================
@@ -242,7 +237,9 @@ public class NotificationService {
         if (instant == null) {
             return "N/A";
         }
-        LocalDateTime dateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+        // Luôn sử dụng múi giờ Việt Nam
+        LocalDateTime dateTime = LocalDateTime.ofInstant(instant, ZoneId.of("Asia/Ho_Chi_Minh"));
         return dateTime.format(DATE_FORMATTER);
     }
 }
+

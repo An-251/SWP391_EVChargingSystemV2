@@ -150,14 +150,14 @@ public class QRCodeController {
             }
 
             // Update invoice status
-            invoice.setStatus("PAID");
+            invoice.setStatus("paid");
             invoice.setPaidDate(java.time.Instant.now());
             invoice.setPaymentReference("MOCK-" + System.currentTimeMillis());
             invoiceService.save(invoice);
 
             // Reactivate account if suspended
-            if ("SUSPENDED".equals(invoice.getDriver().getAccount().getStatus())) {
-                invoice.getDriver().getAccount().setStatus("ACTIVE");
+            if ("suspended".equalsIgnoreCase(invoice.getDriver().getAccount().getStatus())) {
+                invoice.getDriver().getAccount().setStatus("active");
             }
 
             return ResponseEntity.ok(QRCodeResponse.builder()

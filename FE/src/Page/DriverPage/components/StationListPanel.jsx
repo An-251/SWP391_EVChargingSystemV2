@@ -28,42 +28,7 @@ const StationListPanel = ({
             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
         </div>
-        
-        <div className="flex items-center justify-between mt-3">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <Filter className="w-4 h-4" />
-            <span className="text-sm">Bộ lọc</span>
-            <ChevronDown className={`w-4 h-4 transform transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-          </button>
-          
-          <button className="flex items-center space-x-2 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
-            <Locate className="w-4 h-4" />
-            <span className="text-sm">Gần tôi</span>
-          </button>
         </div>
-
-        {showFilters && (
-          <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-            <div className="space-y-2">
-              <label className="flex items-center">
-                <input type="checkbox" className="mr-2" />
-                <span className="text-sm">Sạc nhanh</span>
-              </label>
-              <label className="flex items-center">
-                <input type="checkbox" className="mr-2" />
-                <span className="text-sm">Có sẵn ngay</span>
-              </label>
-              <label className="flex items-center">
-                <input type="checkbox" className="mr-2" />
-                <span className="text-sm">Giá rẻ</span>
-              </label>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Station List */}
       <div className="flex-1 overflow-y-auto">

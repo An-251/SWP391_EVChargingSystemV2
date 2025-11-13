@@ -15,7 +15,6 @@ export default function FacilityForm({ facility, onSuccess, onCancel }) {
     ward: '',
     district: '',
     city: '',
-    description: '',
     status: 'active',
   });
   const [errors, setErrors] = useState({});
@@ -29,7 +28,6 @@ export default function FacilityForm({ facility, onSuccess, onCancel }) {
         ward: facility.ward || '',
         district: facility.district || '',
         city: facility.city || '',
-        description: facility.description || '',
         status: facility.status || 'active',
       });
     }
@@ -89,7 +87,7 @@ export default function FacilityForm({ facility, onSuccess, onCancel }) {
       }
       onSuccess();
     } catch (error) {
-      console.error('Form submission error:', error);
+      // Error handled by Redux
     } finally {
       setSubmitting(false);
     }

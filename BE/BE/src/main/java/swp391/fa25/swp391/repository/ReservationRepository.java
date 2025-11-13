@@ -4,17 +4,29 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
-import swp391.fa25.swp391.entity.Reservation;
-import swp391.fa25.swp391.entity.Driver;
 import swp391.fa25.swp391.entity.ChargingPoint;
+import swp391.fa25.swp391.entity.Driver;
+import swp391.fa25.swp391.entity.Reservation;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.LocalDateTime; // ⭐ IMPORT LocalDateTime
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
+
+
+        // ⭐ Đổi parameter từ Instant sang LocalDateTime
+        List<Reservation> findByStatusAndEndTimeBefore(String status, LocalDateTime endTime);
+
+        // ⭐ Tìm reservations sắp hết hạn (trong 5 phút)
+        @Query("SELECT r FROM Reservation r WHERE LOWER(r.status) = 'active' " +
+                "AND r.endTime BETWEEN :now AND :fiveMinutesLater")
+        List<Reservation> findExpiringReservations(
+                @Param("now") Instant now,
+                @Param("fiveMinutesLater") Instant fiveMinutesLater
+        );
 
     /**
      * Tìm tất cả Reservation theo Driver
@@ -104,7 +116,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      * (Overlapping reservations)
      */
     @Query("SELECT r FROM Reservation r WHERE r.chargingPoint.id = :chargingPointId " +
-            "AND r.status = 'ACTIVE' " +
+            "AND LOWER(r.status) = 'active' " +
             "AND r.startTime < :endTime " +
             "AND r.endTime > :startTime")
     List<Reservation> findConflictingReservations(
@@ -118,7 +130,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      */
     @Query("SELECT r FROM Reservation r WHERE r.driver.id = :driverId " +
             "AND r.startTime > :currentTime " +
-            "AND r.status = 'ACTIVE' " +
+            "AND LOWER(r.status) = 'active' " +
             "ORDER BY r.startTime ASC")
     List<Reservation> findUpcomingReservationsByDriver(
             @Param("driverId") Integer driverId,
@@ -129,7 +141,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      * Tìm reservation đang diễn ra của driver (ACTIVE và trong khoảng thời gian)
      */
     @Query("SELECT r FROM Reservation r WHERE r.driver.id = :driverId " +
-            "AND r.status = 'ACTIVE' " +
+            "AND LOWER(r.status) = 'active' " +
             "AND r.startTime <= :currentTime " +
             "AND r.endTime >= :currentTime")
     Optional<Reservation> findActiveReservationByDriver(
@@ -141,7 +153,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      * Tìm reservation đã quá hạn chưa hoàn thành
      */
     @Query("SELECT r FROM Reservation r WHERE r.endTime < :currentTime " +
-            "AND r.status = 'ACTIVE'")
+            "AND LOWER(r.status) = 'active'")
     List<Reservation> findExpiredActiveReservations(@Param("currentTime") LocalDateTime currentTime);
 
     /**
@@ -167,4 +179,22 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime
     );
+
+    // Trong ReservationRepository
+    List<Reservation> findByDriverId(Long driverId);
+
+    List<Reservation> findByChargingPointId(Integer chargingPointId);
+
+    List<Reservation> findByChargingPointIdAndStatusNot(Integer chargingPointId, String status);
+
+    // ⭐ Tìm reservation đã hết hạn
+    @Query("SELECT r FROM Reservation r WHERE r.endTime < :now AND r.status IN :statuses")
+    List<Reservation> findExpiredReservations(
+            @Param("now") LocalDateTime now,
+            @Param("statuses") List<String> statuses
+    );
+
+    // ⭐ Tìm reservation đang active
+    @Query("SELECT r FROM Reservation r WHERE r.startTime <= :now AND r.endTime > :now AND r.status = 'CONFIRMED'")
+    List<Reservation> findActiveReservations(@Param("now") LocalDateTime now);
 }

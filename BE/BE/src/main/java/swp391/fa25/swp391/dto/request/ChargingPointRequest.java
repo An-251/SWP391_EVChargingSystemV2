@@ -18,18 +18,6 @@ public class ChargingPointRequest {
     @Size(max = 100, message = "Point name cannot exceed 100 characters")
     private String pointName;
 
-    @NotBlank(message = "Connector type is required")
-    @Size(max = 50, message = "Connector type cannot exceed 50 characters")
-    private String connectorType;
-
-    @NotNull(message = "Max power is required")
-    @PositiveOrZero(message = "Max power must be non-negative")
-    private BigDecimal maxPower;
-
-    @NotBlank(message = "Status is required")
-    @Size(max = 50, message = "Status cannot exceed 50 characters")
-    private String status;
-
     @NotNull(message = "Price per Kwh is required")
     @PositiveOrZero(message = "Price per Kwh must be non-negative")
     private BigDecimal pricePerKwh;

@@ -1,1 +1,2 @@
-export { default } from './SubscriptionSelectionPage';
+import SubscriptionSelectionPage from './SubscriptionSelectionPage';
+export default SubscriptionSelectionPage;

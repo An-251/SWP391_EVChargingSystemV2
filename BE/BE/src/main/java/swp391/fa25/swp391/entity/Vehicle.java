@@ -1,5 +1,6 @@
 package swp391.fa25.swp391.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -14,6 +15,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Vehicle {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,12 +42,11 @@ public class Vehicle {
     private BigDecimal batteryCapacity;
 
     @ManyToOne
-    @JoinColumn(name = "DRIVER_ID")
+    @JoinColumn(name = "DRIVER_ID", nullable = true)
+    @JsonIgnoreProperties({"vehicles", "account", "chargingSessions"})
     private Driver driver;
 
     @OneToMany(mappedBy = "vehicle")
+    @JsonIgnoreProperties({"vehicle", "driver"})
     private List<ChargingSession> chargingSessions = new ArrayList<>();
-    @ManyToOne
-    @JoinColumn(name = "enterprise_id")
-    private Enterprise enterprise;
 }

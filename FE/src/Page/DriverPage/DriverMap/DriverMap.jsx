@@ -12,6 +12,7 @@ import StationFilters from './components/StationFilters';
 import StationPopup from './components/StationPopup';
 import BookingModal from './components/BookingModal';
 import NavigationPanel from './components/NavigationPanel';
+import { CHARGING_POINT_STATUS } from '../../../constants/statusConstants';
 import { 
   createCustomIcon, 
   userLocationIcon, 
@@ -59,7 +60,6 @@ function DriverMap() {
 
   // Fetch stations on mount
   useEffect(() => {
-    console.log('🗺️ [DriverMap] Fetching stations...');
     dispatch(fetchStations());
   }, [dispatch]);
 
@@ -110,12 +110,12 @@ function DriverMap() {
     // Filter by availability (Backend uses lowercase status)
     if (filters.availability === 'available') {
       const hasAvailable = station.chargingPoints?.some(
-        (cp) => cp.status === 'active'
+        (cp) => (cp.status || '').toLowerCase() === CHARGING_POINT_STATUS.ACTIVE
       );
       if (!hasAvailable) return false;
     } else if (filters.availability === 'busy') {
       const allBusy = station.chargingPoints?.every(
-        (cp) => cp.status !== 'active'
+        (cp) => (cp.status || '').toLowerCase() !== CHARGING_POINT_STATUS.ACTIVE
       );
       if (!allBusy) return false;
     }
@@ -164,7 +164,7 @@ function DriverMap() {
     dispatch(setSelectedStation(station));
   };
 
-  // Handle booking
+  // Handle booking (reservation)
   const handleBook = (station) => {
     const stationName = station.stationName || station.name || 'Trạm sạc';
     console.log('📅 [DriverMap] Opening booking modal for:', stationName);
@@ -295,7 +295,7 @@ function DriverMap() {
         {/* Charging station markers */}
         {filteredStations.map((station) => {
           const availableCount = station.chargingPoints?.filter(
-            (cp) => cp.status === 'active'
+            (cp) => (cp.status || '').toLowerCase() === CHARGING_POINT_STATUS.ACTIVE
           ).length || 0;
 
           return (

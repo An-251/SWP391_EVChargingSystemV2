@@ -13,7 +13,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -30,6 +29,7 @@ public class InvoiceService implements IInvoiceService {
     private final SubscriptionPlanRepository planRepository;
     private final AccountRepository accountRepository;
     private final NotificationService notificationService;
+    private final EmailService emailService;
 
     // ==================== CONFIGURATION ====================
     private static final int DAYS_TO_DUE_DATE = 7; // Invoice → Due date: 7 ngày
@@ -213,7 +213,7 @@ public class InvoiceService implements IInvoiceService {
         invoice.setIssueDate(issueDate);
         invoice.setDueDate(dueDate);
         invoice.setTotalCost(totalCost);
-        invoice.setStatus("UNPAID");
+        invoice.setStatus("unpaid");
         invoice.setPlanAtBilling(currentPlan);
 
         // Lưu invoice trước để có ID
@@ -228,6 +228,18 @@ public class InvoiceService implements IInvoiceService {
 
         log.info("Created invoice {} for driver {}, amount: {}, due date: {}, sessions: {}",
                 savedInvoice.getId(), driver.getId(), totalCost, dueDate, sessions.size());
+
+        // ⭐ Send invoice email notification
+        try {
+            String driverEmail = driver.getAccount().getEmail();
+            if (driverEmail != null && !driverEmail.isEmpty()) {
+                emailService.sendInvoiceEmail(driverEmail, savedInvoice);
+                log.info("✅ Invoice email sent to driver {} at {}", driver.getId(), driverEmail);
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to send invoice email to driver {}: {}", driver.getId(), e.getMessage());
+            // Don't throw - invoice is still created successfully
+        }
 
         return savedInvoice;
     }
@@ -350,7 +362,7 @@ public class InvoiceService implements IInvoiceService {
         invoice.setIssueDate(issueDate);
         invoice.setDueDate(dueDate);
         invoice.setTotalCost(totalSessionsCost);
-        invoice.setStatus("UNPAID");
+        invoice.setStatus("unpaid");
 
         // Get current plan
         Optional<PlanRegistration> currentPlanOpt = planRegistrationRepository
@@ -368,6 +380,17 @@ public class InvoiceService implements IInvoiceService {
             sessionRepository.save(session);
         }
         savedInvoice.setSessions(unbilledSessions);
+
+        // ⭐ Send invoice email notification
+        try {
+            String driverEmail = driver.getAccount().getEmail();
+            if (driverEmail != null && !driverEmail.isEmpty()) {
+                emailService.sendInvoiceEmail(driverEmail, savedInvoice);
+                log.info("✅ Unbilled sessions invoice email sent to driver {} at {}", driver.getId(), driverEmail);
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to send unbilled invoice email to driver {}: {}", driver.getId(), e.getMessage());
+        }
 
         // 6. Gửi notification
         try {
@@ -398,8 +421,8 @@ public class InvoiceService implements IInvoiceService {
         Instant now = Instant.now();
         Instant reminderThreshold = now.plus(DAYS_BEFORE_DUE_REMINDER, ChronoUnit.DAYS);
 
-        // Lấy invoices UNPAID có due date trong 3 ngày tới
-        List<Invoice> upcomingDueInvoices = invoiceRepository.findByStatus("UNPAID").stream()
+        // Lấy invoices unpaid có due date trong 3 ngày tới
+        List<Invoice> upcomingDueInvoices = invoiceRepository.findByStatus("unpaid").stream()
                 .filter(inv -> inv.getDueDate() != null)
                 .filter(inv -> inv.getDueDate().isAfter(now) && inv.getDueDate().isBefore(reminderThreshold))
                 .toList();
@@ -428,20 +451,20 @@ public class InvoiceService implements IInvoiceService {
         log.info("========== CHECKING OVERDUE INVOICES ==========");
 
         Instant now = Instant.now();
-        List<Invoice> overdueInvoices = invoiceRepository.findByStatusAndDueDateBefore("UNPAID", now);
+        List<Invoice> overdueInvoices = invoiceRepository.findByStatusAndDueDateBefore("unpaid", now);
 
         log.info("Found {} overdue invoices", overdueInvoices.size());
 
         for (Invoice invoice : overdueInvoices) {
             try {
                 // Update invoice status
-                invoice.setStatus("OVERDUE");
+                invoice.setStatus("overdue");
                 invoiceRepository.save(invoice);
 
                 // Gửi warning notification
                 notificationService.sendOverdueWarningNotification(invoice);
 
-                log.warn("⚠️ Invoice {} marked as OVERDUE", invoice.getId());
+                log.warn("⚠️ Invoice {} marked as overdue", invoice.getId());
 
             } catch (Exception e) {
                 log.error("Failed to process overdue invoice {}", invoice.getId(), e);
@@ -463,8 +486,8 @@ public class InvoiceService implements IInvoiceService {
         Instant now = Instant.now();
         Instant suspensionThreshold = now.minus(DAYS_GRACE_PERIOD, ChronoUnit.DAYS);
 
-        // Lấy invoices OVERDUE quá grace period
-        List<Invoice> suspendableInvoices = invoiceRepository.findByStatus("OVERDUE").stream()
+        // Lấy invoices overdue quá grace period
+        List<Invoice> suspendableInvoices = invoiceRepository.findByStatus("overdue").stream()
                 .filter(inv -> inv.getDueDate() != null)
                 .filter(inv -> inv.getDueDate().isBefore(suspensionThreshold))
                 .toList();
@@ -476,8 +499,8 @@ public class InvoiceService implements IInvoiceService {
                 Account account = invoice.getDriver().getAccount();
 
                 // Chỉ suspend nếu chưa bị suspend
-                if ("ACTIVE".equals(account.getStatus())) {
-                    account.setStatus("SUSPENDED");
+                if ("active".equalsIgnoreCase(account.getStatus())) {
+                    account.setStatus("suspended");
                     accountRepository.save(account);
 
                     // Gửi notification
@@ -504,7 +527,7 @@ public class InvoiceService implements IInvoiceService {
      * ⭐ Lấy tất cả driver đang active
      */
     public List<Driver> findAllActiveDrivers() {
-        return driverRepository.findByAccountStatus("ACTIVE");
+        return driverRepository.findByAccountStatus("active");
     }
 
     public Driver findDriverById(Integer driverId) {

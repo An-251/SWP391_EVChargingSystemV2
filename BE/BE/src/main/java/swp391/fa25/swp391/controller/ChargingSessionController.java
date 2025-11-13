@@ -14,13 +14,19 @@ import swp391.fa25.swp391.dto.request.StopChargingSessionRequest;
 import swp391.fa25.swp391.dto.response.ApiResponse;
 import swp391.fa25.swp391.dto.response.ChargingSessionListResponse;
 import swp391.fa25.swp391.dto.response.ChargingSessionResponse;
+import swp391.fa25.swp391.entity.Charger;
 import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.ChargingSession;
+import swp391.fa25.swp391.entity.PlanRegistration;
 import swp391.fa25.swp391.entity.Reservation;
+import swp391.fa25.swp391.repository.ChargingSessionRepository;
+import swp391.fa25.swp391.repository.PlanRegistrationRepository;
 import swp391.fa25.swp391.service.ChargingSessionService;
 import swp391.fa25.swp391.service.IService.IChargingSessionService;
 
+import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -36,6 +42,8 @@ import java.util.stream.Collectors;
 public class ChargingSessionController {
 
     private final ChargingSessionService chargingSessionService;
+    private final ChargingSessionRepository chargingSessionRepository;
+    private final PlanRegistrationRepository planRegistrationRepository;
 
     // ============================================
     // SESSION MANAGEMENT APIs
@@ -394,6 +402,116 @@ public class ChargingSessionController {
                     .body(ApiResponse.error("Error retrieving problematic sessions: " + e.getMessage()));
         }
     }
+    
+    // ============================================
+    // EMPLOYEE MONITORING APIs
+    // ============================================
+    
+    /**
+     * Get all charging sessions by facility (for Employee monitoring)
+     * GET /api/charging-sessions/facility/{facilityId}
+     */
+    @GetMapping("/facility/{facilityId}")
+    public ResponseEntity<ApiResponse> getSessionsByFacility(
+            @PathVariable Integer facilityId,
+            @RequestParam(required = false) String status) {
+        try {
+            System.out.println("🔍 Fetching charging sessions for facility ID: " + facilityId);
+            
+            List<ChargingSession> allSessions = chargingSessionRepository.findAll();
+            
+            // Filter sessions by facility through Charger -> ChargingPoint -> Station -> Facility
+            List<ChargingSession> facilitySessions = allSessions.stream()
+                    .filter(session -> {
+                        if (session.getCharger() == null) return false;
+                        ChargingPoint point = session.getCharger().getChargingPoint();
+                        if (point == null || point.getStation() == null) return false;
+                        if (point.getStation().getFacility() == null) return false;
+                        return point.getStation().getFacility().getId().equals(facilityId);
+                    })
+                    .collect(Collectors.toList());
+            
+            // Filter by status if provided
+            if (status != null && !status.isEmpty()) {
+                facilitySessions = facilitySessions.stream()
+                        .filter(s -> status.equalsIgnoreCase(s.getStatus()))
+                        .collect(Collectors.toList());
+            }
+            
+            // Sort by start time descending (newest first)
+            facilitySessions.sort((s1, s2) -> s2.getStartTime().compareTo(s1.getStartTime()));
+            
+            List<ChargingSessionResponse> responses = facilitySessions.stream()
+                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+            
+            System.out.println("✅ Found " + responses.size() + " sessions for facility " + facilityId);
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Retrieved " + responses.size() + " sessions for facility", 
+                    responses
+            ));
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error fetching sessions by facility: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error retrieving sessions by facility: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get session statistics by facility (for Employee dashboard)
+     * GET /api/charging-sessions/facility/{facilityId}/statistics
+     */
+    @GetMapping("/facility/{facilityId}/statistics")
+    public ResponseEntity<ApiResponse> getFacilityStatistics(
+            @PathVariable Integer facilityId) {
+        try {
+            List<ChargingSession> allSessions = chargingSessionRepository.findAll();
+            
+            // Filter by facility
+            List<ChargingSession> facilitySessions = allSessions.stream()
+                    .filter(session -> {
+                        if (session.getCharger() == null) return false;
+                        ChargingPoint point = session.getCharger().getChargingPoint();
+                        if (point == null || point.getStation() == null) return false;
+                        if (point.getStation().getFacility() == null) return false;
+                        return point.getStation().getFacility().getId().equals(facilityId);
+                    })
+                    .collect(Collectors.toList());
+            
+            // Calculate statistics
+            long activeCount = facilitySessions.stream()
+                    .filter(s -> "charging".equalsIgnoreCase(s.getStatus()))
+                    .count();
+            
+            long completedToday = facilitySessions.stream()
+                    .filter(s -> "completed".equalsIgnoreCase(s.getStatus()))
+                    .filter(s -> s.getEndTime() != null && 
+                            s.getEndTime().toLocalDate().equals(LocalDate.now()))
+                    .count();
+            
+            double totalEnergyToday = facilitySessions.stream()
+                    .filter(s -> "completed".equalsIgnoreCase(s.getStatus()))
+                    .filter(s -> s.getEndTime() != null && 
+                            s.getEndTime().toLocalDate().equals(LocalDate.now()))
+                    .mapToDouble(s -> s.getKwhUsed() != null ? 
+                            s.getKwhUsed().doubleValue() : 0.0)
+                    .sum();
+            
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("activeSessions", activeCount);
+            stats.put("completedToday", completedToday);
+            stats.put("totalEnergyToday", totalEnergyToday);
+            stats.put("totalSessions", facilitySessions.size());
+            
+            return ResponseEntity.ok(ApiResponse.success("Facility statistics retrieved", stats));
+            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error retrieving facility statistics: " + e.getMessage()));
+        }
+    }
+    
     // ============================================
     // HEALTH CHECK
     // ============================================
@@ -426,20 +544,52 @@ public class ChargingSessionController {
             chargedPercentage = session.getEndPercentage() - session.getStartPercentage();
         }
 
-        ChargingPoint cp = session.getChargingPoint();
+        Charger charger = session.getCharger();
+        ChargingPoint cp = charger != null ? charger.getChargingPoint() : null;
 
-        // ✅ LẤY THÔNG TIN RESERVATION (NẾU CÓ)
+        // ✅ LẤY THÔNG TIN RESERVATION (CHỈ HỖ TRỢ RESERVATION)
         Reservation reservation = session.getReservation();
         Long reservationId = null;
-        String chargingType = "WALK-IN"; // Mặc định là sạc trực tiếp
+        String chargingType = "RESERVATION"; // Chỉ hỗ trợ sạc qua đặt chỗ
         LocalDateTime reservationStartTime = null;
         LocalDateTime reservationEndTime = null;
 
         if (reservation != null) {
             reservationId = reservation.getId();
-            chargingType = "RESERVATION"; // Sạc qua đặt chỗ
             reservationStartTime = reservation.getStartTime();
             reservationEndTime = reservation.getEndTime();
+        }
+
+        // ⭐ TÍNH TOÁN COST BREAKDOWN CHO FE HIỂN THỊ
+        BigDecimal pricePerKwh = cp != null ? cp.getPricePerKwh() : BigDecimal.ZERO;
+        BigDecimal kwhUsed = session.getKwhUsed() != null ? session.getKwhUsed() : BigDecimal.ZERO;
+        BigDecimal startFee = session.getStartFee() != null ? session.getStartFee() : BigDecimal.ZERO;
+        BigDecimal overusePenalty = session.getOverusePenalty() != null ? session.getOverusePenalty() : BigDecimal.ZERO;
+        
+        // Tính chi phí điện năng TRƯỚC giảm giá
+        BigDecimal energyCostBeforeDiscount = kwhUsed.multiply(pricePerKwh);
+        
+        // Lấy thông tin subscription discount
+        String subscriptionPlanName = null;
+        BigDecimal discountRate = BigDecimal.ZERO;
+        BigDecimal energyCostAfterDiscount = energyCostBeforeDiscount; // Mặc định không có discount
+        
+        Optional<PlanRegistration> activePlan = planRegistrationRepository
+                .findActiveByDriverId(session.getDriver().getId(), LocalDate.now());
+        
+        if (activePlan.isPresent()) {
+            PlanRegistration planReg = activePlan.get();
+            subscriptionPlanName = planReg.getPlan().getPlanName();
+            discountRate = planReg.getPlan().getDiscountRate() != null 
+                ? planReg.getPlan().getDiscountRate() 
+                : BigDecimal.ZERO;
+            
+            // Tính chi phí điện năng SAU giảm giá
+            // Formula: energyCostAfterDiscount = energyCostBeforeDiscount - (energyCostBeforeDiscount * discountRate / 100)
+            BigDecimal discountAmount = energyCostBeforeDiscount
+                    .multiply(discountRate)
+                    .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            energyCostAfterDiscount = energyCostBeforeDiscount.subtract(discountAmount);
         }
 
         return ChargingSessionResponse.builder()
@@ -454,16 +604,34 @@ public class ChargingSessionController {
                 .vehicleId(session.getVehicle().getId())
                 .vehicleModel(session.getVehicle().getModel())
                 .licensePlate(session.getVehicle().getLicensePlate())
-                .chargingPointId(cp.getId())
-                .chargingPointName(cp.getPointName())
-                .connectorType(cp.getConnectorType())
-                .stationName(cp.getStation() != null ? cp.getStation().getStationName() : null)
-                .stationAddress(cp.getStation() != null ? cp.getStation().getFacility().getFullAddress() : null)
+                .chargerId(charger != null ? charger.getId() : null)
+                .chargerCode(charger != null ? charger.getChargerCode() : null)
+                .connectorType(charger != null ? charger.getConnectorType() : null)
+                .chargingPointId(cp != null ? cp.getId() : null)
+                .chargingPointName(cp != null ? cp.getPointName() : null)
+                .stationId(cp != null && cp.getStation() != null ? cp.getStation().getId() : null)
+                .stationName(cp != null && cp.getStation() != null ? cp.getStation().getStationName() : null)
+                .stationAddress(cp != null && cp.getStation() != null ? cp.getStation().getFacility().getFullAddress() : null)
+                .facilityId(cp != null && cp.getStation() != null && cp.getStation().getFacility() != null ? 
+                        cp.getStation().getFacility().getId() : null)
+                .facilityName(cp != null && cp.getStation() != null && cp.getStation().getFacility() != null ? 
+                        cp.getStation().getFacility().getName() : null)
                 .startPercentage(session.getStartPercentage())
                 .endPercentage(session.getEndPercentage())
                 .chargedPercentage(chargedPercentage)
-                .kwhUsed(session.getKwhUsed())
+                .kwhUsed(kwhUsed)
+                .pricePerKwh(pricePerKwh)
+                
+                // ⭐ Cost breakdown
+                .startFee(startFee)
+                .energyCostBeforeDiscount(energyCostBeforeDiscount)
+                .energyCostAfterDiscount(energyCostAfterDiscount)
+                .overusePenalty(overusePenalty)
                 .cost(session.getCost())
+                
+                // ⭐ Subscription info
+                .subscriptionPlanName(subscriptionPlanName)
+                .discountRate(discountRate)
 
                 .reservationId(reservationId)
                 .chargingType(chargingType)

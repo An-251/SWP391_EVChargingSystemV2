@@ -20,8 +20,8 @@ public class StartChargingSessionRequest {
     @NotNull(message = "Driver ID is required")
     private Integer driverId;
 
-    @NotNull(message = "Charging point ID is required")
-    private Integer chargingPointId;
+    @NotNull(message = "Charger ID is required")
+    private Integer chargerId;
 
     @NotNull(message = "Vehicle ID is required")
     private Integer vehicleId;
@@ -30,6 +30,11 @@ public class StartChargingSessionRequest {
     @Min(value = 0, message = "Start percentage must be between 0 and 100")
     @Max(value = 100, message = "Start percentage must be between 0 and 100")
     private Integer startPercentage;
+
+    @NotNull(message = "Target percentage is required")
+    @Min(value = 0, message = "Target percentage must be between 0 and 100")
+    @Max(value = 100, message = "Target percentage must be between 0 and 100")
+    private Integer targetPercentage;
 
     // Optional - nếu có reservation trước
     private Long reservationId;

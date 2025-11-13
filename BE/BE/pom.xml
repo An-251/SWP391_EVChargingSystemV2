@@ -91,10 +91,10 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-tx</artifactId>
         </dependency>
+        <!-- Spring Mail -->
         <dependency>
-            <groupId>io.github.momo-wallet</groupId>
-            <artifactId>momopayment</artifactId>
-            <version>1.0</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
     </dependencies>
 
