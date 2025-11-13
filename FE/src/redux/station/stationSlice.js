@@ -20,24 +20,13 @@ export const fetchStations = createAsyncThunk(
   "station/fetchStations",
   async (_, { rejectWithValue }) => {
     try {
-      console.log("🚀 [STATIONS] Fetching all charging stations...");
       const response = await api.get("/charging-stations");
-      console.log("✅ [STATIONS] Response received, count:", response.data?.length || 0);
       
       // Backend has fixed circular reference issue
       // Now we can use response.data directly
       const stations = Array.isArray(response.data) 
         ? response.data 
         : (response.data?.data || response.data?.content || []);
-      
-      console.log("✅ [STATIONS] Stations loaded:", stations.length);
-      console.log("📊 [STATIONS] Sample station data:", stations[0]);
-      console.log("📊 [STATIONS] Has facility?", !!stations[0]?.facility);
-      console.log("📊 [STATIONS] Has chargingPoints?", !!stations[0]?.chargingPoints);
-      console.log("📊 [STATIONS] Has coordinates?", { 
-        lat: stations[0]?.latitude, 
-        lng: stations[0]?.longitude 
-      });
       
       return stations;
       
@@ -55,9 +44,7 @@ export const fetchChargingPoints = createAsyncThunk(
   "station/fetchChargingPoints",
   async (stationId, { rejectWithValue }) => {
     try {
-      console.log(`🚀 [CHARGING_POINTS] Fetching points for station ${stationId}...`);
       const response = await api.get("/drivers/charging-points");
-      console.log("✅ [CHARGING_POINTS] Response:", response.data);
       
       // Filter by station ID if needed
       const filteredPoints = stationId 
