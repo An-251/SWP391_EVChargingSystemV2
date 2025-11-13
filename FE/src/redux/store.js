@@ -6,6 +6,7 @@ import adminReducer from "./admin/adminSlice"; // Import admin reducer
 import vehicleReducer from "./vehicle/vehicleSlice"; // Import vehicle reducer
 import sessionReducer from "./session/sessionSlice"; // Import session reducer
 import subscriptionReducer from "./subscription/subscriptionSlice"; // Import subscription reducer
+import invoiceReducer from "./invoice/invoiceSlice"; // Import invoice reducer
 
 const store = configureStore({
   reducer: {
@@ -15,6 +16,7 @@ const store = configureStore({
     vehicle: vehicleReducer, // Đăng ký vehicleReducer dưới key 'vehicle'
     session: sessionReducer, // Đăng ký sessionReducer dưới key 'session'
     subscription: subscriptionReducer, // Đăng ký subscriptionReducer dưới key 'subscription'
+    invoice: invoiceReducer, // Đăng ký invoiceReducer dưới key 'invoice'
   },
   // DevTools được bật mặc định trong môi trường phát triển
 });
