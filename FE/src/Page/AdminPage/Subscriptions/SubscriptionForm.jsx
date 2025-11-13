@@ -11,6 +11,7 @@ export default function SubscriptionForm({ subscription, onSuccess, onCancel }) 
   const [formData, setFormData] = useState({
     planName: '',
     planType: 'BASIC',
+    targetUserType: 'Driver', // ⭐ THÊM
     price: '',
     validityDays: '',
     description: '',
@@ -25,6 +26,7 @@ export default function SubscriptionForm({ subscription, onSuccess, onCancel }) 
       setFormData({
         planName: subscription.planName || '',
         planType: subscription.planType || 'BASIC',
+        targetUserType: subscription.targetUserType || 'Driver', // ⭐ THÊM
         price: subscription.price || '',
         validityDays: subscription.validityDays || '',
         description: subscription.description || '',
@@ -63,6 +65,7 @@ export default function SubscriptionForm({ subscription, onSuccess, onCancel }) 
       const submitData = {
         planName: formData.planName.trim(),
         planType: formData.planType,
+        targetUserType: formData.targetUserType, // ⭐ THÊM
         price: parseFloat(formData.price) || 0,
         validityDays: formData.validityDays.toString(),
         description: formData.description.trim(),
@@ -77,7 +80,7 @@ export default function SubscriptionForm({ subscription, onSuccess, onCancel }) 
       }
       onSuccess();
     } catch (error) {
-      console.error('Error:', error);
+      // Error handled by Redux
     } finally {
       setSubmitting(false);
     }
@@ -102,7 +105,7 @@ export default function SubscriptionForm({ subscription, onSuccess, onCancel }) 
         <p className="text-xs text-gray-500 mt-1">Enter a clear and descriptive package name</p>
       </div>
 
-      {/* Row 2: Plan Type + Set as Default */}
+      {/* Row 2: Plan Type + Target User Type */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -117,26 +120,43 @@ export default function SubscriptionForm({ subscription, onSuccess, onCancel }) 
             <option value="BASIC">Basic</option>
             <option value="STANDARD">Standard</option>
             <option value="PREMIUM">Premium</option>
-            <option value="ENTERPRISE">Enterprise</option>
           </select>
           <p className="text-xs text-gray-500 mt-1">Select the subscription tier</p>
         </div>
         
-        <div className="flex items-center">
-          <label className="flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              name="isDefault"
-              checked={formData.isDefault}
-              onChange={(e) => setFormData(prev => ({ ...prev, isDefault: e.target.checked }))}
-              className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <span className="ml-2 text-sm font-medium text-gray-700">Set as Default Plan</span>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Target User Type <span className="text-red-500">*</span>
           </label>
+          <select
+            name="targetUserType"
+            value={formData.targetUserType}
+            onChange={handleChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+          >
+            <option value="Driver">Driver</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">Who can use this plan</p>
         </div>
       </div>
 
-      {/* Row 3: Price + Duration */}
+      {/* Row 3: Set as Default */}
+      <div className="flex items-center">
+        <label className="flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            name="isDefault"
+            checked={formData.isDefault}
+            onChange={(e) => setFormData(prev => ({ ...prev, isDefault: e.target.checked }))}
+            className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+          <span className="ml-2 text-sm font-medium text-gray-700">
+            Set as Default Plan (Basic) for {formData.targetUserType}
+          </span>
+        </label>
+      </div>
+
+      {/* Row 4: Price + Duration */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
