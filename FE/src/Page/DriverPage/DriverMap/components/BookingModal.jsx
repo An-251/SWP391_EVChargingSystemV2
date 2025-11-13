@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Modal, Select, Slider, Button, message, Spin } from 'antd';
-import { X, MapPin, Zap, Battery, Clock, Navigation, Car, Calendar } from 'lucide-react';
-import { fetchDriverVehicles } from '../../../../redux/vehicle/vehicleSlice';
+import { X, MapPin, Zap, Clock, Navigation, Car } from 'lucide-react';
 import { fetchRoute, formatDistance, formatDuration } from '../../../../utils/routingService';
+import { CHARGING_POINT_STATUS } from '../../../../constants/statusConstants';
 import api from '../../../../configs/config-axios';
 
 const { Option } = Select;
@@ -14,21 +14,94 @@ const BookingModal = ({ visible, onClose, station, userLocation }) => {
   const navigate = useNavigate();
   
   const { user } = useSelector((state) => state.auth);
-  const { vehicles, loading: vehiclesLoading } = useSelector((state) => state.vehicle);
 
   const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [selectedChargingPoint, setSelectedChargingPoint] = useState(null);
-  const [startPercentage, setStartPercentage] = useState(20);
+  const [vehicles, setVehicles] = useState([]);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
+  const [selectedCharger, setSelectedCharger] = useState(null); // ⭐ CHANGED: charger instead of charging point
+  const [chargers, setChargers] = useState([]); // ⭐ NEW: store chargers list
+  const [loadingChargers, setLoadingChargers] = useState(false); // ⭐ NEW: loading state
   const [routeInfo, setRouteInfo] = useState(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch vehicles when modal opens
+  // Fetch user vehicles when modal opens
   useEffect(() => {
-    if (visible && user) {
-      dispatch(fetchDriverVehicles());
+    const fetchVehicles = async () => {
+      if (!visible || !user) return;
+      
+      try {
+        setLoadingVehicles(true);
+        const response = await api.get('/vehicles/my-vehicles');
+        
+        // Backend returns: { success: true, message: '...', data: { vehicles: [...] } }
+        const vehiclesData = response.data?.data?.vehicles || response.data?.vehicles || [];
+        setVehicles(vehiclesData);
+        
+        console.log('🚗 [BookingModal] Vehicles loaded:', vehiclesData.length);
+        
+        // Auto-select if only one vehicle
+        if (vehiclesData.length === 1) {
+          setSelectedVehicle(vehiclesData[0]);
+        }
+      } catch (error) {
+        console.error('❌ [BookingModal] Error fetching vehicles:', error);
+        message.error('Không thể tải danh sách xe');
+      } finally {
+        setLoadingVehicles(false);
+      }
+    };
+
+    fetchVehicles();
+  }, [visible, user]);
+
+  // ⭐ NEW: Fetch chargers for all charging points in station
+  useEffect(() => {
+    const fetchChargers = async () => {
+      if (!visible || !station || !station.chargingPoints) return;
+      
+      try {
+        setLoadingChargers(true);
+        const allChargers = [];
+        
+        // Fetch chargers for each charging point
+        for (const point of station.chargingPoints) {
+          try {
+            const response = await api.get(`/charging-points/${point.id}/chargers`);
+            const pointChargers = response.data || [];
+            // ⭐ IMPORTANT: Add chargingPointId to each charger for reservation API
+            const chargersWithPointId = pointChargers.map(charger => ({
+              ...charger,
+              chargingPointId: point.id // Store parent charging point ID
+            }));
+            allChargers.push(...chargersWithPointId);
+          } catch (error) {
+            console.error(`❌ [BookingModal] Error fetching chargers for point ${point.id}:`, error);
+          }
+        }
+        
+        setChargers(allChargers);
+        console.log('⚡ [BookingModal] Chargers loaded:', allChargers.length);
+      } catch (error) {
+        console.error('❌ [BookingModal] Error fetching chargers:', error);
+        message.error('Không thể tải danh sách charger');
+      } finally {
+        setLoadingChargers(false);
+      }
+    };
+
+    fetchChargers();
+  }, [visible, station]);
+
+  // Reset selections when modal closes
+  useEffect(() => {
+    if (!visible) {
+      setSelectedVehicle(null);
+      setSelectedCharger(null);
+      setVehicles([]);
+      setChargers([]);
     }
-  }, [visible, user, dispatch]);
+  }, [visible]);
 
   // Calculate route using OSRM when station or user location changes
   useEffect(() => {
@@ -82,79 +155,51 @@ const BookingModal = ({ visible, onClose, station, userLocation }) => {
     fetchRealRoute();
   }, [station, userLocation]);
 
-  // Handle create reservation (ĐẶT CHỖ - KHÔNG START SESSION)
   const handleCreateReservation = async () => {
     if (!selectedVehicle) {
       message.warning('Vui lòng chọn xe!');
       return;
     }
-    if (!selectedChargingPoint) {
-      message.warning('Vui lòng chọn cổng sạc!');
+    
+    if (!selectedCharger) {
+      message.warning('Vui lòng chọn charger!');
       return;
     }
 
-    // Find the actual charging point object to get more details
-    const selectedPointObject = availablePoints.find(
-      p => (p.id || p.pointId) === selectedChargingPoint
-    );
-    
-    console.log('🔍 [RESERVATION] Selected point object:', selectedPointObject);
-    console.log('🔍 [RESERVATION] Selected point ID:', selectedChargingPoint);
-    console.log('🔍 [RESERVATION] Point details:', {
-      id: selectedPointObject?.id,
-      pointId: selectedPointObject?.pointId,
-      pointName: selectedPointObject?.pointName,
-      status: selectedPointObject?.status
-    });
-
-    // Tạo reservation với thời gian mặc định 60 phút
+    // ⭐ NOTE: Backend Reservation entity still uses chargingPointId (not chargerId yet)
+    // We pass chargingPointId for now - full charger support requires BE migration
+    const selectedChargerObj = chargers.find(c => c.id === selectedCharger);
     const requestData = {
-      chargingPointId: selectedChargingPoint,
-      durationMinutes: 60 // Default duration
+      chargingPointId: selectedChargerObj?.chargingPointId || selectedChargerObj?.chargingPoint?.id,
+      vehicleId: selectedVehicle.vehicleId || selectedVehicle.id,
+      durationMinutes: 60, // Default 1 hour reservation
     };
 
-    console.log('📝 [RESERVATION] Creating reservation with data:', requestData);
-    console.log('👤 [RESERVATION] Driver ID:', user?.driverId);
-    console.log('📍 [RESERVATION] Full URL:', `/drivers/${user?.driverId}/reservations`);
+    console.log('🚀 [RESERVATION] Creating reservation:', requestData);
+    console.log('🚀 [RESERVATION] Driver ID:', user?.driverId);
+    console.log('🚗 [RESERVATION] Vehicle:', selectedVehicle);
 
     try {
       setSubmitting(true);
       
-      // Call API to create reservation
+      // Call API: POST /api/drivers/{driverId}/reservations
+      // This will change charging point status: ACTIVE → BOOKED
       const response = await api.post(`/drivers/${user?.driverId}/reservations`, requestData);
       
-      console.log('✅ [RESERVATION] Success! Full response:', response);
-      console.log('✅ [RESERVATION] Response data:', response.data);
+      console.log('✅ [RESERVATION] Success:', response.data);
       
-      // Save chargingPointId AND vehicleId mapping for later use when starting session
-      if (response.data?.reservationId) {
-        const mapping = JSON.parse(localStorage.getItem('reservationMapping') || '{}');
-        mapping[response.data.reservationId] = {
-          chargingPointId: selectedChargingPoint,
-          vehicleId: selectedVehicle, // 🆕 Lưu vehicleId đã chọn
-        };
-        localStorage.setItem('reservationMapping', JSON.stringify(mapping));
-        console.log('💾 [RESERVATION] Saved reservation data:', {
-          reservationId: response.data.reservationId,
-          chargingPointId: selectedChargingPoint,
-          vehicleId: selectedVehicle,
-        });
-      }
-      
-      message.success('Đặt chỗ thành công! Vui lòng đến trạm và quét QR để bắt đầu sạc. 🎉');
+      message.success('Đặt chỗ thành công! Reservation sẽ hết hạn sau 1 giờ. 🎉');
       onClose();
       
-      // Navigate to reservations page
+      // Navigate to reservations page to see the new reservation
       navigate('/driver/reservations');
+      
     } catch (error) {
       console.error('❌ [RESERVATION] Error:', error);
-      console.error('❌ [RESERVATION] Error response:', error.response);
-      console.error('❌ [RESERVATION] Error data:', error.response?.data);
-      console.error('❌ [RESERVATION] Error status:', error.response?.status);
-      console.error('❌ [RESERVATION] Error message:', error.message);
-      
-      const errorMsg = error.response?.data?.message || error.response?.data || error.message || 'Không thể đặt chỗ!';
-      message.error(errorMsg);
+      const errorMessage = typeof error.response?.data === 'string' 
+        ? error.response.data 
+        : error.response?.data?.message || 'Không thể đặt chỗ!';
+      message.error(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -181,33 +226,32 @@ const BookingModal = ({ visible, onClose, station, userLocation }) => {
     return station.address || facility?.address || facility?.fullAddress || 'Chưa có địa chỉ';
   };
 
-  // Get available charging points - MUST match BE validation (only "active")
-  // BE defines 3 statuses: "active", "inactive", "using"
-  // Only "active" points can be reserved
-  const availablePoints = station?.chargingPoints?.filter(
-    (point) => {
-      const status = point.status?.toLowerCase();
-      console.log('🔍 [BookingModal] Checking charging point:', {
-        pointName: point.pointName,
-        id: point.id,
-        pointId: point.pointId,
-        status: point.status,
-        statusLower: status,
-        willBeAcceptedByBE: status === 'active'
-      });
-      // CRITICAL: BE only accepts "active" status (not "inactive" or "using")
-      return status === 'active';
+  // ⭐ CHANGED: Get available chargers (only ACTIVE status and compatible with selected vehicle)
+  const availableChargers = chargers.filter((charger) => {
+    const isActive = (charger.status || '').toLowerCase() === 'active';
+    
+    // If no vehicle selected, show all active chargers
+    if (!selectedVehicle) return isActive;
+    
+    // Get connector types - Backend uses 'chargingPort' for vehicle, 'connectorType' for charger
+    const vehicleConnector = (selectedVehicle.chargingPort || selectedVehicle.connectorType || '').toUpperCase().trim();
+    const chargerConnector = (charger.connectorType || '').toUpperCase().trim();
+    
+    // If vehicle has no connector type specified, show all active chargers
+    if (!vehicleConnector || vehicleConnector === 'N/A') {
+      console.warn('⚠️ [BookingModal] Vehicle has no connector type, showing all active chargers');
+      return isActive;
     }
-  ) || [];
-
-  console.log('📍 [BookingModal] Total charging points:', station?.chargingPoints?.length);
-  console.log('✅ [BookingModal] Available charging points:', availablePoints.length);
-  console.log('📋 [BookingModal] Available points details:', availablePoints.map(p => ({
-    name: p.pointName,
-    id: p.id,
-    pointId: p.pointId,
-    status: p.status
-  })));
+    
+    // Check if connectors are compatible
+    const isCompatible = vehicleConnector === chargerConnector || 
+                         chargerConnector === 'UNIVERSAL' || 
+                         vehicleConnector === 'UNIVERSAL';
+    
+    console.log(`🔌 [BookingModal] Checking compatibility: Vehicle ${vehicleConnector} vs Charger ${chargerConnector} = ${isCompatible}`);
+    
+    return isActive && isCompatible;
+  }) || [];
 
   if (!station) return null;
 
@@ -279,13 +323,16 @@ const BookingModal = ({ visible, onClose, station, userLocation }) => {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             <Car className="inline mr-2" size={16} />
-            Chọn xe của bạn *
+            Chọn xe cần sạc *
           </label>
-          {vehiclesLoading ? (
-            <Spin />
+          {loadingVehicles ? (
+            <div className="text-center py-4">
+              <Spin size="small" />
+              <span className="ml-2 text-sm text-gray-500">Đang tải danh sách xe...</span>
+            </div>
           ) : vehicles.length === 0 ? (
-            <div className="text-center py-4 bg-yellow-50 rounded-lg">
-              <p className="text-yellow-700">Bạn chưa có xe nào. Vui lòng thêm xe trước!</p>
+            <div className="text-center py-4 bg-yellow-50 rounded-lg border border-yellow-200">
+              <p className="text-yellow-800 mb-2">Bạn chưa có xe nào!</p>
               <Button 
                 type="link" 
                 onClick={() => {
@@ -293,7 +340,7 @@ const BookingModal = ({ visible, onClose, station, userLocation }) => {
                   navigate('/driver/vehicles');
                 }}
               >
-                Thêm xe ngay
+                Thêm xe ngay →
               </Button>
             </div>
           ) : (
@@ -301,50 +348,78 @@ const BookingModal = ({ visible, onClose, station, userLocation }) => {
               placeholder="Chọn xe..."
               className="w-full"
               size="large"
-              value={selectedVehicle}
-              onChange={setSelectedVehicle}
+              value={selectedVehicle?.vehicleId || selectedVehicle?.id}
+              onChange={(value) => {
+                const vehicle = vehicles.find(v => (v.vehicleId || v.id) === value);
+                setSelectedVehicle(vehicle);
+                // ⭐ CHANGED: Reset charger selection when vehicle changes
+                setSelectedCharger(null);
+                console.log('🚗 [BookingModal] Vehicle selected:', vehicle);
+              }}
             >
               {vehicles.map((vehicle) => (
-                <Option key={vehicle.id} value={vehicle.id}>
+                <Option key={vehicle.vehicleId || vehicle.id} value={vehicle.vehicleId || vehicle.id}>
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">{vehicle.model}</span>
-                    <span className="text-gray-500 text-sm">
-                      {vehicle.licensePlate} • {vehicle.batteryCapacity}kWh
+                    <span className="font-medium">
+                      {vehicle.brand} {vehicle.model}
                     </span>
+                    <div className="text-gray-500 text-sm">
+                      {vehicle.licensePlate && (
+                        <span className="mr-2">• {vehicle.licensePlate}</span>
+                      )}
+                      <span>• {vehicle.chargingPort || vehicle.connectorType || 'Chưa rõ'}</span>
+                      {vehicle.batteryCapacity && (
+                        <span className="ml-2">• {vehicle.batteryCapacity}kWh</span>
+                      )}
+                    </div>
                   </div>
                 </Option>
               ))}
             </Select>
           )}
+          {selectedVehicle && (
+            <div className="mt-2 p-2 bg-blue-50 rounded text-xs text-blue-700">
+              ℹ️ Connector: <strong>{selectedVehicle.chargingPort || selectedVehicle.connectorType || 'Chưa rõ'}</strong> • 
+              Battery: <strong>{selectedVehicle.batteryCapacity || 'Chưa rõ'}kWh</strong>
+            </div>
+          )}
         </div>
 
-        {/* Select Charging Point */}
+        {/* ⭐ CHANGED: Select Charger */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             <Zap className="inline mr-2" size={16} />
-            Chọn cổng sạc *
+            Chọn charger *
           </label>
-          {availablePoints.length === 0 ? (
-            <div className="text-center py-4 bg-red-50 rounded-lg">
-              <p className="text-red-700">Không có cổng sạc khả dụng!</p>
+          {!selectedVehicle ? (
+            <div className="text-center py-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-gray-600">Vui lòng chọn xe trước</p>
+            </div>
+          ) : loadingChargers ? (
+            <div className="text-center py-4">
+              <Spin size="small" />
+              <span className="ml-2 text-sm text-gray-500">Đang tải danh sách charger...</span>
+            </div>
+          ) : availableChargers.length === 0 ? (
+            <div className="text-center py-4 bg-red-50 rounded-lg border border-red-200">
+              <p className="text-red-700">
+                Không có charger tương thích với connector <strong>{selectedVehicle.chargingPort || selectedVehicle.connectorType || 'Chưa rõ'}</strong>!
+              </p>
             </div>
           ) : (
             <Select
-              placeholder="Chọn cổng sạc..."
+              placeholder="Chọn charger..."
               className="w-full"
               size="large"
-              value={selectedChargingPoint}
-              onChange={(value) => {
-                console.log('⚡ [BookingModal] Selected charging point ID:', value);
-                setSelectedChargingPoint(value);
-              }}
+              value={selectedCharger}
+              onChange={setSelectedCharger}
             >
-              {availablePoints.map((point) => (
-                <Option key={point.id || point.pointId} value={point.id || point.pointId}>
+              {availableChargers.map((charger) => (
+                <Option key={charger.id} value={charger.id}>
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">{point.pointName || point.name || `Cổng ${point.id}`}</span>
+                    <span className="font-medium">{charger.chargerCode || `Charger ${charger.id}`}</span>
                     <span className="text-gray-500 text-sm">
-                      {point.connectorType} • {point.maxPower || point.powerOutput || 'N/A'}kW
+                      {charger.connectorType} • {charger.maxPower || 'N/A'}kW
                     </span>
                   </div>
                 </Option>
@@ -352,33 +427,26 @@ const BookingModal = ({ visible, onClose, station, userLocation }) => {
             </Select>
           )}
         </div>
-
-        {/* Info Message */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <p className="text-sm text-blue-800">
-            <Calendar className="inline mr-2" size={16} />
-            <strong>Lưu ý:</strong> Sau khi đặt chỗ, bạn cần đến trạm và quét mã QR để bắt đầu sạc.
-          </p>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
-          <Button size="large" onClick={onClose}>
-            Hủy
-          </Button>
+          
+          {/* Reservation Button - Book and reserve charger */}
           <Button
-            type="primary"
+            type="default"
             size="large"
+            block
             onClick={handleCreateReservation}
             loading={submitting}
-            disabled={!selectedVehicle || !selectedChargingPoint || vehicles.length === 0}
-            className="bg-gradient-to-r from-green-500 to-blue-500"
+            disabled={!selectedVehicle || !selectedCharger || vehicles.length === 0}
+            className="border-2 border-green-500 text-green-600 hover:bg-green-50 h-12"
           >
-            <Calendar className="inline mr-2" size={18} />
-            Đặt chỗ
+            <Zap className="inline mr-2" size={20} />
+            <span className="font-semibold">📅 Đặt chỗ trước (1 giờ)</span>
+          </Button>
+
+          {/* Cancel Button */}
+          <Button size="large" block onClick={onClose} className="h-12">
+            Hủy
           </Button>
         </div>
-      </div>
     </Modal>
   );
 };
