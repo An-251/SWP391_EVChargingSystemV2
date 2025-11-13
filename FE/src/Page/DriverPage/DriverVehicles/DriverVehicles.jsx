@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Button, Modal, message, Empty, Spin } from 'antd';
 import { Plus, Car as CarIcon } from 'lucide-react';
+import PageHeader from '../../../Components/Common/PageHeader';
 import VehicleCard from './components/VehicleCard';
 import VehicleForm from './components/VehicleForm';
 import {
@@ -110,17 +111,20 @@ const DriverVehicles = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-              <CarIcon className="w-8 h-8 text-blue-600" />
-              My Vehicles
-            </h1>
-            <p className="text-gray-600 mt-2">Manage your electric vehicles for charging</p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <PageHeader
+        title="Xe của tôi"
+        subtitle="Quản lý phương tiện điện của bạn"
+        showBackButton
+        onBack="/driver"
+        icon={CarIcon}
+        iconBgColor="bg-blue-100"
+        iconColor="text-blue-600"
+        breadcrumbs={[
+          { label: 'Trang chủ', path: '/driver' },
+          { label: 'Vehicles' }
+        ]}
+        actions={
           <Button 
             type="primary" 
             icon={<Plus className="w-5 h-5" />} 
@@ -130,8 +134,10 @@ const DriverVehicles = () => {
           >
             Add Vehicle
           </Button>
-        </div>
+        }
+      />
 
+      <div className="max-w-7xl mx-auto p-6">
         {/* Content */}
         {loading && vehicles.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
