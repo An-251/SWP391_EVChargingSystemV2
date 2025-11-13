@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Clock, Star, Zap } from 'lucide-react';
 import { calculateRoadDistance, getRouteDuration, formatDistance, formatDuration } from '../../../utils/routingService';
+import { CHARGING_POINT_STATUS } from '../../../constants/statusConstants';
 
 const StationCard = ({ station, isSelected, onSelect, onBook, userLocation }) => {
   // State for OSRM routing data
@@ -23,8 +24,6 @@ const StationCard = ({ station, isSelected, onSelect, onBook, userLocation }) =>
         const origin = { lat: userLocation.lat, lng: userLocation.lng };
         const destination = { lat: station.latitude, lng: station.longitude };
         
-        console.log('🚗 [StationCard] Fetching road route for:', station.stationName);
-        
         // Fetch both distance and duration from OSRM
         const [distKm, durationMin] = await Promise.all([
           calculateRoadDistance(origin, destination),
@@ -33,12 +32,6 @@ const StationCard = ({ station, isSelected, onSelect, onBook, userLocation }) =>
         
         setRouteDistance(distKm);
         setRouteDuration(durationMin);
-        
-        console.log('✅ [StationCard] Road route:', {
-          station: station.stationName,
-          distance: formatDistance(distKm),
-          duration: formatDuration(durationMin)
-        });
         
       } catch (error) {
         console.error('❌ [StationCard] Error fetching route:', error);
@@ -50,19 +43,6 @@ const StationCard = ({ station, isSelected, onSelect, onBook, userLocation }) =>
     
     fetchRoadRoute();
   }, [userLocation, station.latitude, station.longitude, station.stationName]);
-  
-  // Debug logging
-  React.useEffect(() => {
-    console.log('🎴 [StationCard] === RENDER DEBUG ===');
-    console.log('📍 Station:', station?.stationName || station?.name);
-    console.log('👤 UserLocation:', userLocation);
-    console.log('🗺️ Station Coords:', { lat: station?.latitude, lng: station?.longitude });
-    console.log('🏢 Facility:', station?.facility);
-    console.log('⚡ ChargingPoints:', station?.chargingPoints);
-    console.log('🚗 Road Distance:', routeDistance ? `${routeDistance.toFixed(2)} km` : 'Loading...');
-    console.log('⏱️ Road Duration:', routeDuration ? `${routeDuration.toFixed(1)} min` : 'Loading...');
-    console.log('=====================================');
-  }, [station, userLocation, routeDistance, routeDuration]);
 
   // Calculate display values using OSRM routing data
   const getDistance = () => {
@@ -91,23 +71,15 @@ const StationCard = ({ station, isSelected, onSelect, onBook, userLocation }) =>
 
   const getSlots = () => {
     if (!station.chargingPoints || !Array.isArray(station.chargingPoints)) {
-      console.log('⚠️ [getSlots] No chargingPoints array:', station.chargingPoints);
       return { available: 0, total: 0 };
     }
     
-    console.log('🔍 [getSlots] ChargingPoints:', station.chargingPoints.map(cp => ({
-      id: cp.id,
-      name: cp.pointName,
-      status: cp.status
-    })));
-    
-    // Check multiple status formats (Backend uses lowercase)
+    // Only ACTIVE charging points are available for booking
     const available = station.chargingPoints.filter(cp => {
       const status = (cp.status || '').toLowerCase();
-      return status === 'active' ;
+      return status === CHARGING_POINT_STATUS.ACTIVE;
     }).length;
     
-    console.log('✅ [getSlots] Result:', { available, total: station.chargingPoints.length });
     return { available, total: station.chargingPoints.length };
   };
 
@@ -151,7 +123,6 @@ const StationCard = ({ station, isSelected, onSelect, onBook, userLocation }) =>
   const price = getPrice();
   const fastCharging = hasFastCharging();
   const address = getAddress();
-  const rating = station.rating || 4.5;
 
   return (
     <div
@@ -184,13 +155,7 @@ const StationCard = ({ station, isSelected, onSelect, onBook, userLocation }) =>
               <Clock className="w-4 h-4 text-gray-400" />
               <span className="text-gray-600">{estimatedTime}</span>
             </div>
-            
-            <div className="flex items-center space-x-1">
-              <Star className="w-4 h-4 text-yellow-400 fill-current" />
-              <span className="text-gray-600">{rating}</span>
-            </div>
           </div>
-          
           <div className="flex items-center justify-between mt-3">
             <div className="flex items-center space-x-2">
               <div className={`w-3 h-3 rounded-full ${
