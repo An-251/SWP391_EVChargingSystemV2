@@ -107,6 +107,21 @@ const ProfileForm = ({
           </Form.Item>
 
           <Form.Item
+            label={
+              <span className="flex items-center space-x-2">
+                <User className="w-4 h-4" />
+                <span>CMND/CCCD</span>
+              </span>
+            }
+            name="idNumber"
+            rules={[
+              { pattern: /^[0-9]{9,12}$/, message: 'Số CMND/CCCD không hợp lệ!' }
+            ]}
+          >
+            <Input placeholder="Nhập số CMND/CCCD" className="h-12" />
+          </Form.Item>
+
+          <Form.Item
             label="Giới tính"
             name="gender"
             rules={[{ required: true, message: 'Vui lòng chọn giới tính!' }]}
