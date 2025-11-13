@@ -136,8 +136,6 @@ export default function AdminRegistration() {
       }, 2000);
 
     } catch (error) {
-      console.error('Admin registration error:', error);
-      
       if (error.response?.data?.message) {
         setErrorMessage(error.response.data.message);
       } else if (error.response?.status === 409) {
