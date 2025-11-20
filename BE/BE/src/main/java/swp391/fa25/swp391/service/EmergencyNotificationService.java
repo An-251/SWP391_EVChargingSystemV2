@@ -31,7 +31,7 @@ public class EmergencyNotificationService {
             "Charger: %s\n" +
             "Station: %s\n" +
             "Time: %s\n" +
-            "⚠️ Please inspect the charging station and create incident report if needed.",
+            "Please inspect the charging station and create incident report if needed.",
             session.getDriver().getId(),
             session.getId(),
             session.getCharger().getChargerCode(),
@@ -50,7 +50,7 @@ public class EmergencyNotificationService {
                 .build();
 
         Notification saved = notificationRepository.save(notification);
-        log.info("✅ [NOTIFICATION] Emergency stop notification created with ID: {}", saved.getId());
+        log.info("[NOTIFICATION] Emergency stop notification created with ID: {}", saved.getId());
         
         return saved;
     }
@@ -81,7 +81,7 @@ public class EmergencyNotificationService {
         notification.setReadAt(LocalDateTime.now());
         notificationRepository.save(notification);
         
-        log.info("✅ [NOTIFICATION] Marked notification {} as read", notificationId);
+        log.info("[NOTIFICATION] Marked notification {} as read", notificationId);
     }
 
     /**
@@ -97,7 +97,7 @@ public class EmergencyNotificationService {
         });
         
         notificationRepository.saveAll(unreadNotifications);
-        log.info("✅ [NOTIFICATION] Marked {} notifications as read", unreadNotifications.size());
+        log.info("[NOTIFICATION] Marked {} notifications as read", unreadNotifications.size());
     }
 
     /**

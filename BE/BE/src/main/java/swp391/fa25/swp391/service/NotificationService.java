@@ -59,7 +59,7 @@ public class NotificationService {
 
         sendEmail(email, "Hóa đơn mới - EV Charging", message);
 
-        log.info("✅ Sent invoice created notification to driver {} (Invoice: {})",
+        log.info("Sent invoice created notification to driver {} (Invoice: {})",
                 driver.getId(), invoice.getId());
     }
 
@@ -117,7 +117,7 @@ public class NotificationService {
 
         String message = String.format(
                 "Xin chào %s,\n\n" +
-                        "⚠️ CẢNH BÁO: HÓA ĐƠN QUÁ HẠN\n\n" +
+                        "CẢNH BÁO: HÓA ĐƠN QUÁ HẠN\n\n" +
                         "Hóa đơn #%d đã quá hạn thanh toán:\n" +
                         "Số tiền: %,d VND\n" +
                         "Hạn thanh toán: %s\n\n" +
@@ -130,9 +130,9 @@ public class NotificationService {
                 dueDate
         );
 
-        sendEmail(email, "⚠️ Cảnh báo: Hóa đơn quá hạn - EV Charging", message);
+        sendEmail(email, "Cảnh báo: Hóa đơn quá hạn - EV Charging", message);
 
-        log.warn("⚠️ Sent overdue warning to driver {} (Invoice: {})",
+        log.warn("Sent overdue warning to driver {} (Invoice: {})",
                 driver.getId(), invoice.getId());
     }
 
@@ -153,7 +153,7 @@ public class NotificationService {
 
         String message = String.format(
                 "Xin chào %s,\n\n" +
-                        "🔒 TÀI KHOẢN ĐÃ BỊ KHÓA\n\n" +
+                        "TÀI KHOẢN ĐÃ BỊ KHÓA\n\n" +
                         "Tài khoản của bạn đã bị tạm khóa do chưa thanh toán hóa đơn #%d\n" +
                         "Số tiền: %,d VND\n\n" +
                         "Vui lòng thanh toán ngay để kích hoạt lại tài khoản.\n" +
@@ -164,9 +164,9 @@ public class NotificationService {
                 amount.longValue()
         );
 
-        sendEmail(email, "🔒 Tài khoản bị khóa - EV Charging", message);
+        sendEmail(email, "Tài khoản bị khóa - EV Charging", message);
 
-        log.error("🔒 Sent account suspended notification to driver {} (Invoice: {})",
+        log.error("Sent account suspended notification to driver {} (Invoice: {})",
                 driver.getId(), invoice.getId());
     }
 
@@ -188,7 +188,7 @@ public class NotificationService {
 
         String message = String.format(
                 "Xin chào %s,\n\n" +
-                        "✅ THANH TOÁN THÀNH CÔNG\n\n" +
+                        "THANH TOÁN THÀNH CÔNG\n\n" +
                         "Hóa đơn #%d đã được thanh toán:\n" +
                         "Số tiền: %,d VND\n" +
                         "Ngày thanh toán: %s\n" +
@@ -203,9 +203,9 @@ public class NotificationService {
                 invoice.getPaymentMethod() != null ? invoice.getPaymentMethod() : "N/A",
                 invoice.getPaymentReference() != null ? invoice.getPaymentReference() : "N/A"
         );
-        sendEmail(email, "✅ Thanh toán thành công - EV Charging", message);
+        sendEmail(email, "Thanh toán thành công - EV Charging", message);
 
-        log.info("✅ Sent payment success notification to driver {} (Invoice: {})",
+        log.info("Sent payment success notification to driver {} (Invoice: {})",
                 driver.getId(), invoice.getId());
     }
 
@@ -220,7 +220,7 @@ public class NotificationService {
         }
 
         try {
-            // ✅ Gọi service thật
+            // Gọi service thật
             emailService.sendEmail(emailAddress, subject, body);
         } catch (Exception e) {
             // Bắt lỗi để không làm crash luồng chính

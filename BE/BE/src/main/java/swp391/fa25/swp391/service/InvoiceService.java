@@ -107,7 +107,7 @@ public class InvoiceService implements IInvoiceService {
     // ==================== MONTHLY INVOICE GENERATION (Updated với Notification) ====================
 
     /**
-     * ⭐ SCHEDULED JOB: Tạo invoice cuối tháng
+     * SCHEDULED JOB: Tạo invoice cuối tháng
      * Chạy lúc 00:00 ngày cuối tháng
      */
     @Scheduled(cron = "0 0 0 L * ?")
@@ -132,32 +132,32 @@ public class InvoiceService implements IInvoiceService {
                 if (invoice != null) {
                     successCount++;
 
-                    // ⭐ GỬI NOTIFICATION
+                    // GỬI NOTIFICATION
                     try {
                         notificationService.sendInvoiceCreatedNotification(invoice);
                     } catch (Exception e) {
                         log.error("Failed to send notification for invoice {}", invoice.getId(), e);
                     }
 
-                    log.info("✅ Generated invoice {} for driver {}", invoice.getId(), driver.getId());
+                    log.info("Generated invoice {} for driver {}", invoice.getId(), driver.getId());
                 } else {
                     noSessionCount++;
-                    log.info("ℹ️ No sessions for driver {}, skipped", driver.getId());
+                    log.info("No sessions for driver {}, skipped", driver.getId());
                 }
             } catch (Exception e) {
-                log.error("❌ Failed to generate invoice for driver {}: {}",
+                log.error("Failed to generate invoice for driver {}: {}",
                         driver.getId(), e.getMessage(), e);
                 failureCount++;
             }
         }
 
         log.info("========== INVOICE GENERATION COMPLETED ==========");
-        log.info("✅ Success: {}, ℹ️ No sessions: {}, ❌ Failed: {}",
+        log.info("Success: {}, No sessions: {}, Failed: {}",
                 successCount, noSessionCount, failureCount);
     }
 
     /**
-     * ⭐ Tạo invoice cho 1 driver (Updated với Due Date)
+     * Tạo invoice cho 1 driver (Updated với Due Date)
      */
     @Transactional
     public Invoice generateInvoiceForDriver(Driver driver, LocalDate startDate, LocalDate endDate) {
@@ -229,15 +229,15 @@ public class InvoiceService implements IInvoiceService {
         log.info("Created invoice {} for driver {}, amount: {}, due date: {}, sessions: {}",
                 savedInvoice.getId(), driver.getId(), totalCost, dueDate, sessions.size());
 
-        // ⭐ Send invoice email notification
+        // Send invoice email notification
         try {
             String driverEmail = driver.getAccount().getEmail();
             if (driverEmail != null && !driverEmail.isEmpty()) {
                 emailService.sendInvoiceEmail(driverEmail, savedInvoice);
-                log.info("✅ Invoice email sent to driver {} at {}", driver.getId(), driverEmail);
+                log.info("Invoice email sent to driver {} at {}", driver.getId(), driverEmail);
             }
         } catch (Exception e) {
-            log.error("❌ Failed to send invoice email to driver {}: {}", driver.getId(), e.getMessage());
+            log.error("Failed to send invoice email to driver {}: {}", driver.getId(), e.getMessage());
             // Don't throw - invoice is still created successfully
         }
 
@@ -245,7 +245,7 @@ public class InvoiceService implements IInvoiceService {
     }
 
     /**
-     * ⭐ Tính cost khi driver đổi plan giữa tháng
+     * Tính cost khi driver đổi plan giữa tháng
      */
     private BigDecimal calculateTotalCostWithPlanChanges(
             Driver driver,
@@ -294,7 +294,7 @@ public class InvoiceService implements IInvoiceService {
     }
 
     /**
-     * ⭐ MANUAL: Tạo invoice thủ công (để test)
+     * MANUAL: Tạo invoice thủ công (để test)
      */
     @Transactional
     public Invoice manualGenerateInvoice(Integer driverId, LocalDate startDate, LocalDate endDate) {
@@ -318,7 +318,7 @@ public class InvoiceService implements IInvoiceService {
     }
 
     /**
-     * ⭐ Tạo invoice tổng hợp cho các sessions chưa có invoice
+     * Tạo invoice tổng hợp cho các sessions chưa có invoice
      */
     @Transactional
     public Invoice generateInvoiceForUnbilledSessions(Integer driverId, LocalDate startDate, LocalDate endDate) {
@@ -381,15 +381,15 @@ public class InvoiceService implements IInvoiceService {
         }
         savedInvoice.setSessions(unbilledSessions);
 
-        // ⭐ Send invoice email notification
+        // Send invoice email notification
         try {
             String driverEmail = driver.getAccount().getEmail();
             if (driverEmail != null && !driverEmail.isEmpty()) {
                 emailService.sendInvoiceEmail(driverEmail, savedInvoice);
-                log.info("✅ Unbilled sessions invoice email sent to driver {} at {}", driver.getId(), driverEmail);
+                log.info("Unbilled sessions invoice email sent to driver {} at {}", driver.getId(), driverEmail);
             }
         } catch (Exception e) {
-            log.error("❌ Failed to send unbilled invoice email to driver {}: {}", driver.getId(), e.getMessage());
+            log.error("Failed to send unbilled invoice email to driver {}: {}", driver.getId(), e.getMessage());
         }
 
         // 6. Gửi notification
@@ -406,10 +406,10 @@ public class InvoiceService implements IInvoiceService {
         return savedInvoice;
     }
 
-    // ==================== ⭐ REMINDER & OVERDUE CHECKS (Tích hợp vào file này) ====================
+    // ==================== REMINDER & OVERDUE CHECKS (Tích hợp vào file này) ====================
 
     /**
-     * ⭐ SCHEDULED JOB: Gửi payment reminder
+     * SCHEDULED JOB: Gửi payment reminder
      * Chạy mỗi ngày lúc 09:00 AM
      * Gửi cho invoices sắp đến hạn (3 ngày trước due date)
      */
@@ -432,9 +432,9 @@ public class InvoiceService implements IInvoiceService {
         for (Invoice invoice : upcomingDueInvoices) {
             try {
                 notificationService.sendPaymentReminderNotification(invoice);
-                log.info("✅ Sent reminder for invoice {}", invoice.getId());
+                log.info("Sent reminder for invoice {}", invoice.getId());
             } catch (Exception e) {
-                log.error("❌ Failed to send reminder for invoice {}", invoice.getId(), e);
+                log.error("Failed to send reminder for invoice {}", invoice.getId(), e);
             }
         }
 
@@ -442,7 +442,7 @@ public class InvoiceService implements IInvoiceService {
     }
 
     /**
-     * ⭐ SCHEDULED JOB: Check overdue invoices và gửi warning
+     * SCHEDULED JOB: Check overdue invoices và gửi warning
      * Chạy mỗi ngày lúc 01:00 AM
      */
     @Scheduled(cron = "0 0 1 * * ?")
@@ -464,7 +464,7 @@ public class InvoiceService implements IInvoiceService {
                 // Gửi warning notification
                 notificationService.sendOverdueWarningNotification(invoice);
 
-                log.warn("⚠️ Invoice {} marked as overdue", invoice.getId());
+                log.warn("Invoice {} marked as overdue", invoice.getId());
 
             } catch (Exception e) {
                 log.error("Failed to process overdue invoice {}", invoice.getId(), e);
@@ -475,7 +475,7 @@ public class InvoiceService implements IInvoiceService {
     }
 
     /**
-     * ⭐ SCHEDULED JOB: Suspend accounts với invoices quá grace period
+     * SCHEDULED JOB: Suspend accounts với invoices quá grace period
      * Chạy mỗi ngày lúc 02:00 AM
      */
     @Scheduled(cron = "0 0 2 * * ?")
@@ -506,7 +506,7 @@ public class InvoiceService implements IInvoiceService {
                     // Gửi notification
                     notificationService.sendAccountSuspendedNotification(invoice);
 
-                    log.error("🔒 Suspended account {} due to overdue invoice {}",
+                    log.error("Suspended account {} due to overdue invoice {}",
                             account.getId(), invoice.getId());
                 }
 
@@ -524,7 +524,7 @@ public class InvoiceService implements IInvoiceService {
     }
 
     /**
-     * ⭐ Lấy tất cả driver đang active
+     * Lấy tất cả driver đang active
      */
     public List<Driver> findAllActiveDrivers() {
         return driverRepository.findByAccountStatus("active");

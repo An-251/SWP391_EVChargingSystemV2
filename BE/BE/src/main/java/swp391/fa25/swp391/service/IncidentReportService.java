@@ -4,11 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional; // Quan trọng
 import swp391.fa25.swp391.dto.request.*;
-import swp391.fa25.swp391.entity.Charger; // ⭐ NEW
+import swp391.fa25.swp391.entity.Charger; // NEW
 import swp391.fa25.swp391.entity.ChargingPoint;
 import swp391.fa25.swp391.entity.IncidentReport;
 import swp391.fa25.swp391.entity.StationEmployee;
-import swp391.fa25.swp391.repository.ChargerRepository; // ⭐ NEW
+import swp391.fa25.swp391.repository.ChargerRepository; // NEW
 import swp391.fa25.swp391.repository.ChargingPointRepository;
 import swp391.fa25.swp391.repository.IncidentReportRepository;
 import swp391.fa25.swp391.repository.StationEmployeeRepository;
@@ -23,7 +23,7 @@ public class IncidentReportService implements IIncidentReportService {
 
     private final IncidentReportRepository incidentReportRepository;
     private final ChargingPointRepository chargingPointRepository;
-    private final ChargerRepository chargerRepository; // ⭐ NEW
+    private final ChargerRepository chargerRepository; // NEW
     private final StationEmployeeRepository stationEmployeeRepository;
 
     @Override
@@ -120,7 +120,7 @@ public class IncidentReportService implements IIncidentReportService {
     @Transactional
     public IncidentReport updateReportStatus(Integer reportId, String status) {
         IncidentReport report = getReportById(reportId); // Sẽ throw RuntimeException nếu không tìm thấy
-        report.setStatus(status.toLowerCase()); // ⭐ Chuẩn hóa thành lowercase
+        report.setStatus(status.toLowerCase()); // Chuẩn hóa thành lowercase
         if ("resolved".equalsIgnoreCase(status) || "closed".equalsIgnoreCase(status)) {
             report.setResolvedDate(Instant.now());
         }
@@ -131,11 +131,11 @@ public class IncidentReportService implements IIncidentReportService {
     @Transactional
     public IncidentReport closeReport(Integer reportId, String resolutionNotes) {
         IncidentReport report = getReportById(reportId); // Sẽ throw RuntimeException nếu không tìm thấy
-        report.setStatus("closed"); // ⭐ lowercase
+        report.setStatus("closed"); // lowercase
         report.setResolvedDate(Instant.now());
         report.setResolutionNotes(resolutionNotes);
         
-        // ⭐ NEW: Khi admin close report → đổi status về ACTIVE (lowercase)
+        // NEW: Khi admin close report → đổi status về ACTIVE (lowercase)
         ChargingPoint point = report.getPoint();
         Charger charger = report.getCharger();
         
@@ -150,7 +150,7 @@ public class IncidentReportService implements IIncidentReportService {
             
             List<Charger> chargers = chargerRepository.findByChargingPointId(point.getId());
             for (Charger c : chargers) {
-                c.setStatus("active"); // ⭐ lowercase
+                c.setStatus("active"); // lowercase
                 chargerRepository.save(c);
             }
         }
@@ -209,25 +209,25 @@ public class IncidentReportService implements IIncidentReportService {
             report.setResolutionNotes("Employee notes: " + request.getEmployeeNotes());
         }
 
-        // ⭐ FIX: Set relationships BEFORE saving (required for queries)
+        // FIX: Set relationships BEFORE saving (required for queries)
         report.setPoint(point);
         report.setStation(point.getStation());
         if (employee != null) {
             report.setEmployee(employee);
         }
 
-        // ⭐ NEW: Xử lý thay đổi status dựa trên reportTarget
+        // NEW: Xử lý thay đổi status dựa trên reportTarget
         String reportTarget = request.getReportTarget();
         
         if ("CHARGING_POINT".equalsIgnoreCase(reportTarget)) {
             // Báo cáo sự cố của Charging Point → Đổi status Point + tất cả Chargers
-            point.setStatus("maintenance"); // ⭐ lowercase
+            point.setStatus("maintenance"); // lowercase
             chargingPointRepository.save(point);
             
             // Đổi status tất cả chargers thuộc point này
             List<Charger> chargers = chargerRepository.findByChargingPointId(point.getId());
             for (Charger charger : chargers) {
-                charger.setStatus("maintenance"); // ⭐ lowercase
+                charger.setStatus("maintenance"); // lowercase
                 chargerRepository.save(charger);
             }
             
@@ -238,7 +238,7 @@ public class IncidentReportService implements IIncidentReportService {
             Charger charger = chargerRepository.findById(request.getChargerId())
                     .orElseThrow(() -> new RuntimeException("Charger not found with id: " + request.getChargerId()));
             
-            charger.setStatus("maintenance"); // ⭐ lowercase
+            charger.setStatus("maintenance"); // lowercase
             chargerRepository.save(charger);
             
             report.setCharger(charger);

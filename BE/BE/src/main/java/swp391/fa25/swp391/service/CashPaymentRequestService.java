@@ -130,19 +130,19 @@ public class CashPaymentRequestService {
             invoice.setPaidDate(LocalDateTime.now().toInstant(java.time.ZoneOffset.UTC));
             invoiceRepository.save(invoice);
             
-            // ⭐ Send payment confirmation email
+            // Send payment confirmation email
             String driverEmail = request.getDriver().getAccount().getEmail();
             if (driverEmail != null && !driverEmail.isEmpty()) {
                 try {
                     emailService.sendInvoicePaymentConfirmationEmail(driverEmail, invoice, "CASH");
-                    log.info("✅ Sent invoice payment confirmation email to {}", driverEmail);
+                    log.info("Sent invoice payment confirmation email to {}", driverEmail);
                 } catch (Exception e) {
-                    log.error("❌ Failed to send invoice payment email: {}", e.getMessage());
+                    log.error("Failed to send invoice payment email: {}", e.getMessage());
                 }
             }
             
         } else if ("SUBSCRIPTION".equals(request.getRequestType())) {
-            // ⭐ STEP 1: Cancel all active subscriptions for this driver
+            // STEP 1: Cancel all active subscriptions for this driver
             List<PlanRegistration> activeSubscriptions = planRegistrationRepository
                     .findByDriverIdAndStatus(request.getDriver().getId(), PaymentStatus.SUBSCRIPTION_ACTIVE);
             
@@ -151,7 +151,7 @@ public class CashPaymentRequestService {
                 planRegistrationRepository.save(oldSubscription);
             }
             
-            // ⭐ STEP 2: Create new subscription plan registration
+            // STEP 2: Create new subscription plan registration
             SubscriptionPlan subscriptionPlan = subscriptionPlanRepository.findById(request.getReferenceId())
                     .orElseThrow(() -> new RuntimeException("Subscription plan not found"));
             
@@ -177,14 +177,14 @@ public class CashPaymentRequestService {
             
             planRegistrationRepository.save(registration);
             
-            // ⭐ Send subscription payment confirmation email
+            // Send subscription payment confirmation email
             String driverEmail = request.getDriver().getAccount().getEmail();
             if (driverEmail != null && !driverEmail.isEmpty()) {
                 try {
                     emailService.sendSubscriptionPaymentEmail(driverEmail, registration, "CASH");
-                    log.info("✅ Sent subscription payment confirmation email to {}", driverEmail);
+                    log.info("Sent subscription payment confirmation email to {}", driverEmail);
                 } catch (Exception e) {
-                    log.error("❌ Failed to send subscription payment email: {}", e.getMessage());
+                    log.error("Failed to send subscription payment email: {}", e.getMessage());
                 }
             }
         }

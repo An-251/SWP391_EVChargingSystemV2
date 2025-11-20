@@ -20,7 +20,7 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
     @Override
     @Transactional
     public SubscriptionPlan register(SubscriptionPlan subscriptionPlan) {
-        // ⭐ Validation: Chỉ có 1 plan được là default cho mỗi targetUserType
+        // Validation: Chỉ có 1 plan được là default cho mỗi targetUserType
         if (Boolean.TRUE.equals(subscriptionPlan.getIsDefault())) {
             subscriptionPlanRepository.findByIsDefaultAndTargetUserType(true, subscriptionPlan.getTargetUserType())
                 .ifPresent(existingDefault -> {
@@ -45,7 +45,7 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
         SubscriptionPlan plan = subscriptionPlanRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Plan not found"));
 
-        // ⭐ Không cho xóa Basic plan
+        // Không cho xóa Basic plan
         if (Boolean.TRUE.equals(plan.getIsDefault())) {
             throw new RuntimeException("Không thể xóa gói Basic (default plan)");
         }

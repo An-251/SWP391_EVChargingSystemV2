@@ -100,7 +100,7 @@ public class ChargingSessionController {
     }
 
     /**
-     * ⭐ NEW: Emergency stop - Dừng khẩn cấp với tính tiền và gửi incident
+     * NEW: Emergency stop - Dừng khẩn cấp với tính tiền và gửi incident
      * POST /api/charging-sessions/{sessionId}/emergency-stop
      */
     @PostMapping("/{sessionId}/emergency-stop")
@@ -116,7 +116,7 @@ public class ChargingSessionController {
             ChargingSessionResponse response = mapToResponse(session);
 
             return ResponseEntity.ok(
-                    ApiResponse.success("⚠️ Emergency stop successful. Incident report sent to employees.", response));
+                    ApiResponse.success("Emergency stop successful. Incident report sent to employees.", response));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
@@ -484,15 +484,15 @@ public class ChargingSessionController {
             List<ChargingSessionResponse> responses = facilitySessions.stream()
                     .map(this::mapToResponse)
                     .collect(Collectors.toList());
-            
-            System.out.println("✅ Found " + responses.size() + " sessions for facility " + facilityId);
+
+            System.out.println("Found " + responses.size() + " sessions for facility " + facilityId);
             return ResponseEntity.ok(ApiResponse.success(
                     "Retrieved " + responses.size() + " sessions for facility", 
                     responses
             ));
             
         } catch (Exception e) {
-            System.err.println("❌ Error fetching sessions by facility: " + e.getMessage());
+            System.err.println("Error fetching sessions by facility: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Error retrieving sessions by facility: " + e.getMessage()));
         }
@@ -587,7 +587,7 @@ public class ChargingSessionController {
         Charger charger = session.getCharger();
         ChargingPoint cp = charger != null ? charger.getChargingPoint() : null;
 
-        // ✅ LẤY THÔNG TIN RESERVATION (CHỈ HỖ TRỢ RESERVATION)
+        // LẤY THÔNG TIN RESERVATION (CHỈ HỖ TRỢ RESERVATION)
         Reservation reservation = session.getReservation();
         Long reservationId = null;
         String chargingType = "RESERVATION"; // Chỉ hỗ trợ sạc qua đặt chỗ
@@ -600,13 +600,13 @@ public class ChargingSessionController {
             reservationEndTime = reservation.getEndTime();
         }
 
-        // ⭐ TÍNH TOÁN COST BREAKDOWN CHO FE HIỂN THỊ
+        // TÍNH TOÁN COST BREAKDOWN CHO FE HIỂN THỊ
         BigDecimal pricePerKwh = cp != null ? cp.getPricePerKwh() : BigDecimal.ZERO;
         BigDecimal kwhUsed = session.getKwhUsed() != null ? session.getKwhUsed() : BigDecimal.ZERO;
         BigDecimal startFee = session.getStartFee() != null ? session.getStartFee() : BigDecimal.ZERO;
         BigDecimal overusePenalty = session.getOverusePenalty() != null ? session.getOverusePenalty() : BigDecimal.ZERO;
         
-        // ⭐ NEW: Tính thời gian sạc thực tế vs idle time
+        // NEW: Tính thời gian sạc thực tế vs idle time
         BigDecimal actualChargingMinutes = BigDecimal.ZERO;
         BigDecimal idleMinutes = session.getOverusedTime() != null ? session.getOverusedTime() : BigDecimal.ZERO;
         BigDecimal penaltyMinutes = BigDecimal.ZERO;
@@ -656,7 +656,7 @@ public class ChargingSessionController {
                 .endTime(session.getEndTime())
                 .durationMinutes(durationMinutes)
                 
-                // ⭐ NEW: Time breakdown
+                // NEW: Time breakdown
                 .actualChargingMinutes(actualChargingMinutes)
                 .idleMinutes(idleMinutes)
                 .penaltyMinutes(penaltyMinutes)
@@ -684,14 +684,14 @@ public class ChargingSessionController {
                 .kwhUsed(kwhUsed)
                 .pricePerKwh(pricePerKwh)
                 
-                // ⭐ Cost breakdown
+                // Cost breakdown
                 .startFee(startFee)
                 .energyCostBeforeDiscount(energyCostBeforeDiscount)
                 .energyCostAfterDiscount(energyCostAfterDiscount)
                 .overusePenalty(overusePenalty)
                 .cost(session.getCost())
                 
-                // ⭐ Subscription info
+                // Subscription info
                 .subscriptionPlanName(subscriptionPlanName)
                 .discountRate(discountRate)
 
