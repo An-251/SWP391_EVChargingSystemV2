@@ -25,7 +25,7 @@ public class SubscriptionPlanRequest {
     @Size(max = 50, message = "Target user type cannot exceed 50 characters")
     private String targetUserType; // "Driver" or "Enterprise"
 
-    @NotNull(message = "Price is required")
+    // ⭐ Không bắt buộc NotNull để cho phép Basic plan có price = null hoặc 0
     @PositiveOrZero(message = "Price must be non-negative")
     private BigDecimal price;
 
