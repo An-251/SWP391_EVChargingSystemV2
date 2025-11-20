@@ -42,7 +42,6 @@ const AdminLayout = () => {
     { path: '/admin/subscriptions', icon: CreditCard, label: 'Subscriptions' },
     { path: '/admin/invoices', icon: FileText, label: 'Invoices' },
     { path: '/admin/incidents', icon: AlertCircle, label: 'Incidents' },
-    { path: '/admin/reports', icon: BarChart3, label: 'Reports' },
   ];
 
   const handleLogout = async () => {

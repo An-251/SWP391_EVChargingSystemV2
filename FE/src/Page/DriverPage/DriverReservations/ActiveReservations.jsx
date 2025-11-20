@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Card, Empty, Button, Tag, Modal, message } from 'antd';
-import { MapPin, Clock, Zap, QrCode, XCircle, Calendar } from 'lucide-react';
+import { MapPin, Clock, Zap, QrCode, XCircle, Calendar, ArrowLeft } from 'lucide-react';
 import moment from 'moment';
 import api from '../../../configs/config-axios';
 import { RESERVATION_STATUS } from '../../../constants/statusConstants';
@@ -205,6 +205,16 @@ const ActiveReservations = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
+        {/* Back Button */}
+        <Button
+          icon={<ArrowLeft size={20} />}
+          onClick={() => navigate('/driver')}
+          className="mb-4 flex items-center gap-2"
+          size="large"
+        >
+          Quay lại
+        </Button>
+
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
