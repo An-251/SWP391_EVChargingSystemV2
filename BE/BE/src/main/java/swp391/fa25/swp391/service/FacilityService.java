@@ -35,19 +35,51 @@ public class FacilityService implements IFacilityService {
     @Override
     @Transactional
     public void deleteFacility(Integer id) {
-        // SOFT DELETE: Chỉ đánh dấu là đã xóa
+        // SOFT DELETE: Cascade xuống stations, points và chargers
         Facility facility = facilityRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Facility not found with id: " + id));
         
-        facility.setIsDeleted(true);
-        facility.setDeletedAt(java.time.Instant.now());
+        java.time.Instant now = java.time.Instant.now();
+        String deletedBy = null;
         
         // Lấy username của người thực hiện xóa
         org.springframework.security.core.Authentication auth = 
             org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getName() != null) {
-            facility.setDeletedBy(auth.getName());
+            deletedBy = auth.getName();
         }
+        
+        // Cascade soft delete xuống tất cả stations và points
+        if (facility.getChargingStations() != null) {
+            for (ChargingStation station : facility.getChargingStations()) {
+                station.setIsDeleted(true);
+                station.setDeletedAt(now);
+                station.setDeletedBy(deletedBy);
+                
+                // Cascade soft delete xuống tất cả charging points
+                if (station.getChargingPoints() != null) {
+                    for (swp391.fa25.swp391.entity.ChargingPoint point : station.getChargingPoints()) {
+                        point.setIsDeleted(true);
+                        point.setDeletedAt(now);
+                        point.setDeletedBy(deletedBy);
+                        
+                        // Cascade soft delete xuống tất cả chargers
+                        if (point.getChargers() != null) {
+                            for (swp391.fa25.swp391.entity.Charger charger : point.getChargers()) {
+                                charger.setIsDeleted(true);
+                                charger.setDeletedAt(now);
+                                charger.setDeletedBy(deletedBy);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Soft delete facility
+        facility.setIsDeleted(true);
+        facility.setDeletedAt(now);
+        facility.setDeletedBy(deletedBy);
         
         facilityRepository.save(facility);
     }

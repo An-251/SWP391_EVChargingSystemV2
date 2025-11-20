@@ -41,19 +41,41 @@ public class ChargingStationService implements IChargingStationService {
     @Override
     @Transactional
     public void deleteChargingStation(Integer id) {
-        // SOFT DELETE
+        // SOFT DELETE: Cascade xuống points và chargers
         ChargingStation station = chargingStationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Charging station not found with id: " + id));
         
-        station.setIsDeleted(true);
-        station.setDeletedAt(java.time.Instant.now());
+        java.time.Instant now = java.time.Instant.now();
+        String deletedBy = null;
         
         // Lấy username của người thực hiện xóa
         org.springframework.security.core.Authentication auth = 
             org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getName() != null) {
-            station.setDeletedBy(auth.getName());
+            deletedBy = auth.getName();
         }
+        
+        // Cascade soft delete xuống tất cả charging points
+        if (station.getChargingPoints() != null) {
+            for (swp391.fa25.swp391.entity.ChargingPoint point : station.getChargingPoints()) {
+                point.setIsDeleted(true);
+                point.setDeletedAt(now);
+                point.setDeletedBy(deletedBy);
+                
+                // Cascade soft delete xuống tất cả chargers
+                if (point.getChargers() != null) {
+                    for (swp391.fa25.swp391.entity.Charger charger : point.getChargers()) {
+                        charger.setIsDeleted(true);
+                        charger.setDeletedAt(now);
+                        charger.setDeletedBy(deletedBy);
+                    }
+                }
+            }
+        }
+        
+        station.setIsDeleted(true);
+        station.setDeletedAt(now);
+        station.setDeletedBy(deletedBy);
         
         chargingStationRepository.save(station);
     }
