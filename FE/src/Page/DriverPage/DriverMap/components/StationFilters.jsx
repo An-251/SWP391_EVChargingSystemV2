@@ -65,35 +65,17 @@ const StationFilters = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               >
                 <option value="">All Types</option>
-                <option value="CCS">CCS (Combined Charging System)</option>
+                <option value="CCS1">CCS1</option>
+                <option value="CCS2">CCS2</option>
                 <option value="CHAdeMO">CHAdeMO</option>
-                <option value="Type2">Type 2 (Mennekes)</option>
-                <option value="Type1">Type 1 (J1772)</option>
+                <option value="Type 1">Type 1 </option>
+                <option value="Type 2">Type 2 </option>
                 <option value="Tesla">Tesla Supercharger</option>
                 <option value="GB/T">GB/T</option>
+                <option value="NACS">NACS</option>
               </select>
             </div>
 
-            {/* Power Level */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Minimum Power Level
-              </label>
-              <select
-                value={filters.powerLevel || ''}
-                onChange={(e) =>
-                  handleFilterChange('powerLevel', e.target.value ? parseInt(e.target.value) : null)
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              >
-                <option value="">Any Power</option>
-                <option value="7">7 kW (Slow)</option>
-                <option value="22">22 kW (Fast)</option>
-                <option value="50">50 kW (Rapid)</option>
-                <option value="150">150 kW (Ultra Rapid)</option>
-                <option value="350">350 kW (Hyper)</option>
-              </select>
-            </div>
 
             {/* Availability */}
             <div>
@@ -109,50 +91,6 @@ const StationFilters = () => {
                 <option value="available">Available Now</option>
                 <option value="busy">Busy</option>
               </select>
-            </div>
-
-            {/* Max Distance */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Maximum Distance
-              </label>
-              <select
-                value={filters.maxDistance || ''}
-                onChange={(e) =>
-                  handleFilterChange('maxDistance', e.target.value ? parseInt(e.target.value) : null)
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              >
-                <option value="">Any Distance</option>
-                <option value="1">Within 1 km</option>
-                <option value="5">Within 5 km</option>
-                <option value="10">Within 10 km</option>
-                <option value="25">Within 25 km</option>
-                <option value="50">Within 50 km</option>
-              </select>
-            </div>
-
-            {/* Minimum Rating */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Minimum Rating
-              </label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="range"
-                  min="0"
-                  max="5"
-                  step="0.5"
-                  value={filters.minRating}
-                  onChange={(e) =>
-                    handleFilterChange('minRating', parseFloat(e.target.value))
-                  }
-                  className="flex-1"
-                />
-                <span className="text-sm font-medium text-gray-700 w-12 text-right">
-                  {filters.minRating.toFixed(1)} ⭐
-                </span>
-              </div>
             </div>
           </div>
 

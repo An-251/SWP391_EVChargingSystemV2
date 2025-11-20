@@ -5,7 +5,6 @@ import { CHARGING_POINT_STATUS } from '../../../../constants/statusConstants';
 const StationPopup = ({ station, onBook, onGetDirections, onToggleFavorite, isFavorite }) => {
   // Calculate rating display
   const rating = station.rating || 4.5;
-  const reviewCount = station.reviewCount || 0;
   
   // Get status color
   const getStatusColor = (status) => {
@@ -66,21 +65,7 @@ const StationPopup = ({ station, onBook, onGetDirections, onToggleFavorite, isFa
               {station.status || 'ACTIVE'}
             </span>
           </div>
-          
-          {/* Rating */}
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-1">
-              <Star size={16} className="text-yellow-400 fill-yellow-400" />
-              <span className="text-sm font-semibold text-gray-700">
-                {rating.toFixed(1)}
-              </span>
-            </div>
-            <span className="text-xs text-gray-500">
-              ({reviewCount} reviews)
-            </span>
-          </div>
-        </div>
-
+</div>
         {/* Address */}
         {station.facility?.address && (
           <div className="flex items-start space-x-2 text-sm text-gray-600">
