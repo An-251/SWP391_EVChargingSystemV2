@@ -126,25 +126,6 @@ public class ChargingSessionController {
         }
     }
 
-    /**
-     * Hủy phiên sạc (cancel without charging - old method)
-     */
-    @DeleteMapping("/{sessionId}")
-    public ResponseEntity<?> cancelChargingSession(@PathVariable Integer sessionId) {
-        try {
-            // Service chỉ thực hiện logic, không cần trả về DTO
-            chargingSessionService.cancelChargingSession(sessionId);
-            return ResponseEntity.ok(
-                    ApiResponse.success("Charging session cancelled successfully"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Error cancelling session: " + e.getMessage()));
-        }
-    }
-
     // ============================================
     // QUERY APIs
     // ============================================

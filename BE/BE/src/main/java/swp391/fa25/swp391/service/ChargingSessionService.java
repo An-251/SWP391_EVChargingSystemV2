@@ -53,9 +53,6 @@ public class ChargingSessionService implements IChargingSessionService {
     // ChargingSession Status Constants
     private static final String STATUS_CHARGING = "charging";      // Đang sạc
     private static final String STATUS_COMPLETED = "completed";    // Hoàn thành
-    private static final String STATUS_CANCELLED = "cancelled";    // Đã hủy
-    private static final String STATUS_FAILED = "failed";          // Lỗi hệ thống
-    private static final String STATUS_INTERRUPTED = "interrupted"; // Bị gián đoạn
 
     @Override
     public ChargingSession startChargingSession(StartChargingSessionRequest request) {
@@ -286,70 +283,7 @@ public class ChargingSessionService implements IChargingSessionService {
         return updatedSession;
     }
 
-    @Override
-    public void cancelChargingSession(Integer sessionId) {
-        log.info("Cancelling charging session {}", sessionId);
 
-        ChargingSession session = chargingSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new RuntimeException("Charging session not found"));
-
-        // Kiểm tra status phải là CHARGING
-        if (!STATUS_CHARGING.equalsIgnoreCase(session.getStatus())) {
-            throw new RuntimeException("Can only cancel sessions with status 'charging'");
-        }
-
-        session.setStatus(STATUS_CANCELLED);
-        session.setEndTime(LocalDateTime.now());
-        chargingSessionRepository.save(session);
-
-        chargerService.stopUsingCharger(session.getCharger().getId());
-
-        log.info("Session {} marked as '{}'", sessionId, STATUS_CANCELLED);
-    }
-
-    /**
-     * Đánh dấu session bị lỗi (system error)
-     */
-    public void failChargingSession(Integer sessionId, String reason) {
-        log.warn("Marking charging session {} as '{}'. Reason: {}", sessionId, STATUS_FAILED, reason);
-
-        ChargingSession session = chargingSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new RuntimeException("Charging session not found"));
-
-        if (!STATUS_CHARGING.equalsIgnoreCase(session.getStatus())) {
-            throw new RuntimeException("Can only fail active charging sessions");
-        }
-
-        session.setStatus(STATUS_FAILED);
-        session.setEndTime(LocalDateTime.now());
-        chargingSessionRepository.save(session);
-
-        chargerService.stopUsingCharger(session.getCharger().getId());
-
-        log.error("Session {} marked as '{}': {}", sessionId, STATUS_FAILED, reason);
-    }
-
-    /**
-     * Đánh dấu session bị gián đoạn (connection lost)
-     */
-    public void interruptChargingSession(Integer sessionId) {
-        log.warn("Marking charging session {} as '{}'", sessionId, STATUS_INTERRUPTED);
-
-        ChargingSession session = chargingSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new RuntimeException("Charging session not found"));
-
-        if (!STATUS_CHARGING.equalsIgnoreCase(session.getStatus())) {
-            throw new RuntimeException("Session is not active");
-        }
-
-        session.setStatus(STATUS_INTERRUPTED);
-        session.setEndTime(LocalDateTime.now());
-        chargingSessionRepository.save(session);
-
-        chargerService.stopUsingCharger(session.getCharger().getId());
-
-        log.warn("Session {} marked as '{}'", sessionId, STATUS_INTERRUPTED);
-    }
 
     /**
      * ⭐ NEW: Emergency stop với tính tiền theo % đã sạc và gửi incident report
