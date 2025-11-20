@@ -32,6 +32,7 @@ import {
   AdminInvoiceDetail,
   Reports
 } from "./Page/AdminPage";
+import { DashboardNew } from "./Page/AdminPage/Dashboard";
 import AdminIncidents from "./Page/AdminPage/Incidents";
 import AdminEmployees from "./Page/AdminPage/Employees";
 import EmployeeLayout from "./Layout/Employee/EmployeeLayout";
@@ -440,7 +441,8 @@ function App() {
               </RoleBasedRoute>
             }
           >
-            <Route index element={<Dashboard />} />
+            <Route index element={<DashboardNew />} />
+            <Route path="dashboard-old" element={<Dashboard />} /> {/* Keep old for reference */}
             <Route path="facilities" element={<FacilityList />} />
             <Route path="stations" element={<StationList />} />
             <Route path="charging-points" element={<ChargingPointList />} />

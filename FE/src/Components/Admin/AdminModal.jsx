@@ -50,8 +50,7 @@ export default function AdminModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-        onClick={onClose}
+        className="fixed inset-0 backdrop-blur-sm bg-black/30 transition-opacity"
       ></div>
 
       {/* Modal */}
