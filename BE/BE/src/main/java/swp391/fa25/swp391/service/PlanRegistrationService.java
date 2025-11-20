@@ -86,15 +86,24 @@ public class PlanRegistrationService {
         if (existingActive.isPresent()) {
             PlanRegistration current = existingActive.get();
 
-            // Nếu đang ở Basic → cho phép upgrade
+            // ⭐ Cho phép upgrade từ Basic hoặc downgrade về Basic
             if (Boolean.TRUE.equals(current.getPlan().getIsDefault())) {
+                // Đang ở Basic → cho phép upgrade
                 current.setStatus("cancelled");
                 current.setEndDate(LocalDate.now());
                 registrationRepository.save(current);
-                log.info("Cancelled Basic plan for driver {}", driver.getId());
+                log.info("Cancelled Basic plan for driver {} to upgrade", driver.getId());
+            } else if (Boolean.TRUE.equals(plan.getIsDefault())) {
+                // Đang ở Premium/VIP → cho phép downgrade về Basic
+                current.setStatus("cancelled");
+                current.setEndDate(LocalDate.now());
+                registrationRepository.save(current);
+                log.info("Cancelled {} plan for driver {} to downgrade to Basic", 
+                        current.getPlan().getPlanName(), driver.getId());
             } else {
+                // Đang ở Premium/VIP và muốn chuyển sang Premium/VIP khác → yêu cầu hủy trước
                 throw new RuntimeException("Bạn đang có gói " + current.getPlan().getPlanName() +
-                        " đang hoạt động. Vui lòng hủy trước khi đăng ký gói mới.");
+                        " đang hoạt động. Vui lòng hủy gói hiện tại trước khi đăng ký gói khác.");
             }
         }
 

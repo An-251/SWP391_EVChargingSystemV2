@@ -101,43 +101,6 @@ export default function LoginForm() {
     if (isAuthenticated && user && !socialLoading) {
       console.log("✅ Login successful, user role:", user.role);
       
-      // Check for pending Enterprise registration
-      const pendingEnterprise = sessionStorage.getItem('pendingEnterpriseRegistration');
-      
-      if (pendingEnterprise === 'true' && user.role?.toUpperCase() === 'DRIVER') {
-        // Show modal to complete Enterprise registration
-        Modal.confirm({
-          title: (
-            <div className="flex items-center gap-2">
-              <Building2 size={20} className="text-blue-500" />
-              <span>Hoàn Tất Đăng Ký Doanh Nghiệp</span>
-            </div>
-          ),
-          content: (
-            <div className="py-2">
-              <p className="mb-2">Bạn đã đăng ký tài khoản Driver thành công! 🎉</p>
-              <p className="text-slate-600">
-                Bây giờ hãy hoàn tất đăng ký doanh nghiệp để Admin có thể phê duyệt và chuyển đổi tài khoản của bạn.
-              </p>
-            </div>
-          ),
-          okText: 'Đăng Ký Doanh Nghiệp',
-          cancelText: 'Để Sau',
-          okButtonProps: { type: 'primary', size: 'large' },
-          cancelButtonProps: { size: 'large' },
-          onOk: () => {
-            sessionStorage.removeItem('pendingEnterpriseRegistration');
-            navigate('/driver/enterprise-registration');
-          },
-          onCancel: () => {
-            // Keep the flag for next login
-            message.info('Bạn có thể đăng ký doanh nghiệp bất cứ lúc nào từ trang Driver');
-            navigate('/driver');
-          }
-        });
-        return; // Don't do normal navigation
-      }
-      
       // Navigation based on user role (support both formats)
       const roleUpper = user.role?.toUpperCase();
       

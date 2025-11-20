@@ -63,6 +63,16 @@ function DriverMap() {
     dispatch(fetchStations());
   }, [dispatch]);
 
+  // Debug: Log stations data structure
+  useEffect(() => {
+    if (stationsList.length > 0) {
+      console.log('🏢 Total stations loaded:', stationsList.length);
+      const firstPoint = stationsList[0]?.chargingPoints?.[0];
+      console.log('🔌 First charging point:', firstPoint);
+      console.log('🔌 Chargers in point:', firstPoint?.chargers);
+    }
+  }, [stationsList]);
+
   // Get user location
   useEffect(() => {
     if (navigator.geolocation) {
@@ -91,11 +101,26 @@ function DriverMap() {
 
   // Filter stations based on filters
   const filteredStations = stationsList.filter((station) => {
-    // Filter by connector type
+    // Filter by connector type - check inside chargers array
     if (filters.connectorType) {
-      const hasConnector = station.chargingPoints?.some(
-        (cp) => cp.connectorType === filters.connectorType
-      );
+      if (!station.chargingPoints || station.chargingPoints.length === 0) {
+        return false;
+      }
+      
+      const hasConnector = station.chargingPoints.some((cp) => {
+        // Check if charging point has chargers array
+        if (!cp.chargers || cp.chargers.length === 0) {
+          return false;
+        }
+        
+        // Check if any charger has matching connector type
+        return cp.chargers.some((charger) => {
+          const chargerType = (charger.connectorType || '').trim();
+          const filterType = filters.connectorType.trim();
+          return chargerType.toLowerCase() === filterType.toLowerCase();
+        });
+      });
+      
       if (!hasConnector) return false;
     }
 

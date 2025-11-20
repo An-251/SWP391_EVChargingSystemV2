@@ -65,7 +65,9 @@ const StationsManagement = () => {
     if (successMessage) {
       message.success(successMessage);
       dispatch(clearSuccess());
-      handleCloseModal();
+      setShowModal(false);
+      setEditMode(false);
+      setHasChargingPointUsing(false);
     }
     if (error) {
       message.error(error);
@@ -235,7 +237,11 @@ const StationsManagement = () => {
           {stationsList.map((station) => (
             <div
               key={station.id}
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow"
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow select-none"
+              onClick={(e) => {
+                // Prevent any parent handlers from triggering
+                e.stopPropagation();
+              }}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
@@ -275,16 +281,18 @@ const StationsManagement = () => {
               <div className="space-y-2 pt-2 border-t border-gray-100">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-700">Status</span>
-                  <Switch
-                    checked={station.status === 'ACTIVE'}
-                    onChange={() => handleToggleStatus(station.id, station.status, station)}
-                    checkedChildren="Active"
-                    unCheckedChildren="Inactive"
-                    disabled={
-                      station.status === 'USING' || 
-                      station.chargingPoints?.some(point => point.status === 'USING')
-                    }
-                  />
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Switch
+                      checked={station.status === 'ACTIVE'}
+                      onChange={() => handleToggleStatus(station.id, station.status, station)}
+                      checkedChildren="Active"
+                      unCheckedChildren="Inactive"
+                      disabled={
+                        station.status === 'USING' || 
+                        station.chargingPoints?.some(point => point.status === 'USING')
+                      }
+                    />
+                  </div>
                 </div>
                 {station.status === 'USING' && (
                   <p className="text-xs text-blue-600">● Station is currently in use</p>
@@ -292,7 +300,7 @@ const StationsManagement = () => {
                 {station.chargingPoints?.some(point => point.status === 'IN_USE' || point.status === 'OCCUPIED') && station.status !== 'USING' && (
                   <p className="text-xs text-orange-600">⚠ Some charging points are in use - cannot change status</p>
                 )}
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => handleOpenModal(station)}
                     className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
@@ -324,8 +332,8 @@ const StationsManagement = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={(e) => e.stopPropagation()}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-800">
                 {editMode ? 'Edit Station' : 'Create New Station'}

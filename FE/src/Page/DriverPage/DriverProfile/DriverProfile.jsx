@@ -212,49 +212,8 @@ const DriverProfile = () => {
             </div>
           )}
         </div>
-
-        {/* Additional Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <MapPin className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900">Xe của tôi</h4>
-                <p className="text-sm text-gray-500">Quản lý thông tin xe</p>
-              </div>
-            </div>
-            <Button 
-              type="link" 
-              className="text-blue-600 p-0"
-              onClick={() => navigate('/driver/vehicles')}
-            >
-              Xem chi tiết →
-            </Button>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900">Lịch sử sạc</h4>
-                <p className="text-sm text-gray-500">Xem lịch sử các lần sạc</p>
-              </div>
-            </div>
-            <Button 
-              type="link" 
-              className="text-green-600 p-0"
-              onClick={() => navigate('/driver/history')}
-            >
-              Xem lịch sử →
-            </Button>
-          </div>
-        </div>
       </div>
-    </div>
+    </div>  
   );
 };
 

@@ -46,4 +46,15 @@ public interface PlanRegistrationRepository extends JpaRepository<PlanRegistrati
     @Query("SELECT pr FROM PlanRegistration pr WHERE pr.endDate < :today " +
             "AND LOWER(pr.status) = 'active'")
     List<PlanRegistration> findExpiredPlans(@Param("today") LocalDate today);
+
+    /**
+     * Thống kê số lượng registrations theo plan và status (cho admin dashboard)
+     * Returns: [planId, planName, count]
+     */
+    @Query("SELECT pr.plan.id, pr.plan.planName, COUNT(pr) " +
+            "FROM PlanRegistration pr " +
+            "WHERE LOWER(pr.status) = LOWER(:status) " +
+            "GROUP BY pr.plan.id, pr.plan.planName " +
+            "ORDER BY COUNT(pr) DESC")
+    List<Object[]> countByPlanAndStatus(@Param("status") String status);
 }

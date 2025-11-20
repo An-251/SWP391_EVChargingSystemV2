@@ -21,6 +21,7 @@ import {
 } from '../../../redux/session/sessionSlice';
 import api from '../../../configs/config-axios';
 import { getSubscriptionDiscountRate } from '../../../utils/chargingCalculations'; // ⭐ FIX: Import discount helper
+import { formatTime } from '../../../utils/formatNumber'; // Format time without decimals
 
 const { confirm } = Modal;
 
@@ -47,7 +48,7 @@ const ActiveSession = () => {
   
   const START_FEE = 5000;
   const OVERUSE_PENALTY_PER_MINUTE = 2000;
-  const GRACE_PERIOD_MINUTES = 5;
+  const GRACE_PERIOD_MINUTES = 1; // ⭐ FIXED: Đồng bộ với BE (ChargingSessionService.java line 47)
   
   // Get session from navigation state (if just started)
   const sessionFromNav = location.state?.session;
@@ -98,11 +99,11 @@ const ActiveSession = () => {
           const percentCharged = newBatteryPercent - startBattery;
           const batteryCapacity = currentSession.vehicle?.batteryCapacity || 60;
           // ⭐ CHANGED: charger.chargingPoint.pricePerKwh (charger has FK to chargingPoint)
-          const pricePerKwh = currentSession.charger?.chargingPoint?.pricePerKwh || currentSession.pricePerKwh || 3000;
+          const pricePerKwh = currentSession.charger?.chargingPoint?.pricePerKwh || currentSession.pricePerKwh || 5000;
           const kwhUsed = (percentCharged / 100) * batteryCapacity;
           const currentCost = Math.round(kwhUsed * pricePerKwh);
           
-          console.log(`⚡ [ActiveSession] Progress: ${elapsed}s/${chargingDurationSeconds}s (${Math.round(progressPercent)}%) - Battery: ${newBatteryPercent}% - Cost: ${currentCost.toLocaleString('vi-VN')} đ`);
+          console.log(`⚡ [ActiveSession] Progress: ${elapsed}s/${chargingDurationSeconds}s (${Math.round(progressPercent)}%) - Battery: ${newBatteryPercent}% - Cost: ${currentCost} đ`);
         }
       }, 1000);
 
@@ -161,7 +162,7 @@ const ActiveSession = () => {
         // Show warning every minute after grace period
         if (penaltyMinutes % 1 === 0 && penaltyMinutes > 0) {
           message.error({
-            content: `🚨 Phí phạt đậu quá giờ: +${penalty.toLocaleString()} đ (${penaltyMinutes} phút quá ${GRACE_PERIOD_MINUTES} phút miễn phí)`,
+            content: `🚨 Phí phạt đậu quá giờ: +${penalty} đ (${penaltyMinutes} phút quá ${GRACE_PERIOD_MINUTES} phút miễn phí)`,
             duration: 3,
           });
         }
@@ -235,25 +236,62 @@ const ActiveSession = () => {
     const sessionId = currentSession?.sessionId || currentSession?.id;
     
     if (!sessionId) {
-      console.error('❌ [CANCEL SESSION] No session ID found in:', currentSession);
+      console.error('❌ [EMERGENCY STOP] No session ID found in:', currentSession);
       message.error('Không tìm thấy ID phiên sạc! Vui lòng refresh trang.');
       return;
     }
 
     confirm({
-      title: 'Hủy phiên sạc khẩn cấp?',
+      title: '🚨 Hủy phiên sạc khẩn cấp?',
       icon: <AlertCircle className="text-red-500" />,
-      content: 'Thao tác này chỉ dùng trong trường hợp khẩn cấp. Bạn có chắc chắn?',
-      okText: 'Hủy phiên',
+      content: (
+        <div className="space-y-2">
+          <p>Thao tác này sẽ:</p>
+          <ul className="list-disc pl-5 space-y-1 text-sm">
+            <li>Dừng phiên sạc ngay lập tức</li>
+            <li>Tính tiền dựa trên % pin đã sạc ({currentBatteryPercent}%)</li>
+            <li>Gửi thông báo sự cố đến nhân viên trạm sạc</li>
+          </ul>
+          <p className="text-red-600 font-semibold mt-2">
+            ⚠️ Chỉ sử dụng trong trường hợp khẩn cấp!
+          </p>
+        </div>
+      ),
+      okText: 'Xác nhận dừng khẩn cấp',
       cancelText: 'Quay lại',
       okButtonProps: { danger: true },
+      width: 500,
       onOk: async () => {
         try {
-          await dispatch(cancelSession(sessionId)).unwrap();
-          message.warning('Đã hủy phiên sạc');
-          navigate('/driver');
+          console.log('🚨 [EMERGENCY STOP] Stopping session:', { 
+            sessionId, 
+            endPercentage: currentBatteryPercent 
+          });
+          
+          // ⭐ Gọi endpoint mới: emergency-stop (tính tiền + gửi incident)
+          const response = await api.post(
+            `/charging-sessions/${sessionId}/emergency-stop`,
+            { endPercentage: currentBatteryPercent }
+          );
+          
+          console.log('✅ [EMERGENCY STOP] Success:', response.data);
+          
+          message.success({
+            content: '⚠️ Đã dừng khẩn cấp! Thông báo đã được gửi đến nhân viên.',
+            duration: 3,
+          });
+          
+          // Navigate to completed page với session data
+          setTimeout(() => {
+            navigate(`/driver/session/${sessionId}/completed`, {
+              state: { sessionData: response.data.data }
+            });
+          }, 1500);
         } catch (error) {
-          const errorMsg = error?.message || error?.error || (typeof error === 'string' ? error : 'Không thể hủy phiên sạc!');
+          console.error('❌ [EMERGENCY STOP] Failed:', error);
+          const errorMsg = error?.response?.data?.message || 
+                          error?.message || 
+                          'Không thể dừng khẩn cấp phiên sạc!';
           message.error(errorMsg);
         }
       },
@@ -416,7 +454,7 @@ const ActiveSession = () => {
                 </span>
               </div>
               <Progress 
-                percent={chargingProgress} 
+                percent={Math.round(chargingProgress)} 
                 status={isChargingComplete ? 'success' : 'active'}
                 strokeColor={{
                   '0%': '#1890ff',
@@ -458,20 +496,12 @@ const ActiveSession = () => {
                       overtimeMinutes > GRACE_PERIOD_MINUTES ? 'text-red-800' : 'text-yellow-800'
                     }`}>
                       {overtimeMinutes <= GRACE_PERIOD_MINUTES 
-                        ? '⏰ Pin đã đầy 100%' 
+                        ? '⏰ Đã Hoàn Thành - Trong thời gian miễn phí!' 
                         : '🚨 Đang tính phí phạt quá giờ!'}
-                    </p>
-                    <p className="text-xs text-gray-700 mb-2">
-                      Thời gian overtime: <strong>{overtimeMinutes} phút</strong>
-                      {overtimeMinutes <= GRACE_PERIOD_MINUTES && (
-                        <span className="ml-2 text-green-600 font-semibold">
-                          (Còn {GRACE_PERIOD_MINUTES - overtimeMinutes} phút miễn phí)
-                        </span>
-                      )}
                     </p>
                     {overusePenalty > 0 && (
                       <p className="text-sm font-bold text-red-700 bg-white px-3 py-1 rounded">
-                        Phí phạt: +{overusePenalty.toLocaleString('vi-VN')} đ
+                        Phí phạt: +{overusePenalty} đ
                       </p>
                     )}
                     {overtimeMinutes <= GRACE_PERIOD_MINUTES && (
@@ -535,13 +565,10 @@ const ActiveSession = () => {
                   <div className="pt-4 border-t border-gray-200">
                     <div className="text-sm text-gray-500 mb-1">Thời gian còn lại (dự kiến)</div>
                     <div className="text-2xl font-bold text-green-600">
-                      {formatElapsedTime(Math.max(0, chargingDurationSeconds - elapsedTime))}
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      Tổng: {formatElapsedTime(chargingDurationSeconds)} (Demo tăng tốc 100x)
+                      {formatElapsedTime(Math.round(Math.max(0, chargingDurationSeconds - elapsedTime)))}
                     </div>
                     <div className="text-xs text-blue-500 mt-1">
-                      ⚡ Thực tế: {Math.round(estimatedTimeMinutes)} phút
+                      ⚡ Thực tế: {formatTime(estimatedTimeMinutes)} phút
                     </div>
                   </div>
                 )}
@@ -595,3 +622,4 @@ const ActiveSession = () => {
 };
 
 export default ActiveSession;
+

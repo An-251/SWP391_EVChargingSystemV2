@@ -118,6 +118,13 @@ public class IncidentReport {
     @Column(name = "IS_DELETED")
     private Boolean isDeleted = false;
 
+    @Column(name = "DELETED_AT")
+    private Instant deletedAt;
+
+    @Nationalized
+    @Column(name = "DELETED_BY", length = 255)
+    private String deletedBy;
+
     @Column(name = "UPDATED_AT")
     private LocalDateTime updatedAt;
 

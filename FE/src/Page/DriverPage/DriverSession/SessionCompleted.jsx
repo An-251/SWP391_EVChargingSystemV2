@@ -14,6 +14,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import api from '../../../configs/config-axios';
+import { formatVND, formatKWh, formatTime } from '../../../utils/formatNumber';
 
 const SessionCompleted = () => {
   const { sessionId } = useParams();
@@ -61,11 +62,6 @@ const SessionCompleted = () => {
       minute: '2-digit',
       second: '2-digit'
     });
-  };
-
-  const formatCurrency = (amount) => {
-    if (!amount) return '0';
-    return parseFloat(amount).toLocaleString('vi-VN');
   };
 
   // ⭐ FIXED: Calculate duration in seconds for demo (100x faster)
@@ -152,44 +148,10 @@ const SessionCompleted = () => {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-green-100 mb-1">EcoCharge</p>
+                <p className="text-sm text-green-100 mb-1">EV Charge</p>
                 <p className="text-xs text-green-200">Eco-friendly charging solutions</p>
               </div>
             </div>
-          </div>
-
-          {/* Success Badge */}
-          <div className="flex justify-center -mt-3 mb-6">
-            <div className="bg-white px-6 py-3 rounded-full shadow-lg border-4 border-green-100 flex items-center space-x-2">
-              <CheckCircle className="w-6 h-6 text-green-500" />
-              <span className="text-green-700 font-semibold text-lg">Sạc hoàn tất</span>
-            </div>
-          </div>
-
-          {/* ⭐ NEW: Charging Mode Badge (Walk-in / Reservation) */}
-          <div className="flex justify-center items-center space-x-2 mb-6">
-            <Tag 
-              color={session.reservation ? 'green' : 'blue'} 
-              className="text-sm px-4 py-1"
-            >
-              {session.reservation ? (
-                <>
-                  <Calendar size={14} className="inline mr-1" />
-                  Sạc qua đặt chỗ (Reservation)
-                </>
-              ) : (
-                <>
-                  <Zap size={14} className="inline mr-1" />
-                  Sạc trực tiếp (Walk-in)
-                </>
-              )}
-            </Tag>
-            
-            {session.reservation && (
-              <Tag color="purple">
-                Reservation ID: {session.reservation.id || session.reservation}
-              </Tag>
-            )}
           </div>
 
           {/* Session Information */}
@@ -238,16 +200,12 @@ const SessionCompleted = () => {
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Loại sạc</p>
                     <Tag color="green" className="text-sm px-3 py-1">
-                      {session.connectorType || 'DC Fast Charger'} ({session.powerOutput || '150'}kW)
+                      {session.connectorType || 'DC Fast Charger'}
                     </Tag>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Charger</p>
-                    <p className="text-base font-medium text-gray-900">{session.charger?.chargerCode || session.chargingPointName || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Công suất</p>
-                    <p className="text-base font-medium text-gray-900">{session.charger?.maxPower || 'N/A'} kW</p>
+                    <p className="text-base font-medium text-gray-900">{ session.chargingPointName || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -274,12 +232,34 @@ const SessionCompleted = () => {
               <div className="bg-purple-50 p-4 rounded-lg">
                 <div className="flex items-center space-x-2 mb-2">
                   <Clock className="w-5 h-5 text-purple-600" />
-                  <span className="text-sm text-gray-600">Thời gian sạc</span>
+                  <span className="text-sm text-gray-600">Chi tiết thời gian</span>
                 </div>
-                <p className="text-lg font-bold text-purple-900">{calculateDuration()}</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  (Demo 100x - Thực tế: {calculateActualDuration()})
-                </p>
+                {/* Show breakdown if available */}
+                {session.actualChargingMinutes && parseFloat(session.actualChargingMinutes) > 0 ? (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-600">⚡ Sạc:</span>
+                      <span className="font-semibold text-green-700">{formatTime(session.actualChargingMinutes)} phút</span>
+                    </div>
+                    {session.idleMinutes && parseFloat(session.idleMinutes) > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600">🅿️ Đậu xe:</span>
+                        <span className="font-semibold text-orange-600">{formatTime(session.idleMinutes)} phút</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm border-t pt-1 mt-1">
+                      <span className="text-purple-600 font-medium">Tổng:</span>
+                      <span className="font-bold text-purple-900">{calculateDuration()}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-lg font-bold text-purple-900">{calculateDuration()}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      (Demo 100x - Thực tế: {calculateActualDuration()})
+                    </p>
+                  </>
+                )}
               </div>
             </div>
 
@@ -324,7 +304,7 @@ const SessionCompleted = () => {
                         </div>
                       </div>
                       <p className="text-lg font-semibold text-gray-900">
-                        {formatCurrency(startFee)} đ
+                        {formatVND(startFee)} đ
                       </p>
                     </div>
                   );
@@ -349,39 +329,54 @@ const SessionCompleted = () => {
                         <div>
                           <p className="text-sm font-medium text-gray-900">Điện năng</p>
                           <p className="text-xs text-gray-500">
-                            {kwhUsed.toFixed(2)} kWh × {pricePerKwh.toLocaleString('vi-VN')} đ/kWh
+                            {formatKWh(kwhUsed)} kWh × {formatVND(pricePerKwh)} đ/kWh
                           </p>
                         </div>
                       </div>
                       <p className="text-lg font-semibold text-gray-900">
-                        {formatCurrency(energyCost)} đ
+                        {formatVND(energyCost)} đ
                       </p>
                     </div>
                   );
                 })()}
 
-                {/* ⭐ NEW: Overuse Penalty (if exists) */}
-                {session.overusedTime && parseFloat(session.overusedTime) > 0 && (
-                  <div className="flex items-start justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+                {/* ⭐ NEW: Overuse Penalty với breakdown chi tiết */}
+                {session.overusePenalty && parseFloat(session.overusePenalty) > 0 && (
+                  <div className="flex items-start justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                        <AlertTriangle className="w-5 h-5 text-red-600" />
+                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <AlertTriangle className="w-5 h-5 text-orange-600" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-red-900">Phí phạt quá giờ</p>
-                        <p className="text-xs text-red-600">
-                          {parseFloat(session.overusedTime).toFixed(0)} phút overtime
-                          {parseFloat(session.overusedTime) > 5 && (
-                            <span> (sau grace period 5 phút)</span>
+                        <p className="text-sm font-medium text-orange-900">Phí phạt đậu xe quá giờ</p>
+                        <p className="text-xs text-orange-600">
+                          {session.idleMinutes && parseFloat(session.idleMinutes) > 0 ? (
+                            <>
+                              Đậu xe: <strong>{formatTime(session.idleMinutes)} phút</strong>
+                              {session.penaltyMinutes && parseFloat(session.penaltyMinutes) > 0 && (
+                                <> → Tính phí: <strong>{formatTime(session.penaltyMinutes)} phút</strong> (trừ 1 phút free)</>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {formatTime(session.overusedTime || 0)} phút idle
+                              {parseFloat(session.overusedTime || 0) > 1 && (
+                                <span> (sau grace period 1 phút)</span>
+                              )}
+                            </>
                           )}
                         </p>
                         <p className="text-xs text-gray-600 mt-1">
-                          💡 Pin đã đầy 100% nhưng không dừng sạc ngay
+                          {session.reservation ? (
+                            <>⚠️ Vượt thời gian đặt chỗ (Reservation)</>
+                          ) : (
+                            <>💡 Pin đã đầy nhưng không rời trạm</>
+                          )}
                         </p>
                       </div>
                     </div>
-                    <p className="text-lg font-semibold text-red-700">
-                      +{formatCurrency(session.overusePenalty || 0)} đ
+                    <p className="text-lg font-semibold text-orange-700">
+                      +{formatVND(session.overusePenalty || 0)} đ
                     </p>
                   </div>
                 )}
@@ -401,7 +396,7 @@ const SessionCompleted = () => {
                       </div>
                     </div>
                     <p className="text-lg font-semibold text-gray-900">
-                      {formatCurrency(session.idleFee)} đ
+                      {formatVND(session.idleFee)} đ
                     </p>
                   </div>
                 )}
@@ -430,7 +425,7 @@ const SessionCompleted = () => {
                       <div className="flex justify-between items-center px-3 pt-2">
                         <p className="text-sm font-medium text-gray-600">Phí khởi động</p>
                         <p className="text-base font-semibold text-gray-700">
-                          {formatCurrency(startFee)} đ
+                          {formatVND(startFee)} đ
                         </p>
                       </div>
                       
@@ -443,7 +438,7 @@ const SessionCompleted = () => {
                           </span>
                         </p>
                         <p className="text-base font-semibold text-gray-700">
-                          {formatCurrency(energyCostBeforeDiscount)} đ
+                          {formatVND(energyCostBeforeDiscount)} đ
                         </p>
                       </div>
                       
@@ -457,7 +452,7 @@ const SessionCompleted = () => {
                             </p>
                           </div>
                           <p className="text-base font-semibold text-green-600">
-                            -{formatCurrency(discountAmount)} đ
+                            -{formatVND(discountAmount)} đ
                           </p>
                         </div>
                       )}
@@ -480,7 +475,7 @@ const SessionCompleted = () => {
                             <p className="text-sm font-medium text-orange-700">Phí phạt quá thời gian</p>
                           </div>
                           <p className="text-base font-semibold text-orange-600">
-                            +{formatCurrency(overusePenalty)} đ
+                            +{formatVND(overusePenalty)} đ
                           </p>
                         </div>
                       )}
@@ -494,11 +489,11 @@ const SessionCompleted = () => {
                             Tổng chi phí {hasDiscount && <span className="text-green-600">(Đã giảm giá)</span>}
                           </p>
                           <p className="text-3xl font-bold text-blue-700">
-                            {formatCurrency(finalCost)} đ
+                            {formatVND(finalCost)} đ
                           </p>
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
-                          💡 Công thức: Phí khởi động ({formatCurrency(startFee)}) + Điện năng sau giảm giá ({formatCurrency(energyCostAfterDiscount)}) {overusePenalty > 0 && `+ Phí phạt (${formatCurrency(overusePenalty)})`}
+                          💡 Công thức: Phí khởi động ({formatVND(startFee)}) + Điện năng sau giảm giá ({formatVND(energyCostAfterDiscount)}) {overusePenalty > 0 && `+ Phí phạt (${formatVND(overusePenalty)})`}
                         </p>
                       </div>
                     </>
@@ -506,56 +501,6 @@ const SessionCompleted = () => {
                 })()}
               </div>
             </div>
-
-            {/* Payment Notice */}
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
-              <div className="flex items-start space-x-3">
-                <DollarSign className="w-5 h-5 text-yellow-600 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-yellow-800 mb-1">
-                    Thanh toán trả sau
-                  </p>
-                  <p className="text-sm text-yellow-700">
-                    Chi phí phiên sạc này sẽ được tổng hợp vào <span className="font-semibold">hóa đơn cuối tháng</span>. 
-                    Hóa đơn sẽ được gửi vào ngày 1 hàng tháng và bạn có <span className="font-semibold">7 ngày</span> để thanh toán.
-                  </p>
-                  {session?.subscriptionPlanName ? (
-                    <p className="text-sm text-green-700 mt-2">
-                      ✅ Bạn đang sử dụng gói <span className="font-semibold">{session.subscriptionPlanName}</span> với giảm giá {session.discountRate}%
-                    </p>
-                  ) : (
-                    <p className="text-sm text-gray-600 mt-2">
-                      💡 Bạn chưa có gói subscription. <a href="/driver/select-subscription" className="text-blue-600 underline">Đăng ký ngay</a> để được giảm giá!
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* ⭐ UPDATED: Overuse Warning (if penalty applied) */}
-            {session.overusePenalty && parseFloat(session.overusePenalty) > 0 && (
-              <div className="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-r-lg mt-4">
-                <div className="flex items-start space-x-3">
-                  <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-orange-800 mb-1">
-                      ⚠️ Phí phạt quá thời gian
-                    </p>
-                    <p className="text-sm text-orange-700">
-                      Bạn đã để xe sạc quá <strong>{parseFloat(session.overusedTime || 0).toFixed(0)} phút</strong> sau khi đạt mức pin mục tiêu ({session.endPercentage}%). 
-                      Phí phạt: <strong className="text-orange-800">{formatCurrency(session.overusePenalty || 0)} đ</strong>
-                    </p>
-                    <p className="text-sm text-gray-600 mt-2">
-                      💡 <strong>Mẹo:</strong> Khi pin đạt mức mục tiêu, bạn có <strong>5 phút ân hạn</strong> để dừng session miễn phí. 
-                      Sau đó sẽ tính <strong>2,000 đ/phút</strong> phí chiếm chỗ.
-                    </p>
-                    <p className="text-sm text-blue-600 mt-2">
-                      ✅ <strong>Khuyến nghị:</strong> Dừng ngay khi pin đạt mục tiêu để tránh phí phạt và giải phóng trạm cho người khác.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Battery Progress */}
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl">

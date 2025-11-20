@@ -34,7 +34,8 @@ const ChargingPointsManagement = () => {
     if (successMessage) {
       message.success(successMessage);
       dispatch(clearSuccess());
-      handleCloseModal();
+      setShowModal(false);
+      setEditMode(false);
     }
     if (error) {
       message.error(error);
@@ -155,7 +156,14 @@ const ChargingPointsManagement = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {chargingPoints.map((point) => (
-            <div key={point.id} className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
+            <div 
+              key={point.id} 
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow select-none"
+              onClick={(e) => {
+                // Prevent any parent handlers from triggering
+                e.stopPropagation();
+              }}
+            >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-yellow-100 rounded-lg">
@@ -182,18 +190,20 @@ const ChargingPointsManagement = () => {
               <div className="space-y-2 pt-2 border-t border-gray-100">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-700">Status</span>
-                  <Switch
-                    checked={point.status === 'ACTIVE'}
-                    onChange={() => handleToggleStatus(point.id, point.status)}
-                    checkedChildren="Active"
-                    unCheckedChildren="Inactive"
-                    disabled={point.status === 'USING'}
-                  />
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Switch
+                      checked={point.status === 'ACTIVE'}
+                      onChange={() => handleToggleStatus(point.id, point.status)}
+                      checkedChildren="Active"
+                      unCheckedChildren="Inactive"
+                      disabled={point.status === 'USING'}
+                    />
+                  </div>
                 </div>
                 {point.status === 'USING' && (
                   <p className="text-xs text-blue-600">⚠ Point is currently in use - cannot change status</p>
                 )}
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => handleOpenModal(point)}
                     className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
@@ -217,8 +227,8 @@ const ChargingPointsManagement = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={(e) => e.stopPropagation()}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0  bg-opacity-30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
             <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-800">
                 {editMode ? 'Edit Charging Point' : 'Create New Charging Point'}

@@ -13,6 +13,6 @@ public interface ISubscriptionPlanService {
     List<SubscriptionPlan> findSubscriptionPlanName(String subscriptionPlanName);
     List<SubscriptionPlan> findAll();
     
-    // ⭐ NEW: Find plans by target user type (Driver or Enterprise)
+    // ⭐ NEW: Find plans by target user type (Driver)
     List<SubscriptionPlan> findByTargetUserType(String targetUserType);
 }

@@ -101,7 +101,6 @@ export default function ChargingPointList() {
         columns={columns}
         data={list}
         loading={loading}
-        onRowClick={(row) => { setEditingItem(row); setShowModal(true); }}
         pagination={{ currentPage, totalPages: pagination.totalPages, totalItems: pagination.totalElements, pageSize: pagination.size }}
         onPageChange={setCurrentPage}
         actions={(row) => (

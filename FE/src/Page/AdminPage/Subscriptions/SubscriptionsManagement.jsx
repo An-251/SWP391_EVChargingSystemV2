@@ -37,7 +37,8 @@ const SubscriptionsManagement = () => {
     if (successMessage) {
       message.success(successMessage);
       dispatch(clearSuccess());
-      handleCloseModal();
+      setShowModal(false);
+      setEditMode(false);
     }
     if (error) {
       message.error(error);
@@ -184,7 +185,14 @@ const SubscriptionsManagement = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {subscriptions.map((sub) => (
-            <div key={sub.id} className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
+            <div 
+              key={sub.id} 
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow select-none"
+              onClick={(e) => {
+                // Prevent any parent handlers from triggering
+                e.stopPropagation();
+              }}
+            >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 bg-purple-100 rounded-lg">
@@ -235,7 +243,7 @@ const SubscriptionsManagement = () => {
                 )}
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
                 <button
                   onClick={() => handleOpenModal(sub)}
                   className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
@@ -258,8 +266,8 @@ const SubscriptionsManagement = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full my-8 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full my-8 max-h-[90vh] overflow-y-auto">
             <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
               <h2 className="text-xl font-bold text-gray-800">
                 {editMode ? 'Edit Subscription' : 'Create New Subscription'}
@@ -300,7 +308,6 @@ const SubscriptionsManagement = () => {
                     <option value="BASIC">Basic</option>
                     <option value="STANDARD">Standard</option>
                     <option value="PREMIUM">Premium</option>
-                    <option value="ENTERPRISE">Enterprise</option>
                   </select>
                 </div>
 

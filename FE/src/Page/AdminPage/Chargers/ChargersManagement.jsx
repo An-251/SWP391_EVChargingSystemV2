@@ -240,20 +240,7 @@ const ChargersManagement = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="space-y-2 pt-4 border-t border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">Status Control</span>
-                    <Switch
-                      checked={charger.status === 'ACTIVE'}
-                      onChange={() => handleToggleStatus(charger.id, charger.status)}
-                      checkedChildren="Active"
-                      unCheckedChildren="Maintenance"
-                      disabled={charger.status === 'USING'}
-                    />
-                  </div>
-                  {charger.status === 'USING' && (
-                    <p className="text-xs text-blue-600">⚡ Charger is currently in use</p>
-                  )}
+                <div className="space-y-3">
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => handleOpenModal(charger)}
@@ -280,7 +267,7 @@ const ChargersManagement = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+<div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
             <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-4 flex items-center justify-between rounded-t-xl">
               <h2 className="text-xl font-bold">

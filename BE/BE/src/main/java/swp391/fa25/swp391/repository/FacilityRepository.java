@@ -30,4 +30,11 @@ public interface FacilityRepository extends JpaRepository<Facility, Integer> {
             "LOWER(f.district) LIKE LOWER(CONCAT('%', :address, '%')) OR " +
             "LOWER(f.city) LIKE LOWER(CONCAT('%', :address, '%'))")
     List<Facility> findByAddressContaining(@Param("address") String address);
+
+    // ========== SOFT DELETE METHODS ==========
+    @Query("SELECT f FROM Facility f WHERE (f.isDeleted = false OR f.isDeleted IS NULL)")
+    List<Facility> findAllNotDeleted();
+
+    @Query("SELECT f FROM Facility f WHERE f.id = :id AND (f.isDeleted = false OR f.isDeleted IS NULL)")
+    Optional<Facility> findByIdNotDeleted(Integer id);
 }

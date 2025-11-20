@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Card, Empty, Button, Tag, Modal, message } from 'antd';
-import { MapPin, Clock, Zap, QrCode, XCircle, Calendar } from 'lucide-react';
+import { MapPin, Clock, Zap, QrCode, XCircle, Calendar, ArrowLeft } from 'lucide-react';
 import moment from 'moment';
 import api from '../../../configs/config-axios';
 import { RESERVATION_STATUS } from '../../../constants/statusConstants';
@@ -57,6 +57,16 @@ const ActiveReservations = () => {
       
       console.log('✅ [ActiveReservations] Filtered active reservations:', activeReservations);
       
+      // ⭐ DEBUG: Log all reservation IDs
+      activeReservations.forEach(r => {
+        console.log('🎫 [Reservation]', {
+          id: r.id,
+          reservationId: r.reservationId,
+          stationName: r.stationName,
+          status: r.status
+        });
+      });
+      
       setReservations(activeReservations);
     } catch (error) {
       console.error('Error fetching reservations:', error);
@@ -77,7 +87,18 @@ const ActiveReservations = () => {
   }, [user]);
 
   // Handle cancel reservation
-  const handleCancel = async (reservationId) => {
+  const handleCancel = async (reservation) => {
+    // ⭐ Get reservation ID with fallback
+    const reservationId = reservation.id || reservation.reservationId;
+    
+    if (!reservationId) {
+      console.error('❌ [Cancel] Reservation ID is null/undefined:', reservation);
+      message.error('Không tìm thấy ID đặt chỗ');
+      return;
+    }
+    
+    console.log('❌ [Cancel] Attempting to cancel reservation:', reservationId);
+    
     Modal.confirm({
       title: 'Xác nhận hủy đặt chỗ',
       content: 'Bạn có chắc chắn muốn hủy đặt chỗ này?',
@@ -87,15 +108,21 @@ const ActiveReservations = () => {
       onOk: async () => {
         try {
           setCancellingId(reservationId);
+          console.log('🔄 [Cancel] Calling API DELETE /drivers/reservations/' + reservationId);
           // ⭐ BE requires driverId as @RequestParam for validation
           await api.delete(`/drivers/reservations/${reservationId}?driverId=${user.driverId}`);
+          console.log('✅ [Cancel] Successfully cancelled');
           message.success('Đã hủy đặt chỗ thành công');
           fetchActiveReservations();
         } catch (error) {
-          console.error('Error cancelling reservation:', error);
+          console.error('❌ [Cancel] Error:', error);
+          console.error('❌ [Cancel] Error response:', error.response);
+          console.error('❌ [Cancel] Error data:', error.response?.data);
+          
           const errorMessage = typeof error.response?.data === 'string' 
             ? error.response.data 
             : error.response?.data?.message || 'Không thể hủy đặt chỗ';
+          
           message.error(errorMessage);
         } finally {
           setCancellingId(null);
@@ -178,6 +205,16 @@ const ActiveReservations = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
+        {/* Back Button */}
+        <Button
+          icon={<ArrowLeft size={20} />}
+          onClick={() => navigate('/driver')}
+          className="mb-4 flex items-center gap-2"
+          size="large"
+        >
+          Quay lại
+        </Button>
+
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
@@ -217,10 +254,11 @@ const ActiveReservations = () => {
             {reservations.map((reservation) => {
               const expired = isExpired(reservation);
               const expiringSoon = isExpiringSoon(reservation);
+              const reservationKey = reservation.id || reservation.reservationId || Math.random();
               
               return (
                 <Card
-                  key={reservation.id}
+                  key={reservationKey}
                   className={`shadow-lg ${
                     expired ? 'border-2 border-red-300' :
                     expiringSoon ? 'border-2 border-yellow-300' :
@@ -295,19 +333,9 @@ const ActiveReservations = () => {
                       icon={<QrCode size={18} />}
                       onClick={() => handleScanQR(reservation)}
                       disabled={expired}
-                      className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-gray-300"
+                      className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-300"
                     >
                       Quét QR Code
-                    </Button>
-                    <Button
-                      danger
-                      size="large"
-                      icon={<XCircle size={18} />}
-                      onClick={() => handleCancel(reservation.id)}
-                      loading={cancellingId === reservation.id}
-                      disabled={expired}
-                    >
-                      Hủy
                     </Button>
                   </div>
                 </Card>

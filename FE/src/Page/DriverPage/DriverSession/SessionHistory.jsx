@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Table, Card, Statistic, Button, Select, Tag, Empty } from 'antd';
-import { Clock, Zap, DollarSign, MapPin, Battery, CheckCircle, Eye } from 'lucide-react';
+import { Clock, Zap, DollarSign, MapPin, Battery, CheckCircle, Eye, ArrowLeft } from 'lucide-react';
 import { fetchAllSessions, fetchTotalCost } from '../../../redux/session/sessionSlice';
 import { SESSION_STATUS } from '../../../constants/statusConstants';
+import { formatVND, formatKWh } from '../../../utils/formatNumber';
 
 const { Option } = Select;
 
@@ -105,7 +106,7 @@ const SessionHistory = () => {
       key: 'cost',
       render: (cost) => (
         <span className="font-semibold text-green-600">
-          {cost ? `${parseFloat(cost).toLocaleString()} VNĐ` : 'N/A'}
+          {cost ? `${formatVND(cost)} VNĐ` : 'N/A'}
         </span>
       ),
     },
@@ -146,6 +147,16 @@ const SessionHistory = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Back Button */}
+        <Button
+          icon={<ArrowLeft size={20} />}
+          onClick={() => navigate('/driver')}
+          className="mb-4 flex items-center gap-2"
+          size="large"
+        >
+          Quay lại
+        </Button>
+
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
@@ -175,7 +186,7 @@ const SessionHistory = () => {
           <Card className="shadow-lg">
             <Statistic
               title={<span className="flex items-center"><Battery className="mr-2" size={16} />Tổng điện năng</span>}
-              value={totalEnergy.toFixed(2)}
+              value={formatKWh(totalEnergy)}
               suffix="kWh"
               valueStyle={{ color: '#faad14' }}
             />
@@ -245,3 +256,4 @@ const SessionHistory = () => {
 };
 
 export default SessionHistory;
+

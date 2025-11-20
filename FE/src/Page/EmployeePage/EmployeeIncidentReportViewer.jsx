@@ -10,7 +10,7 @@ import {
   Wrench,
   Zap
 } from 'lucide-react';
-import axios from '../../configs/config-axios';
+import api from '../../configs/config-axios';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
@@ -48,12 +48,12 @@ const EmployeeIncidentReportViewer = () => {
         endpoint = `/incident-reports/employee/${user.employeeId}`;
       }
       
-      const response = await axios.get(endpoint);
+      const response = await api.get(endpoint);
       let data = response.data || [];
       
-      // Filter by status if not ALL
+      // Filter by status if not ALL (BE returns lowercase status)
       if (activeTab !== 'ALL') {
-        data = data.filter(incident => incident.status === activeTab);
+        data = data.filter(incident => incident.status?.toLowerCase() === activeTab.toLowerCase());
       }
       
       setIncidents(data);
@@ -72,33 +72,34 @@ const EmployeeIncidentReportViewer = () => {
 
   const getSeverityColor = (severity) => {
     const colors = {
-      'LOW': 'blue',
-      'MEDIUM': 'orange',
-      'HIGH': 'red',
-      'CRITICAL': 'red'
+      'low': 'blue',
+      'medium': 'orange',
+      'high': 'red',
+      'critical': 'red'
     };
-    return colors[severity] || 'default';
+    return colors[severity?.toLowerCase()] || 'default';
   };
 
   const getStatusColor = (status) => {
     const colors = {
-      'PENDING': 'orange',
-      'IN_PROGRESS': 'blue',
-      'RESOLVED': 'green',
-      'CLOSED': 'gray'
+      'pending': 'orange',
+      'in_progress': 'blue',
+      'resolved': 'green',
+      'closed': 'gray'
     };
-    return colors[status] || 'default';
+    return colors[status?.toLowerCase()] || 'default';
   };
 
   const getStatusIcon = (status) => {
-    switch (status) {
-      case 'PENDING':
+    const statusLower = status?.toLowerCase();
+    switch (statusLower) {
+      case 'pending':
         return <Clock size={14} />;
-      case 'IN_PROGRESS':
+      case 'in_progress':
         return <Wrench size={14} />;
-      case 'RESOLVED':
+      case 'resolved':
         return <CheckCircle size={14} />;
-      case 'CLOSED':
+      case 'closed':
         return <FileText size={14} />;
       default:
         return <AlertTriangle size={14} />;
@@ -195,7 +196,7 @@ const EmployeeIncidentReportViewer = () => {
       label: (
         <span className="flex items-center gap-2">
           <Clock size={16} />
-          Chờ xử lý ({incidents.filter(i => i.status === 'PENDING').length})
+          Chờ xử lý ({incidents.filter(i => i.status?.toLowerCase() === 'pending').length})
         </span>
       ),
     },
@@ -204,7 +205,7 @@ const EmployeeIncidentReportViewer = () => {
       label: (
         <span className="flex items-center gap-2">
           <Wrench size={16} />
-          Đang xử lý ({incidents.filter(i => i.status === 'IN_PROGRESS').length})
+          Đang xử lý ({incidents.filter(i => i.status?.toLowerCase() === 'in_progress').length})
         </span>
       ),
     },
@@ -213,7 +214,7 @@ const EmployeeIncidentReportViewer = () => {
       label: (
         <span className="flex items-center gap-2">
           <CheckCircle size={16} />
-          Đã giải quyết ({incidents.filter(i => i.status === 'RESOLVED').length})
+          Đã giải quyết ({incidents.filter(i => i.status?.toLowerCase() === 'resolved').length})
         </span>
       ),
     },
@@ -249,7 +250,7 @@ const EmployeeIncidentReportViewer = () => {
             <div>
               <p className="text-sm text-gray-500">Chờ xử lý</p>
               <p className="text-2xl font-bold text-orange-600">
-                {incidents.filter(i => i.status === 'PENDING').length}
+                {incidents.filter(i => i.status?.toLowerCase() === 'pending').length}
               </p>
             </div>
             <Clock size={32} className="text-orange-500" />
@@ -261,7 +262,7 @@ const EmployeeIncidentReportViewer = () => {
             <div>
               <p className="text-sm text-gray-500">Đang xử lý</p>
               <p className="text-2xl font-bold text-blue-600">
-                {incidents.filter(i => i.status === 'IN_PROGRESS').length}
+                {incidents.filter(i => i.status?.toLowerCase() === 'in_progress').length}
               </p>
             </div>
             <Wrench size={32} className="text-blue-500" />
@@ -273,7 +274,7 @@ const EmployeeIncidentReportViewer = () => {
             <div>
               <p className="text-sm text-gray-500">Đã giải quyết</p>
               <p className="text-2xl font-bold text-green-600">
-                {incidents.filter(i => i.status === 'RESOLVED').length}
+                {incidents.filter(i => i.status?.toLowerCase() === 'resolved').length}
               </p>
             </div>
             <CheckCircle size={32} className="text-green-500" />

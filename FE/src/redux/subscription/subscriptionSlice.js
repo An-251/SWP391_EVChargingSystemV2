@@ -13,7 +13,6 @@ const initialState = {
 
 /**
  * Fetch all available subscription plans for drivers to choose from
- * ⭐ Updated to filter by user role (Driver or Enterprise)
  */
 export const fetchAvailablePlans = createAsyncThunk(
   "subscription/fetchAvailablePlans",

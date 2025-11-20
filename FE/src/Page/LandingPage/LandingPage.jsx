@@ -291,7 +291,6 @@ const LandingPage = () => {
         title={
           <div className="text-center">
             <h2 className="text-2xl font-bold">Chọn Loại Đăng Ký</h2>
-            <p className="text-gray-600 text-sm mt-2">Lựa chọn phù hợp với nhu cầu của bạn</p>
           </div>
         }
         open={registerModal}
@@ -314,24 +313,6 @@ const LandingPage = () => {
               Dành cho người dùng cá nhân
             </p>
             <Button type="primary" block className="bg-blue-600">
-              Đăng Ký Ngay
-            </Button>
-          </Card>
-
-          <Card 
-            hoverable
-            onClick={() => {
-              setRegisterModal(false);
-              navigate('/auth/login', { state: 'signup' });
-            }}
-            className="text-center cursor-pointer hover:border-purple-500 border-2"
-          >
-            <Building2 className="w-16 h-16 text-purple-600 mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2">Doanh Nghiệp</h3>
-            <p className="text-gray-600 mb-4">
-              Quản lý đội xe chuyên nghiệp
-            </p>
-            <Button type="primary" block className="bg-gradient-to-r from-blue-600 to-purple-600 border-0">
               Đăng Ký Ngay
             </Button>
           </Card>

@@ -18,6 +18,7 @@ public interface IChargingSessionService {
     // Business operations
     ChargingSession startChargingSession(StartChargingSessionRequest request);
     ChargingSession stopChargingSession(Integer sessionId, StopChargingSessionRequest request);
+    ChargingSession emergencyStopChargingSession(Integer sessionId, StopChargingSessionRequest request);
     void cancelChargingSession(Integer sessionId);
 
     // Query operations

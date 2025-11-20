@@ -54,6 +54,16 @@ public class SubscriptionPlan {
     @Column(name = "DISCOUNT_RATE", precision = 5, scale = 2)
     private BigDecimal discountRate; // VD: 10.00 = 10% discount
 
+    @Column(name = "IS_DELETED")
+    private Boolean isDeleted = false;
+
+    @Column(name = "DELETED_AT")
+    private java.time.Instant deletedAt;
+
+    @Nationalized
+    @Column(name = "DELETED_BY", length = 255)
+    private String deletedBy;
+
     @OneToMany(mappedBy = "plan")
     private List<PlanRegistration> planRegistrations = new ArrayList<>();
 

@@ -65,6 +65,16 @@ public class Account {
     @Column(name = "ACCOUNT_ROLE", length = 50)
     private String accountRole;
 
+    @Column(name = "IS_DELETED")
+    @ColumnDefault("0")
+    private Boolean isDeleted = false;
+
+    @Column(name = "DELETED_AT")
+    private Instant deletedAt;
+
+    @Nationalized
+    @Column(name = "DELETED_BY", length = 255)
+    private String deletedBy;
 
 
 

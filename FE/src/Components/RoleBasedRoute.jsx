@@ -36,8 +36,6 @@ const RoleBasedRoute = ({ children, allowedRoles = [] }) => {
         return <Navigate to="/driver" replace />;
       case "ADMIN":
         return <Navigate to="/admin" replace />;
-      case "ENTERPRISE":
-        return <Navigate to="/enterprise/dashboard" replace />;
       case "STAFF":
       case "STATIONEMPLOYEE":
         return <Navigate to="/employee/dashboard" replace />;

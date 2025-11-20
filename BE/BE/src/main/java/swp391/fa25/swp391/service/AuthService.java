@@ -99,7 +99,6 @@ public class AuthService {
                 .driverId(savedDriver.getId())
                 .adminId(null)
                 .employeeId(null)
-                .enterpriseId(null)
                 .build();
 
         // Trả về RegisterResponse
@@ -157,7 +156,6 @@ public class AuthService {
                 .adminId(savedAdmin.getId())
                 .driverId(null)
                 .employeeId(null)
-                .enterpriseId(null)
                 .build();
 
         // Trả về RegisterResponse
@@ -220,7 +218,6 @@ public class AuthService {
                 .adminId(savedAdmin.getId())
                 .driverId(null)
                 .employeeId(null)
-                .enterpriseId(null)
                 .build();
 
         // Trả về RegisterResponse

@@ -100,7 +100,34 @@ public class ChargingSessionController {
     }
 
     /**
-     * Hủy phiên sạc (emergency stop)
+     * ⭐ NEW: Emergency stop - Dừng khẩn cấp với tính tiền và gửi incident
+     * POST /api/charging-sessions/{sessionId}/emergency-stop
+     */
+    @PostMapping("/{sessionId}/emergency-stop")
+    public ResponseEntity<?> emergencyStopChargingSession(
+            @PathVariable Integer sessionId,
+            @Valid @RequestBody StopChargingSessionRequest request) {
+        try {
+            // Service xử lý tính tiền và gửi incident report
+            ChargingSession session =
+                    chargingSessionService.emergencyStopChargingSession(sessionId, request);
+
+            // Chuyển đổi Entity sang DTO Response
+            ChargingSessionResponse response = mapToResponse(session);
+
+            return ResponseEntity.ok(
+                    ApiResponse.success("⚠️ Emergency stop successful. Incident report sent to employees.", response));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error during emergency stop: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Hủy phiên sạc (cancel without charging - old method)
      */
     @DeleteMapping("/{sessionId}")
     public ResponseEntity<?> cancelChargingSession(@PathVariable Integer sessionId) {
@@ -121,6 +148,38 @@ public class ChargingSessionController {
     // ============================================
     // QUERY APIs
     // ============================================
+
+    /**
+     * Lấy tất cả charging sessions (cho admin dashboard)
+     */
+    @GetMapping
+    public ResponseEntity<?> getAllSessions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
+        try {
+            if (size <= 0 || size > 1000) {
+                size = 100;
+            }
+
+            Pageable pageable = PageRequest.of(page, size);
+            Page<ChargingSession> sessionPage = chargingSessionRepository.findAll(pageable);
+
+            List<ChargingSessionResponse> responses = sessionPage.getContent().stream()
+                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+
+            ChargingSessionListResponse listResponse = ChargingSessionListResponse.builder()
+                    .sessions(responses)
+                    .totalSessions((int) sessionPage.getTotalElements())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("All sessions retrieved successfully", listResponse));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error fetching sessions: " + e.getMessage()));
+        }
+    }
 
     /**
      * Lấy thông tin chi tiết một session
@@ -566,6 +625,23 @@ public class ChargingSessionController {
         BigDecimal startFee = session.getStartFee() != null ? session.getStartFee() : BigDecimal.ZERO;
         BigDecimal overusePenalty = session.getOverusePenalty() != null ? session.getOverusePenalty() : BigDecimal.ZERO;
         
+        // ⭐ NEW: Tính thời gian sạc thực tế vs idle time
+        BigDecimal actualChargingMinutes = BigDecimal.ZERO;
+        BigDecimal idleMinutes = session.getOverusedTime() != null ? session.getOverusedTime() : BigDecimal.ZERO;
+        BigDecimal penaltyMinutes = BigDecimal.ZERO;
+        
+        if (charger != null && kwhUsed.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal chargerPower = charger.getMaxPower(); // kW
+            BigDecimal chargingTimeHours = kwhUsed.divide(chargerPower, 4, java.math.RoundingMode.HALF_UP);
+            actualChargingMinutes = chargingTimeHours.multiply(BigDecimal.valueOf(60));
+            
+            // Penalty minutes = idle time - grace period (nếu có penalty)
+            if (overusePenalty.compareTo(BigDecimal.ZERO) > 0) {
+                // Back-calculate penalty minutes from penalty amount
+                penaltyMinutes = overusePenalty.divide(new BigDecimal("2000"), 0, java.math.RoundingMode.HALF_UP);
+            }
+        }
+        
         // Tính chi phí điện năng TRƯỚC giảm giá
         BigDecimal energyCostBeforeDiscount = kwhUsed.multiply(pricePerKwh);
         
@@ -598,7 +674,12 @@ public class ChargingSessionController {
                 .startTime(session.getStartTime())
                 .endTime(session.getEndTime())
                 .durationMinutes(durationMinutes)
-                .overusedTime(session.getOverusedTime())
+                
+                // ⭐ NEW: Time breakdown
+                .actualChargingMinutes(actualChargingMinutes)
+                .idleMinutes(idleMinutes)
+                .penaltyMinutes(penaltyMinutes)
+                .overusedTime(session.getOverusedTime()) // Keep for backward compatibility
                 .driverId(session.getDriver().getId())
                 .driverName(session.getDriver().getAccount().getFullName())
                 .vehicleId(session.getVehicle().getId())

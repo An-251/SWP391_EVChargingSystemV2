@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import swp391.fa25.swp391.entity.IncidentReport;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface IncidentReportRepository extends JpaRepository<IncidentReport, Integer> {
@@ -50,4 +51,14 @@ public interface IncidentReportRepository extends JpaRepository<IncidentReport, 
     Long countPendingReports();
 
     List<IncidentReport> findTop10ByOrderByReportDateDesc();
+
+    // ========== SOFT DELETE METHODS ==========
+    @Query("SELECT ir FROM IncidentReport ir WHERE (ir.isDeleted = false OR ir.isDeleted IS NULL)")
+    List<IncidentReport> findAllNotDeleted();
+
+    @Query("SELECT ir FROM IncidentReport ir WHERE ir.id = :id AND (ir.isDeleted = false OR ir.isDeleted IS NULL)")
+    Optional<IncidentReport> findByIdNotDeleted(Integer id);
+
+    @Query("SELECT ir FROM IncidentReport ir WHERE ir.point.id = :pointId AND (ir.isDeleted = false OR ir.isDeleted IS NULL)")
+    List<IncidentReport> findByPointIdNotDeleted(Integer pointId);
 }

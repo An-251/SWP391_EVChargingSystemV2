@@ -49,7 +49,14 @@ public class SubscriptionPlanController {
         plan.setPlanName(request.getPlanName());
         plan.setPlanType(request.getPlanType());
         plan.setTargetUserType(request.getTargetUserType()); // ⭐ THÊM
-        plan.setPrice(request.getPrice());
+        
+        // ⭐ Nếu là Basic plan, set price = 0
+        if (Boolean.TRUE.equals(request.getIsDefault())) {
+            plan.setPrice(java.math.BigDecimal.ZERO);
+        } else {
+            plan.setPrice(request.getPrice());
+        }
+        
         plan.setValidityDays(request.getValidityDays());
         plan.setDescription(request.getDescription());
         plan.setDiscountRate(request.getDiscountRate());
@@ -64,7 +71,14 @@ public class SubscriptionPlanController {
         plan.setPlanName(request.getPlanName());
         plan.setPlanType(request.getPlanType());
         plan.setTargetUserType(request.getTargetUserType()); // ⭐ THÊM
-        plan.setPrice(request.getPrice());
+        
+        // ⭐ Nếu là Basic plan, set price = 0
+        if (Boolean.TRUE.equals(request.getIsDefault())) {
+            plan.setPrice(java.math.BigDecimal.ZERO);
+        } else {
+            plan.setPrice(request.getPrice());
+        }
+        
         plan.setValidityDays(request.getValidityDays());
         plan.setDescription(request.getDescription());
         plan.setDiscountRate(request.getDiscountRate());

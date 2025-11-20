@@ -200,7 +200,6 @@ export default function StationList() {
         columns={columns}
         data={list}
         loading={loading}
-        onRowClick={handleEdit}
         pagination={{
           currentPage,
           totalPages: pagination.totalPages,

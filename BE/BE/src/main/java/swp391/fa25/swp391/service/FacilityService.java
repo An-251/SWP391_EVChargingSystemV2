@@ -35,7 +35,53 @@ public class FacilityService implements IFacilityService {
     @Override
     @Transactional
     public void deleteFacility(Integer id) {
-        facilityRepository.deleteById(id);
+        // SOFT DELETE: Cascade xuống stations, points và chargers
+        Facility facility = facilityRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Facility not found with id: " + id));
+        
+        java.time.Instant now = java.time.Instant.now();
+        String deletedBy = null;
+        
+        // Lấy username của người thực hiện xóa
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            deletedBy = auth.getName();
+        }
+        
+        // Cascade soft delete xuống tất cả stations và points
+        if (facility.getChargingStations() != null) {
+            for (ChargingStation station : facility.getChargingStations()) {
+                station.setIsDeleted(true);
+                station.setDeletedAt(now);
+                station.setDeletedBy(deletedBy);
+                
+                // Cascade soft delete xuống tất cả charging points
+                if (station.getChargingPoints() != null) {
+                    for (swp391.fa25.swp391.entity.ChargingPoint point : station.getChargingPoints()) {
+                        point.setIsDeleted(true);
+                        point.setDeletedAt(now);
+                        point.setDeletedBy(deletedBy);
+                        
+                        // Cascade soft delete xuống tất cả chargers
+                        if (point.getChargers() != null) {
+                            for (swp391.fa25.swp391.entity.Charger charger : point.getChargers()) {
+                                charger.setIsDeleted(true);
+                                charger.setDeletedAt(now);
+                                charger.setDeletedBy(deletedBy);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Soft delete facility
+        facility.setIsDeleted(true);
+        facility.setDeletedAt(now);
+        facility.setDeletedBy(deletedBy);
+        
+        facilityRepository.save(facility);
     }
 
     @Override
@@ -46,7 +92,7 @@ public class FacilityService implements IFacilityService {
 
     @Override
     public Facility findById(Integer id) {
-        return facilityRepository.findById(id).orElse(null);
+        return facilityRepository.findByIdNotDeleted(id).orElse(null);
     }
 
     @Override
@@ -56,7 +102,7 @@ public class FacilityService implements IFacilityService {
 
     @Override
     public List<Facility> findAll() {
-        return facilityRepository.findAll();
+        return facilityRepository.findAllNotDeleted();
     }
 
     @Override

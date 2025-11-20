@@ -39,7 +39,7 @@ export default function SubscriptionForm({ subscription, onSuccess, onCancel }) 
   const validate = () => {
     const newErrors = {};
     if (!formData.planName.trim()) newErrors.planName = 'Package name is required';
-    if (!formData.price || formData.price < 0) newErrors.price = 'Price must be 0 or greater';
+    if (formData.price === '' || formData.price < 0) newErrors.price = 'Price must be 0 or greater';
     if (!formData.validityDays || formData.validityDays <= 0) newErrors.validityDays = 'Duration must be greater than 0';
     if (!formData.description.trim()) newErrors.description = 'Benefits are required';
     if (formData.discountRate < 0 || formData.discountRate > 100) newErrors.discountRate = 'Discount must be between 0-100%';
@@ -168,8 +168,9 @@ export default function SubscriptionForm({ subscription, onSuccess, onCancel }) 
             name="price"
             value={formData.price}
             onChange={(e) => {
-              const value = parseFloat(e.target.value);
-              setFormData(prev => ({ ...prev, price: value >= 0 ? value : 0 }));
+              let value = e.target.value === '' ? '' : parseFloat(e.target.value);
+              if (value !== '' && value < 0) value = 0;
+              setFormData(prev => ({ ...prev, price: value }));
               if (errors.price) setErrors(prev => ({ ...prev, price: null }));
             }}
             className={`w-full px-4 py-2 border rounded-lg ${errors.price ? 'border-red-500' : 'border-gray-300'}`}

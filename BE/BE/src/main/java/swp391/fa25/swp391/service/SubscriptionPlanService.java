@@ -50,19 +50,31 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
             throw new RuntimeException("Không thể xóa gói Basic (default plan)");
         }
 
-        log.info("Deleting subscription plan: {}", id);
-        subscriptionPlanRepository.deleteById(id);
+        log.info("Soft deleting subscription plan: {}", id);
+        
+        // SOFT DELETE
+        plan.setIsDeleted(true);
+        plan.setDeletedAt(java.time.Instant.now());
+        
+        // Lấy username của người thực hiện xóa
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            plan.setDeletedBy(auth.getName());
+        }
+        
+        subscriptionPlanRepository.save(plan);
     }
 
     @Override
     public SubscriptionPlan findById(Integer id) {
-        return subscriptionPlanRepository.findById(id)
+        return subscriptionPlanRepository.findByIdNotDeleted(id)
                 .orElseThrow(() -> new RuntimeException("Plan not found with ID: " + id));
     }
 
     @Override
     public List<SubscriptionPlan> findAll() {
-        return subscriptionPlanRepository.findAll();
+        return subscriptionPlanRepository.findAllNotDeleted();
     }
 
     @Override
@@ -92,6 +104,6 @@ public class SubscriptionPlanService implements ISubscriptionPlanService {
 
     // ⭐ NEW: Get all plans by target user type
     public List<SubscriptionPlan> findByTargetUserType(String targetUserType) {
-        return subscriptionPlanRepository.findByTargetUserType(targetUserType);
+        return subscriptionPlanRepository.findByTargetUserTypeNotDeleted(targetUserType);
     }
 }

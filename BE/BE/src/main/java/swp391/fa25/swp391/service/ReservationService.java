@@ -111,7 +111,7 @@ public class ReservationService implements IReservationService {
     @Override
     @Transactional
     public Reservation register(Reservation reservation) {
-        return createReservation(reservation);
+        return createReservation(reservation); // ✅ Đã return kết quả
     }
 
     @Override
@@ -151,15 +151,24 @@ public class ReservationService implements IReservationService {
 
     @Transactional
     public Reservation cancelReservation(Long reservationId, Long driverId) {
+        log.info("🔄 [CANCEL] Attempting to cancel reservation {} by driver {}", reservationId, driverId);
+        
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new RuntimeException("Reservation not found"));
 
+        log.info("📋 [CANCEL] Found reservation - Status: {}, Driver: {}", 
+            reservation.getStatus(), reservation.getDriver().getId());
+
         if (!reservation.getDriver().getId().equals(driverId)) {
+            log.error("❌ [CANCEL] Authorization failed - Reservation driver: {}, Request driver: {}", 
+                reservation.getDriver().getId(), driverId);
             throw new RuntimeException("You are not authorized to cancel this reservation");
         }
 
         // Chỉ có thể cancel nếu đang ở trạng thái ACTIVE
         if (!STATUS_ACTIVE.equals(reservation.getStatus())) {
+            log.error("❌ [CANCEL] Invalid status - Expected: {}, Actual: {}", 
+                STATUS_ACTIVE, reservation.getStatus());
             throw new RuntimeException("Can only cancel active reservations. Current status: " + reservation.getStatus());
         }
         
@@ -175,7 +184,7 @@ public class ReservationService implements IReservationService {
         // Nhả charging point về ACTIVE
         releaseChargingPointOnly(reservation.getChargingPoint());
         
-        log.info("Cancelled reservation {}", reservationId);
+        log.info("✅ [CANCEL] Successfully cancelled reservation {}", reservationId);
         return savedReservation;
     }
 

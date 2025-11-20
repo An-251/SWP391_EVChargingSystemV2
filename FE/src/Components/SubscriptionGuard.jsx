@@ -52,7 +52,7 @@ const SubscriptionGuard = ({ children }) => {
         return;
       }
 
-      // Skip if not a driver (Admin, Staff, Enterprise don't need subscription check)
+      // Skip if not a driver (Admin, Staff don't need subscription check)
       if (userRole !== 'Driver') {
         setIsChecking(false);
         hasCheckedRef.current = true;
@@ -127,7 +127,7 @@ const SubscriptionGuard = ({ children }) => {
   }
 
   // Allow access if:
-  // 1. User is not a driver (admin/staff/enterprise)
+  // 1. User is not a driver (admin/staff)
   // 2. Driver has active subscription
   // 3. Currently on subscription selection page
   const shouldAllowAccess = 

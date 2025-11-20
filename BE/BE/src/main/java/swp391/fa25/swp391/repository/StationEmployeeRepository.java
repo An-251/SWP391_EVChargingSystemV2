@@ -28,4 +28,14 @@ public interface StationEmployeeRepository extends JpaRepository<StationEmployee
      * Tìm tất cả StationEmployee theo Facility ID
      */
     List<StationEmployee> findByFacilityId(Integer facilityId);
+
+    // ========== SOFT DELETE METHODS ==========
+    @Query("SELECT e FROM StationEmployee e WHERE (e.isDeleted = false OR e.isDeleted IS NULL)")
+    List<StationEmployee> findAllNotDeleted();
+
+    @Query("SELECT e FROM StationEmployee e WHERE e.id = :id AND (e.isDeleted = false OR e.isDeleted IS NULL)")
+    Optional<StationEmployee> findByIdNotDeleted(Integer id);
+
+    @Query("SELECT e FROM StationEmployee e WHERE e.facility.id = :facilityId AND (e.isDeleted = false OR e.isDeleted IS NULL)")
+    List<StationEmployee> findByFacilityIdNotDeleted(Integer facilityId);
 }
