@@ -625,6 +625,23 @@ public class ChargingSessionController {
         BigDecimal startFee = session.getStartFee() != null ? session.getStartFee() : BigDecimal.ZERO;
         BigDecimal overusePenalty = session.getOverusePenalty() != null ? session.getOverusePenalty() : BigDecimal.ZERO;
         
+        // ⭐ NEW: Tính thời gian sạc thực tế vs idle time
+        BigDecimal actualChargingMinutes = BigDecimal.ZERO;
+        BigDecimal idleMinutes = session.getOverusedTime() != null ? session.getOverusedTime() : BigDecimal.ZERO;
+        BigDecimal penaltyMinutes = BigDecimal.ZERO;
+        
+        if (charger != null && kwhUsed.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal chargerPower = charger.getMaxPower(); // kW
+            BigDecimal chargingTimeHours = kwhUsed.divide(chargerPower, 4, java.math.RoundingMode.HALF_UP);
+            actualChargingMinutes = chargingTimeHours.multiply(BigDecimal.valueOf(60));
+            
+            // Penalty minutes = idle time - grace period (nếu có penalty)
+            if (overusePenalty.compareTo(BigDecimal.ZERO) > 0) {
+                // Back-calculate penalty minutes from penalty amount
+                penaltyMinutes = overusePenalty.divide(new BigDecimal("2000"), 0, java.math.RoundingMode.HALF_UP);
+            }
+        }
+        
         // Tính chi phí điện năng TRƯỚC giảm giá
         BigDecimal energyCostBeforeDiscount = kwhUsed.multiply(pricePerKwh);
         
@@ -657,7 +674,12 @@ public class ChargingSessionController {
                 .startTime(session.getStartTime())
                 .endTime(session.getEndTime())
                 .durationMinutes(durationMinutes)
-                .overusedTime(session.getOverusedTime())
+                
+                // ⭐ NEW: Time breakdown
+                .actualChargingMinutes(actualChargingMinutes)
+                .idleMinutes(idleMinutes)
+                .penaltyMinutes(penaltyMinutes)
+                .overusedTime(session.getOverusedTime()) // Keep for backward compatibility
                 .driverId(session.getDriver().getId())
                 .driverName(session.getDriver().getAccount().getFullName())
                 .vehicleId(session.getVehicle().getId())

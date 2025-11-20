@@ -99,7 +99,7 @@ const ActiveSession = () => {
           const percentCharged = newBatteryPercent - startBattery;
           const batteryCapacity = currentSession.vehicle?.batteryCapacity || 60;
           // ⭐ CHANGED: charger.chargingPoint.pricePerKwh (charger has FK to chargingPoint)
-          const pricePerKwh = currentSession.charger?.chargingPoint?.pricePerKwh || currentSession.pricePerKwh || 3000;
+          const pricePerKwh = currentSession.charger?.chargingPoint?.pricePerKwh || currentSession.pricePerKwh || 5000;
           const kwhUsed = (percentCharged / 100) * batteryCapacity;
           const currentCost = Math.round(kwhUsed * pricePerKwh);
           
@@ -496,16 +496,8 @@ const ActiveSession = () => {
                       overtimeMinutes > GRACE_PERIOD_MINUTES ? 'text-red-800' : 'text-yellow-800'
                     }`}>
                       {overtimeMinutes <= GRACE_PERIOD_MINUTES 
-                        ? '⏰ Pin đã đầy 100%' 
+                        ? '⏰ Đã Hoàn Thành - Trong thời gian miễn phí!' 
                         : '🚨 Đang tính phí phạt quá giờ!'}
-                    </p>
-                    <p className="text-xs text-gray-700 mb-2">
-                      Thời gian overtime: <strong>{formatTime(overtimeMinutes)} phút</strong>
-                      {overtimeMinutes <= GRACE_PERIOD_MINUTES && (
-                        <span className="ml-2 text-green-600 font-semibold">
-                          (Còn {GRACE_PERIOD_MINUTES - overtimeMinutes} phút miễn phí)
-                        </span>
-                      )}
                     </p>
                     {overusePenalty > 0 && (
                       <p className="text-sm font-bold text-red-700 bg-white px-3 py-1 rounded">

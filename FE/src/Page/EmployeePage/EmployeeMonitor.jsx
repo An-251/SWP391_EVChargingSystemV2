@@ -64,12 +64,23 @@ const EmployeeMonitor = () => {
       
       console.log('📡 Fetching reservations from:', endpoint);
       const response = await api.get(endpoint);
-      const allReservations = response.data?.data || response.data || [];
+      
+      // Handle different response structures
+      let allReservations = [];
+      if (Array.isArray(response.data?.data)) {
+        allReservations = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        allReservations = response.data;
+      } else if (response.data) {
+        allReservations = [response.data];
+      }
       
       console.log('✅ Reservations fetched:', allReservations.length);
+      console.log('📋 Reservation data:', allReservations);
       setReservations(allReservations);
     } catch (error) {
-      console.error('Error fetching reservations:', error);
+      console.error('❌ Error fetching reservations:', error);
+      console.error('Error details:', error.response?.data);
       setReservations([]); // Set empty array on error
     }
   };
@@ -132,30 +143,41 @@ const EmployeeMonitor = () => {
   const reservationColumns = [
     {
       title: 'Mã',
-      dataIndex: 'id',
-      key: 'id',
+      dataIndex: 'reservationId',
+      key: 'reservationId',
       width: 80,
-      render: (id) => <span className="font-mono">#{id}</span>,
+      render: (reservationId) => <span className="font-mono">#{reservationId || 'N/A'}</span>,
     },
     {
       title: 'Khách hàng',
       key: 'customer',
-      render: (_, record) => (
-        <div>
-          <div className="font-medium">{record.driver?.fullName || 'N/A'}</div>
-          <div className="text-xs text-gray-500">{record.vehicle?.licensePlate}</div>
-        </div>
-      ),
+      render: (_, record) => {
+        console.log('🔍 Reservation record:', record);
+        const driverName = record.driverName || record.driver?.fullName || record.driver?.name || 'N/A';
+        const vehiclePlate = record.vehicleLicensePlate || record.vehicle?.licensePlate || 'N/A';
+        return (
+          <div>
+            <div className="font-medium">{driverName}</div>
+            <div className="text-xs text-gray-500">{vehiclePlate}</div>
+          </div>
+        );
+      },
     },
     {
       title: 'Điểm sạc',
-      dataIndex: ['chargingPoint', 'pointName'],
       key: 'chargingPoint',
+      render: (_, record) => {
+        const pointName = record.chargingPointName || record.chargingPoint?.pointName || 'N/A';
+        return <span>{pointName}</span>;
+      },
     },
     {
       title: 'Trạm',
-      dataIndex: ['station', 'stationName'],
       key: 'station',
+      render: (_, record) => {
+        const stationName = record.stationName || record.station?.stationName || 'N/A';
+        return <span>{stationName}</span>;
+      },
     },
     {
       title: 'Thời gian',
@@ -178,7 +200,8 @@ const EmployeeMonitor = () => {
           'confirmed': { color: 'blue', text: 'Đã xác nhận', icon: <CheckCircle size={14} /> },
           'in-progress': { color: 'green', text: 'Đang sử dụng', icon: <Zap size={14} /> },
           'completed': { color: 'gray', text: 'Hoàn thành', icon: <CheckCircle size={14} /> },
-          'cancelled': { color: 'red', text: 'Đã hủy', icon: <AlertCircle size={14} /> }
+          'cancelled': { color: 'red', text: 'Đã hủy', icon: <AlertCircle size={14} /> },
+          'fulfilled': { color: 'green', text: 'Đã thực hiện', icon: <CheckCircle size={14} /> }
         };
         const status = statusMap[record.status] || { color: 'default', text: record.status };
         return (
@@ -362,10 +385,15 @@ const EmployeeMonitor = () => {
         <Col xs={24} sm={8}>
           <Card className="shadow-sm">
             <Statistic
-              title="Đặt chỗ chờ xác nhận"
-              value={reservations.filter(r => r.status === 'pending' || r.status === 'confirmed').length}
+              title="Đặt chỗ (Tất cả trạng thái)"
+              value={reservations.length}
               prefix={<Clock className="text-orange-500" size={20} />}
               valueStyle={{ color: '#f59e0b' }}
+              suffix={
+                <span className="text-xs text-gray-500">
+                  ({reservations.filter(r => r.status === 'fulfilled').length} đã thực hiện)
+                </span>
+              }
             />
           </Card>
         </Col>

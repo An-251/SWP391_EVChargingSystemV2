@@ -48,8 +48,13 @@ public class ChargingSessionResponse {
     // Session timing
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private Long durationMinutes; // Thời gian sạc (phút)
-    private BigDecimal overusedTime; // Thời gian vượt quá khi đầy pin
+    private Long durationMinutes; // Tổng thời gian phiên (phút) = startTime đến endTime
+    
+    // ⭐ NEW: Tách rõ thời gian sạc vs thời gian đậu xe
+    private BigDecimal actualChargingMinutes; // Thời gian sạc thực tế (dựa trên kWh/Power)
+    private BigDecimal idleMinutes; // Thời gian đậu xe sau khi sạc xong
+    private BigDecimal penaltyMinutes; // Thời gian tính phí phạt (idleMinutes - grace period)
+    private BigDecimal overusedTime; // [DEPRECATED] Dùng idleMinutes thay thế
 
     // Charging data
     private Integer startPercentage;

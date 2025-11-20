@@ -215,59 +215,51 @@ public class ChargingSessionService implements IChargingSessionService {
         log.info("💰 Pricing calculation for session {}: Vehicle battery {}kWh, Charged {}%, kWh used: {}, Price/kWh: {}, Base cost: {}",
                 sessionId, batteryCapacity, percentageCharged, kwhUsed, pricePerKwh, baseCost);
 
-        // ⭐ TÍNH PHÍ PHẠT OVERUSE (2 TH: Vượt % mục tiêu HOẶC vượt thời gian đặt chỗ)
+        // ⭐ TÍNH THỜI GIAN SẠC THỰC TẾ (Actual charging time = demo 100x nhanh)
+        // FE đã có demo speed 100x, nên thời gian sạc thực tế rất ngắn
+        // Formula: Charging time = kWh / Power / 100 (do demo 100x)
+        BigDecimal chargerMaxPower = charger.getMaxPower(); // kW
+        BigDecimal actualChargingTimeHours = kwhUsed.divide(chargerMaxPower, 4, RoundingMode.HALF_UP);
+        BigDecimal actualChargingTimeMinutes = actualChargingTimeHours.multiply(BigDecimal.valueOf(60))
+                .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP); // ⭐ Chia 100 vì demo 100x
+        
+        // ⭐ CRITICAL FIX: Tính tổng thời gian session bằng GIÂY để không mất precision
+        // Logic giống ActiveSession.jsx: Idle time = Total time - Charging time
+        long totalSessionSeconds = java.time.Duration.between(session.getStartTime(), endTime).getSeconds();
+        BigDecimal totalSessionMinutes = new BigDecimal(totalSessionSeconds).divide(BigDecimal.valueOf(60), 4, RoundingMode.HALF_UP);
+        BigDecimal totalIdleMinutes = totalSessionMinutes.subtract(actualChargingTimeMinutes);
+        
+        // ⭐ TÍNH PHÍ PHẠT OVERUSE (Idle time after reaching target %)
         BigDecimal overusePenalty = BigDecimal.ZERO;
-        BigDecimal overuseMinutes = BigDecimal.ZERO;
+        BigDecimal penaltyMinutes = BigDecimal.ZERO; // Thời gian tính phí phạt (sau grace period)
         
-        // ✅ FIX 1: Kiểm tra đã đạt target percentage (không chỉ 100%)
-        // Ví dụ: Sạc từ 20% → 80%, khi đạt 80% mà không dừng thì bị phạt
-        Integer targetPercentage = session.getEndPercentage(); // Mục tiêu người dùng đặt ban đầu
-        
-        if (request.getEndPercentage() >= targetPercentage) {
-            // Tính thời gian từ lúc đạt target % đến lúc dừng
-            overuseMinutes = calculateOveruseTime(session, endTime);
+        // ⭐ SIMPLIFIED LOGIC: Giống ActiveSession.jsx
+        // Nếu có idle time (đậu xe sau khi sạc xong) → Tính phí phạt
+        if (totalIdleMinutes.compareTo(BigDecimal.ZERO) > 0) {
+            // ⭐ FIX: Làm tròn XUỐNG idle time thành số nguyên phút
+            int idleMinutesInt = totalIdleMinutes.intValue(); // Floor (làm tròn xuống)
             
-            if (overuseMinutes.compareTo(new BigDecimal(GRACE_PERIOD_MINUTES)) > 0) {
-                // Chỉ tính phí phạt nếu quá thời gian ân hạn
-                BigDecimal penaltyMinutes = overuseMinutes.subtract(new BigDecimal(GRACE_PERIOD_MINUTES));
+            // Chỉ tính phí nếu idle > grace period
+            if (idleMinutesInt > GRACE_PERIOD_MINUTES) {
+                // ⭐ CHỈ TÍNH SỐ NGUYÊN PHÚT
+                int penaltyMinutesInt = idleMinutesInt - GRACE_PERIOD_MINUTES;
+                penaltyMinutes = new BigDecimal(penaltyMinutesInt);
                 overusePenalty = penaltyMinutes.multiply(OVERUSE_PENALTY_PER_MINUTE)
                         .setScale(0, RoundingMode.HALF_UP);
                 
-                log.warn("⚠️ Battery overuse penalty! Session {}: Target was {}%, reached {}%, {} minutes overtime, penalty: {} VND",
-                        sessionId, targetPercentage, request.getEndPercentage(), penaltyMinutes, overusePenalty);
+                log.warn("⚠️ Idle parking penalty! Session {}: Total session {}min, Charging {}min, Idle {}min (floor), Grace {}min, Penalty: {}min → {} VND",
+                        sessionId, totalSessionMinutes.doubleValue(), actualChargingTimeMinutes.doubleValue(), 
+                        idleMinutesInt, GRACE_PERIOD_MINUTES, penaltyMinutesInt, overusePenalty);
+            } else {
+                log.info("✅ Session {}: Idle {}min within grace period ({}min) → No penalty",
+                        sessionId, idleMinutesInt, GRACE_PERIOD_MINUTES);
             }
-            
-            session.setOverusedTime(overuseMinutes);
+        } else {
+            log.info("✅ Session {}: No idle time (stopped immediately after charging) → No penalty", sessionId);
         }
         
-        // ✅ FIX 2: Kiểm tra vượt thời gian đặt chỗ (reservation endTime)
-        // Nếu có reservation và endTime vượt quá reservation.endTime → tính phí phạt
-        Reservation reservation = session.getReservation();
-        if (reservation != null && reservation.getEndTime() != null) {
-            LocalDateTime reservationEndTime = reservation.getEndTime();
-            
-            if (endTime.isAfter(reservationEndTime)) {
-                // Tính số phút vượt quá thời gian đặt chỗ
-                long minutesOverReservation = java.time.Duration.between(reservationEndTime, endTime).toMinutes();
-                
-                if (minutesOverReservation > GRACE_PERIOD_MINUTES) {
-                    // Chỉ tính phí phạt nếu quá thời gian ân hạn
-                    long penaltyMinutes = minutesOverReservation - GRACE_PERIOD_MINUTES;
-                    BigDecimal reservationOverusePenalty = new BigDecimal(penaltyMinutes)
-                            .multiply(OVERUSE_PENALTY_PER_MINUTE)
-                            .setScale(0, RoundingMode.HALF_UP);
-                    
-                    // Cộng dồn vào tổng phí phạt (có thể vừa vượt % vừa vượt thời gian)
-                    overusePenalty = overusePenalty.add(reservationOverusePenalty);
-                    
-                    // Cộng dồn overuse time (có thể vừa vượt % vừa vượt thời gian)
-                    overuseMinutes = overuseMinutes.add(new BigDecimal(minutesOverReservation));
-                    
-                    log.warn("⚠️ Reservation time overuse penalty! Session {}: Reservation ended at {}, actually stopped at {}, {} minutes overtime, penalty: {} VND",
-                            sessionId, reservationEndTime, endTime, penaltyMinutes, reservationOverusePenalty);
-                }
-            }
-        }
+        // Lưu thời gian đậu xe (idle time)
+        session.setOverusedTime(totalIdleMinutes);
 
         // ⭐ FIX: DISCOUNT CHỈ ÁP DỤNG CHO PHÍ ĐIỆN NĂNG (baseCost)
         // Start Fee và Overuse Penalty KHÔNG được giảm giá
