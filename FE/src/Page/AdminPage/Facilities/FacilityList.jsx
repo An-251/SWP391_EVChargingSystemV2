@@ -189,7 +189,6 @@ export default function FacilityList() {
         columns={columns}
         data={list}
         loading={loading}
-        onRowClick={handleEdit}
         pagination={{
           currentPage: currentPage,
           totalPages: pagination.totalPages,

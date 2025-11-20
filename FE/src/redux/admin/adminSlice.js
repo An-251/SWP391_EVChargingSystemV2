@@ -60,26 +60,50 @@ const initialState = {
 };
 
 // ==================== DASHBOARD THUNKS ====================
-// Note: Backend does not have /admin/dashboard/stats endpoint yet
-// This will need to be implemented or removed
 export const fetchDashboardStats = createAsyncThunk(
   'admin/fetchDashboardStats',
   async (_, { rejectWithValue }) => {
     try {
-      // TODO: Backend needs to implement this endpoint
-      // const response = await api.get('/api/admin/dashboard/stats');
-      // return response.data.data || response.data;
-      
-      // Temporary: Return mock data to prevent errors
+      // Fetch data from multiple endpoints since BE doesn't have unified dashboard stats
+      const [
+        facilitiesRes,
+        stationsRes,
+        chargingPointsRes,
+        accountsRes,
+        activeSessionsRes,
+        invoicesRes
+      ] = await Promise.all([
+        api.get('/facilities/profile').catch(() => ({ data: [] })),
+        api.get('/charging-stations').catch(() => ({ data: [] })),
+        api.get('/charging-points').catch(() => ({ data: [] })),
+        api.get('/admin/accounts').catch(() => ({ data: [] })),
+        api.get('/charging-sessions/active').catch(() => ({ data: [] })),
+        api.get('/invoices').catch(() => ({ data: [] }))
+      ]);
+
+      // Extract data (handle both direct array and .data.data format)
+      const facilities = facilitiesRes.data?.content || facilitiesRes.data?.data || facilitiesRes.data || [];
+      const stations = stationsRes.data?.content || stationsRes.data?.data || stationsRes.data || [];
+      const chargingPoints = chargingPointsRes.data?.content || chargingPointsRes.data?.data || chargingPointsRes.data || [];
+      const accounts = accountsRes.data?.data || accountsRes.data || [];
+      const activeSessions = activeSessionsRes.data?.data || activeSessionsRes.data || [];
+      const invoices = invoicesRes.data?.content || invoicesRes.data?.data || invoicesRes.data || [];
+
+      // Calculate total revenue from invoices
+      const totalRevenue = Array.isArray(invoices) 
+        ? invoices.reduce((sum, inv) => sum + (inv.amount || inv.totalAmount || 0), 0)
+        : 0;
+
       return {
-        totalRevenue: 0,
-        totalFacilities: 0,
-        totalStations: 0,
-        totalChargingPoints: 0,
-        totalUsers: 0,
-        activeSessions: 0,
+        totalRevenue,
+        totalFacilities: Array.isArray(facilities) ? facilities.length : 0,
+        totalStations: Array.isArray(stations) ? stations.length : 0,
+        totalChargingPoints: Array.isArray(chargingPoints) ? chargingPoints.length : 0,
+        totalUsers: Array.isArray(accounts) ? accounts.filter(a => a.role === 'DRIVER' || a.accountRole === 'DRIVER').length : 0,
+        activeSessions: Array.isArray(activeSessions) ? activeSessions.length : 0,
       };
     } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
       return rejectWithValue(error.response?.data?.message || 'Cannot load dashboard stats');
     }
   }

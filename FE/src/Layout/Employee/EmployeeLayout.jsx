@@ -15,6 +15,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../redux/auth/authSlice';
 import { APP_SHORT_NAME, LOGO_CONFIG, PORTAL_TITLES } from '../../constants/branding';
+import NotificationBell from '../../Components/Common/NotificationBell'; // ⭐ NEW
 
 const { Header, Sider, Content } = Layout;
 
@@ -153,12 +154,8 @@ export default function EmployeeLayout() {
           </div>
 
           <div className="flex items-center space-x-4">
-            {/* Notifications */}
-            <button className="p-2 hover:bg-gray-100 rounded-lg relative">
-              <Badge count={0} dot>
-                <Bell size={20} className="text-gray-600" />
-              </Badge>
-            </button>
+            {/* Notifications - Emergency Stop Alerts */}
+            <NotificationBell />
 
             {/* User Menu */}
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">

@@ -38,7 +38,6 @@ const AdminLayout = () => {
     { path: '/admin/charging-points', icon: EVChargeIcon, label: 'Charging Points' },
     { path: '/admin/chargers', icon: Plug, label: 'Chargers' },
     { path: '/admin/accounts', icon: Users, label: 'Accounts' },
-    { path: '/admin/admin-registration', icon: UserPlus, label: 'Register Admin' },
     { path: '/admin/employees', icon: UserCog, label: 'Employees' },
     { path: '/admin/subscriptions', icon: CreditCard, label: 'Subscriptions' },
     { path: '/admin/invoices', icon: FileText, label: 'Invoices' },

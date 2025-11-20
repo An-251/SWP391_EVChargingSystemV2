@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchUsageReport, fetchStations } from '../../../redux/admin/adminSlice';
 import { AdminLoader } from '../../../Components/Admin';
+import { formatKWh } from '../../../utils/formatNumber';
 
 export default function UsageReport() {
   const dispatch = useDispatch();
@@ -141,7 +142,7 @@ export default function UsageReport() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-orange-600 font-medium">Total Energy</p>
-              <h3 className="text-2xl font-bold text-orange-900 mt-1">{totalEnergy.toFixed(1)} kWh</h3>
+              <h3 className="text-2xl font-bold text-orange-900 mt-1">{formatKWh(totalEnergy)} kWh</h3>
             </div>
             <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center text-white text-2xl">
               🔋
@@ -208,7 +209,7 @@ export default function UsageReport() {
                   {station.totalSessions}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                  {station.totalEnergy.toFixed(1)}
+                  {formatKWh(station.totalEnergy)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-green-600">
                   {station.totalRevenue.toLocaleString('vi-VN')} VND
@@ -236,7 +237,7 @@ export default function UsageReport() {
             <tr className="font-bold">
               <td className="px-6 py-4 text-sm text-gray-900">Total</td>
               <td className="px-6 py-4 text-sm text-right text-gray-900">{totalSessions}</td>
-              <td className="px-6 py-4 text-sm text-right text-gray-900">{totalEnergy.toFixed(1)}</td>
+              <td className="px-6 py-4 text-sm text-right text-gray-900">{formatKWh(totalEnergy)}</td>
               <td className="px-6 py-4 text-sm text-right text-green-600">
                 {totalRevenue.toLocaleString('vi-VN')} VND
               </td>
@@ -265,3 +266,5 @@ export default function UsageReport() {
     </div>
   );
 }
+
+

@@ -4,6 +4,7 @@ import { Card, Tag, Button, Table, Spin, Alert, Descriptions } from "antd";
 import { ArrowLeft, Calendar, User, CreditCard, FileText } from "lucide-react";
 import moment from "moment";
 import * as apiInvoice from "../../../services/apiInvoice";
+import { formatKWh } from '../../../utils/formatNumber';
 
 /**
  * AdminInvoiceDetail - Admin view of invoice details
@@ -107,7 +108,7 @@ const AdminInvoiceDetail = () => {
       dataIndex: "energyConsumed",
       key: "energyConsumed",
       align: "right",
-      render: (value) => value?.toFixed(2) || "0.00",
+      render: (value) => formatKWh(value || 0),
     },
     {
       title: "Chi phí",
@@ -301,7 +302,7 @@ const AdminInvoiceDetail = () => {
                       <strong>Tổng cộng (trang này)</strong>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={1} align="right">
-                      <strong>{totalEnergy.toFixed(2)} kWh</strong>
+                      <strong>{formatKWh(totalEnergy)} kWh</strong>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={2} align="right">
                       <strong className="text-blue-600">{formatCurrency(totalCost)}</strong>
@@ -336,3 +337,4 @@ const AdminInvoiceDetail = () => {
 };
 
 export default AdminInvoiceDetail;
+
