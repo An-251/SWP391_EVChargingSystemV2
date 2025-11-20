@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import swp391.fa25.swp391.dto.request.StartChargingSessionRequest;
 import swp391.fa25.swp391.dto.request.StopChargingSessionRequest;
+import swp391.fa25.swp391.dto.request.SystemReportRequest;
 import swp391.fa25.swp391.entity.*;
 import swp391.fa25.swp391.repository.ChargingSessionRepository;
 import swp391.fa25.swp391.repository.PlanRegistrationRepository;
@@ -37,6 +38,8 @@ public class ChargingSessionService implements IChargingSessionService {
     private final IChargingPointService chargingPointService;
     private final IChargerService chargerService;
     private final ReservationService reservationService;
+    private final IncidentReportService incidentReportService;
+    private final EmergencyNotificationService emergencyNotificationService; // ⭐ NEW
 
     // Hằng số cấu hình - REAL EV CHARGING SYSTEM
     private static final BigDecimal START_FEE = new BigDecimal("5000"); // Phí khởi động phiên sạc (connection fee)
@@ -212,11 +215,11 @@ public class ChargingSessionService implements IChargingSessionService {
         log.info("💰 Pricing calculation for session {}: Vehicle battery {}kWh, Charged {}%, kWh used: {}, Price/kWh: {}, Base cost: {}",
                 sessionId, batteryCapacity, percentageCharged, kwhUsed, pricePerKwh, baseCost);
 
-        // ⭐ TÍNH PHÍ PHẠT OVERUSE NẾU ĐÃ SẠC ĐẾN TARGET NHƯNG KHÔNG DỪNG
+        // ⭐ TÍNH PHÍ PHẠT OVERUSE (2 TH: Vượt % mục tiêu HOẶC vượt thời gian đặt chỗ)
         BigDecimal overusePenalty = BigDecimal.ZERO;
         BigDecimal overuseMinutes = BigDecimal.ZERO;
         
-        // ✅ FIX: Kiểm tra đã đạt target percentage (không chỉ 100%)
+        // ✅ FIX 1: Kiểm tra đã đạt target percentage (không chỉ 100%)
         // Ví dụ: Sạc từ 20% → 80%, khi đạt 80% mà không dừng thì bị phạt
         Integer targetPercentage = session.getEndPercentage(); // Mục tiêu người dùng đặt ban đầu
         
@@ -230,11 +233,40 @@ public class ChargingSessionService implements IChargingSessionService {
                 overusePenalty = penaltyMinutes.multiply(OVERUSE_PENALTY_PER_MINUTE)
                         .setScale(0, RoundingMode.HALF_UP);
                 
-                log.warn("⚠️ Overuse penalty applied! Session {}: Target was {}%, reached {}%, {} minutes overtime, penalty: {} VND",
+                log.warn("⚠️ Battery overuse penalty! Session {}: Target was {}%, reached {}%, {} minutes overtime, penalty: {} VND",
                         sessionId, targetPercentage, request.getEndPercentage(), penaltyMinutes, overusePenalty);
             }
             
             session.setOverusedTime(overuseMinutes);
+        }
+        
+        // ✅ FIX 2: Kiểm tra vượt thời gian đặt chỗ (reservation endTime)
+        // Nếu có reservation và endTime vượt quá reservation.endTime → tính phí phạt
+        Reservation reservation = session.getReservation();
+        if (reservation != null && reservation.getEndTime() != null) {
+            LocalDateTime reservationEndTime = reservation.getEndTime();
+            
+            if (endTime.isAfter(reservationEndTime)) {
+                // Tính số phút vượt quá thời gian đặt chỗ
+                long minutesOverReservation = java.time.Duration.between(reservationEndTime, endTime).toMinutes();
+                
+                if (minutesOverReservation > GRACE_PERIOD_MINUTES) {
+                    // Chỉ tính phí phạt nếu quá thời gian ân hạn
+                    long penaltyMinutes = minutesOverReservation - GRACE_PERIOD_MINUTES;
+                    BigDecimal reservationOverusePenalty = new BigDecimal(penaltyMinutes)
+                            .multiply(OVERUSE_PENALTY_PER_MINUTE)
+                            .setScale(0, RoundingMode.HALF_UP);
+                    
+                    // Cộng dồn vào tổng phí phạt (có thể vừa vượt % vừa vượt thời gian)
+                    overusePenalty = overusePenalty.add(reservationOverusePenalty);
+                    
+                    // Cộng dồn overuse time (có thể vừa vượt % vừa vượt thời gian)
+                    overuseMinutes = overuseMinutes.add(new BigDecimal(minutesOverReservation));
+                    
+                    log.warn("⚠️ Reservation time overuse penalty! Session {}: Reservation ended at {}, actually stopped at {}, {} minutes overtime, penalty: {} VND",
+                            sessionId, reservationEndTime, endTime, penaltyMinutes, reservationOverusePenalty);
+                }
+            }
         }
 
         // ⭐ FIX: DISCOUNT CHỈ ÁP DỤNG CHO PHÍ ĐIỆN NĂNG (baseCost)
@@ -325,6 +357,92 @@ public class ChargingSessionService implements IChargingSessionService {
         chargerService.stopUsingCharger(session.getCharger().getId());
 
         log.warn("Session {} marked as '{}'", sessionId, STATUS_INTERRUPTED);
+    }
+
+    /**
+     * ⭐ NEW: Emergency stop với tính tiền theo % đã sạc và gửi incident report
+     * POST /api/charging-sessions/{sessionId}/emergency-stop
+     */
+    public ChargingSession emergencyStopChargingSession(Integer sessionId, StopChargingSessionRequest request) {
+        log.warn("⚠️ [EMERGENCY STOP] Processing emergency stop for session {}", sessionId);
+
+        ChargingSession session = chargingSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Charging session not found"));
+
+        // Kiểm tra status phải là CHARGING
+        if (!STATUS_CHARGING.equalsIgnoreCase(session.getStatus())) {
+            throw new RuntimeException("Can only emergency stop sessions with status 'charging'. Current status: " + session.getStatus());
+        }
+
+        if (request.getEndPercentage() < session.getStartPercentage()) {
+            throw new RuntimeException("End percentage cannot be less than start percentage");
+        }
+
+        // ===== TÍNH TOÁN THÔNG TIN SẠC (GIỐNG stopChargingSession) =====
+        LocalDateTime endTime = LocalDateTime.now();
+        session.setEndTime(endTime);
+        session.setEndPercentage(request.getEndPercentage());
+
+        // 1. Tính % pin đã sạc
+        int percentageCharged = request.getEndPercentage() - session.getStartPercentage();
+        
+        // 2. Lấy dung lượng pin xe (kWh)
+        Vehicle vehicle = session.getVehicle();
+        BigDecimal batteryCapacity = vehicle.getBatteryCapacity() != null 
+            ? vehicle.getBatteryCapacity() 
+            : DEFAULT_BATTERY_CAPACITY;
+        
+        // 3. Tính kWh thực tế đã sạc
+        BigDecimal kwhUsed = batteryCapacity
+                .multiply(new BigDecimal(percentageCharged))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        
+        // 4. Lấy giá từ Charging Point (VNĐ/kWh)
+        Charger charger = session.getCharger();
+        ChargingPoint chargingPoint = charger.getChargingPoint();
+        BigDecimal pricePerKwh = chargingPoint.getPricePerKwh() != null 
+            ? chargingPoint.getPricePerKwh() 
+            : DEFAULT_PRICE_PER_KWH;
+        
+        // 5. Tính chi phí cơ bản
+        BigDecimal baseCost = kwhUsed.multiply(pricePerKwh)
+                .setScale(0, RoundingMode.HALF_UP);
+        
+        log.info("💰 [EMERGENCY STOP] Pricing for session {}: Battery {}kWh, Charged {}%, kWh used: {}, Price/kWh: {}, Base cost: {}",
+                sessionId, batteryCapacity, percentageCharged, kwhUsed, pricePerKwh, baseCost);
+
+        // 6. Áp dụng discount cho năng lượng
+        BigDecimal energyCostWithDiscount = applyPlanDiscount(session.getDriver().getId(), baseCost);
+        
+        // 7. Tính tổng chi phí (START_FEE + ENERGY_COST với discount, KHÔNG có overuse penalty)
+        BigDecimal finalCost = session.getStartFee()
+                .add(energyCostWithDiscount);
+
+        session.setKwhUsed(kwhUsed);
+        session.setOverusePenalty(BigDecimal.ZERO); // Emergency stop không tính overuse penalty
+        session.setCost(finalCost);
+        session.setStatus(STATUS_COMPLETED); // ⭐ Đánh dấu là completed để tính tiền
+
+        ChargingSession updatedSession = chargingSessionRepository.save(session);
+
+        // Giải phóng charger
+        chargerService.stopUsingCharger(charger.getId());
+
+        log.info("✅ [EMERGENCY STOP] Session {} completed. Final cost: {} VND", sessionId, finalCost);
+
+        // ⭐ GỬI THÔNG BÁO ĐẾN EMPLOYEE
+        // KHÔNG tạo incident report tự động
+        // Employee sẽ kiểm tra và tự tạo incident nếu cần thiết
+        try {
+            emergencyNotificationService.createEmergencyStopNotification(updatedSession);
+            log.info("✅ [EMERGENCY STOP] Notification sent to employees for session {}", sessionId);
+            
+        } catch (Exception e) {
+            log.error("❌ [EMERGENCY STOP] Failed to send notification: {}", e.getMessage());
+            // Không throw exception vì session đã hoàn tất thành công
+        }
+
+        return updatedSession;
     }
 
     private BigDecimal applyPlanDiscount(Integer driverId, BigDecimal baseCost) {

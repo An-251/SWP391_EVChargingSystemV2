@@ -15,6 +15,6 @@ public class ApproveRegistrationRequest {
     @NotNull(message = "Admin ID is required")
     private Integer adminId;
     
-    @NotNull(message = "Plan ID is required for approved enterprise")
+    @NotNull(message = "Plan ID is required")
     private Integer subscriptionPlanId;
 }

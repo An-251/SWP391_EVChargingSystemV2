@@ -21,5 +21,4 @@ public class RegisterResponse {
     private Integer driverId;      // Cho Driver
     private Integer adminId;       // Cho Admin
     private Integer employeeId;    // Cho StationEmployee
-    private Integer enterpriseId;  // Cho EnterpriseManager
 }

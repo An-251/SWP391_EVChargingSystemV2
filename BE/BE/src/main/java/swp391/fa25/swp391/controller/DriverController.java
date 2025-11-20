@@ -148,21 +148,26 @@ public class DriverController {
      */
     @DeleteMapping("/reservations/{reservationId}")
     public ResponseEntity<?> cancelReservation(
-            @PathVariable Integer reservationId,
+            @PathVariable Long reservationId,  // ⭐ Changed from Integer to Long (matches Entity ID type)
             @RequestParam Integer driverId) { // ⭐ Thêm driverId để validate
         try {
+            System.out.println("🔄 [CONTROLLER] Cancel request - ReservationId: " + reservationId + ", DriverId: " + driverId);
+            
             // FIX: Gọi cancelReservation() từ service (service tự nhả charging point)
             Reservation cancelledReservation = reservationService.cancelReservation(
-                    reservationId.longValue(), 
+                    reservationId, 
                     driverId.longValue()
             );
 
+            System.out.println("✅ [CONTROLLER] Reservation cancelled successfully");
             return ResponseEntity.ok("Reservation cancelled successfully");
 
         } catch (RuntimeException e) {
+            System.err.println("❌ [CONTROLLER] Cancel failed: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(e.getMessage());
         } catch (Exception e) {
+            System.err.println("❌ [CONTROLLER] Unexpected error: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error cancelling reservation: " + e.getMessage());
         }
@@ -343,7 +348,8 @@ public class DriverController {
         }
 
         return ReservationResponse.builder()
-                .reservationId(reservation.getId())
+                .id(reservation.getId().intValue())  // ⭐ Set id field (Integer) for FE compatibility
+                .reservationId(reservation.getId())  // ⭐ Also keep reservationId (Long) for backward compatibility
                 .startTime(reservation.getStartTime())
                 .endTime(reservation.getEndTime())
                 .chargingPointName(cp.getPointName())

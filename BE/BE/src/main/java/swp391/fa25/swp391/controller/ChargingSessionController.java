@@ -100,7 +100,34 @@ public class ChargingSessionController {
     }
 
     /**
-     * Hủy phiên sạc (emergency stop)
+     * ⭐ NEW: Emergency stop - Dừng khẩn cấp với tính tiền và gửi incident
+     * POST /api/charging-sessions/{sessionId}/emergency-stop
+     */
+    @PostMapping("/{sessionId}/emergency-stop")
+    public ResponseEntity<?> emergencyStopChargingSession(
+            @PathVariable Integer sessionId,
+            @Valid @RequestBody StopChargingSessionRequest request) {
+        try {
+            // Service xử lý tính tiền và gửi incident report
+            ChargingSession session =
+                    chargingSessionService.emergencyStopChargingSession(sessionId, request);
+
+            // Chuyển đổi Entity sang DTO Response
+            ChargingSessionResponse response = mapToResponse(session);
+
+            return ResponseEntity.ok(
+                    ApiResponse.success("⚠️ Emergency stop successful. Incident report sent to employees.", response));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error during emergency stop: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Hủy phiên sạc (cancel without charging - old method)
      */
     @DeleteMapping("/{sessionId}")
     public ResponseEntity<?> cancelChargingSession(@PathVariable Integer sessionId) {
@@ -121,6 +148,38 @@ public class ChargingSessionController {
     // ============================================
     // QUERY APIs
     // ============================================
+
+    /**
+     * Lấy tất cả charging sessions (cho admin dashboard)
+     */
+    @GetMapping
+    public ResponseEntity<?> getAllSessions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
+        try {
+            if (size <= 0 || size > 1000) {
+                size = 100;
+            }
+
+            Pageable pageable = PageRequest.of(page, size);
+            Page<ChargingSession> sessionPage = chargingSessionRepository.findAll(pageable);
+
+            List<ChargingSessionResponse> responses = sessionPage.getContent().stream()
+                    .map(this::mapToResponse)
+                    .collect(Collectors.toList());
+
+            ChargingSessionListResponse listResponse = ChargingSessionListResponse.builder()
+                    .sessions(responses)
+                    .totalSessions((int) sessionPage.getTotalElements())
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("All sessions retrieved successfully", listResponse));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error fetching sessions: " + e.getMessage()));
+        }
+    }
 
     /**
      * Lấy thông tin chi tiết một session
