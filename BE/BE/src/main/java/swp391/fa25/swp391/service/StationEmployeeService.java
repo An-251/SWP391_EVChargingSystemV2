@@ -30,13 +30,27 @@ public class StationEmployeeService implements IStationEmployeeService {
 
     @Override
     public void deleteStationEmployee(Integer id) {
-        stationEmployeeRepository.deleteById(id);
+        // SOFT DELETE
+        StationEmployee employee = stationEmployeeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("StationEmployee not found with id: " + id));
+        
+        employee.setIsDeleted(true);
+        employee.setDeletedAt(java.time.Instant.now());
+        
+        // Lấy username của người thực hiện xóa
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            employee.setDeletedBy(auth.getName());
+        }
+        
+        stationEmployeeRepository.save(employee);
     }
 
     @Override
     public StationEmployee findById(Integer id) {
         // Nên dùng orElseThrow để xử lý an toàn hơn
-        return stationEmployeeRepository.findById(id)
+        return stationEmployeeRepository.findByIdNotDeleted(id)
                 .orElseThrow(() -> new RuntimeException("StationEmployee not found with ID: " + id));
     }
 
@@ -48,7 +62,7 @@ public class StationEmployeeService implements IStationEmployeeService {
 
     @Override
     public List<StationEmployee> findAll() {
-        return stationEmployeeRepository.findAll(); // Sửa lại: Trả về tất cả
+        return stationEmployeeRepository.findAllNotDeleted();
     }
 
     // ===================================

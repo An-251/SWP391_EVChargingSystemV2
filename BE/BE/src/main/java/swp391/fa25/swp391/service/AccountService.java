@@ -91,34 +91,62 @@ public class AccountService implements IAccountService {
     @Override
     public Optional<Account> findById(Integer id) {
         // Dùng findById tự sinh của JpaRepository
-        return accountRepository.findById(id);
+        return accountRepository.findByIdNotDeleted(id);
     }
 
     @Override
     public List<Account> findAll() {
         // Dùng findAll tự sinh của JpaRepository
-        return accountRepository.findAll();
+        return accountRepository.findAllNotDeleted();
     }
 
 
     @Override
     @Transactional // Phương thức xóa cần Transactional
     public boolean deleteAccount(String username) {
-        // Sử dụng phương thức deleteByUsername đã thêm vào AccountRepository
-        // Nó trả về số lượng bản ghi đã xóa
-        Long deletedCount = accountRepository.deleteByUsername(username);
-        return deletedCount > 0;
+        // SOFT DELETE theo username
+        Optional<Account> accountOpt = accountRepository.findByUsername(username);
+        if (accountOpt.isEmpty()) {
+            return false;
+        }
+        
+        Account account = accountOpt.get();
+        account.setIsDeleted(true);
+        account.setDeletedAt(java.time.Instant.now());
+        
+        // Lấy username của người thực hiện xóa
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            account.setDeletedBy(auth.getName());
+        }
+        
+        accountRepository.save(account);
+        return true;
     }
 
     @Override
     @Transactional // Phương thức xóa cần Transactional
     public boolean deleteAccountById(Integer id) {
-        // Sử dụng phương thức deleteById chuẩn của JpaRepository
-        if (accountRepository.existsById(id)) {
-            accountRepository.deleteById(id);
-            return true;
+        // SOFT DELETE: Chỉ đánh dấu là đã xóa
+        Optional<Account> accountOpt = accountRepository.findById(id);
+        if (accountOpt.isEmpty()) {
+            return false;
         }
-        return false;
+        
+        Account account = accountOpt.get();
+        account.setIsDeleted(true);
+        account.setDeletedAt(java.time.Instant.now());
+        
+        // Lấy username của người thực hiện xóa
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            account.setDeletedBy(auth.getName());
+        }
+        
+        accountRepository.save(account);
+        return true;
     }
 
 

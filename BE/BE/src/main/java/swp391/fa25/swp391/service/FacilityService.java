@@ -35,7 +35,21 @@ public class FacilityService implements IFacilityService {
     @Override
     @Transactional
     public void deleteFacility(Integer id) {
-        facilityRepository.deleteById(id);
+        // SOFT DELETE: Chỉ đánh dấu là đã xóa
+        Facility facility = facilityRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Facility not found with id: " + id));
+        
+        facility.setIsDeleted(true);
+        facility.setDeletedAt(java.time.Instant.now());
+        
+        // Lấy username của người thực hiện xóa
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            facility.setDeletedBy(auth.getName());
+        }
+        
+        facilityRepository.save(facility);
     }
 
     @Override
@@ -46,7 +60,7 @@ public class FacilityService implements IFacilityService {
 
     @Override
     public Facility findById(Integer id) {
-        return facilityRepository.findById(id).orElse(null);
+        return facilityRepository.findByIdNotDeleted(id).orElse(null);
     }
 
     @Override
@@ -56,7 +70,7 @@ public class FacilityService implements IFacilityService {
 
     @Override
     public List<Facility> findAll() {
-        return facilityRepository.findAll();
+        return facilityRepository.findAllNotDeleted();
     }
 
     @Override

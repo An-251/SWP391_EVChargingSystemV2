@@ -35,6 +35,16 @@ public class Charger {
     @Column(name = "STATUS", length = 50)
     private String status;
 
+    @Column(name = "IS_DELETED")
+    private Boolean isDeleted = false;
+
+    @Column(name = "DELETED_AT")
+    private java.time.Instant deletedAt;
+
+    @Nationalized
+    @Column(name = "DELETED_BY", length = 255)
+    private String deletedBy;
+
     @ManyToOne
     @JoinColumn(name = "POINT_ID")
     private ChargingPoint chargingPoint;

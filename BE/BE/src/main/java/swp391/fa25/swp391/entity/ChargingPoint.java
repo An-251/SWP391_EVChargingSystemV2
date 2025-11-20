@@ -31,6 +31,16 @@ public class ChargingPoint {
     @Column(name = "PRICE_PER_KWH", precision = 18, scale = 2)
     private BigDecimal pricePerKwh;
 
+    @Column(name = "IS_DELETED")
+    private Boolean isDeleted = false;
+
+    @Column(name = "DELETED_AT")
+    private java.time.Instant deletedAt;
+
+    @Nationalized
+    @Column(name = "DELETED_BY", length = 255)
+    private String deletedBy;
+
     @ManyToOne
     @JoinColumn(name = "STATION_ID")
     private ChargingStation station;

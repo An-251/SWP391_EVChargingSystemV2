@@ -41,24 +41,38 @@ public class ChargingStationService implements IChargingStationService {
     @Override
     @Transactional
     public void deleteChargingStation(Integer id) {
-        chargingStationRepository.deleteById(id);
+        // SOFT DELETE
+        ChargingStation station = chargingStationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Charging station not found with id: " + id));
+        
+        station.setIsDeleted(true);
+        station.setDeletedAt(java.time.Instant.now());
+        
+        // Lấy username của người thực hiện xóa
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            station.setDeletedBy(auth.getName());
+        }
+        
+        chargingStationRepository.save(station);
     }
 
     @Override
     public Optional<ChargingStation> findById(Integer id) {
-        return chargingStationRepository.findById(id);
+        return chargingStationRepository.findByIdNotDeleted(id);
     }
 
     @Override
     public List<ChargingStation> findAll() {
-        return chargingStationRepository.findAll();
+        return chargingStationRepository.findAllNotDeleted();
     }
 
     /**
      * ⭐ NEW: Find stations by facility ID
      */
     public List<ChargingStation> findByFacilityId(Integer facilityId) {
-        return chargingStationRepository.findByFacility_Id(facilityId);
+        return chargingStationRepository.findByFacilityIdNotDeleted(facilityId);
     }
 
     @Override

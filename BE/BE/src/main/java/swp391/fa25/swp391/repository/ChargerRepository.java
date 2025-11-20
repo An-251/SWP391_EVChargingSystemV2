@@ -1,6 +1,7 @@
 package swp391.fa25.swp391.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import swp391.fa25.swp391.entity.Charger;
 
@@ -39,4 +40,14 @@ public interface ChargerRepository extends JpaRepository<Charger, Integer> {
      * Tìm tất cả Charger theo trạng thái và charging point
      */
     List<Charger> findByChargingPointIdAndStatus(Integer chargingPointId, String status);
+
+    // ========== SOFT DELETE METHODS ==========
+    @Query("SELECT c FROM Charger c WHERE (c.isDeleted = false OR c.isDeleted IS NULL)")
+    List<Charger> findAllNotDeleted();
+
+    @Query("SELECT c FROM Charger c WHERE c.id = :id AND (c.isDeleted = false OR c.isDeleted IS NULL)")
+    Optional<Charger> findByIdNotDeleted(Integer id);
+
+    @Query("SELECT c FROM Charger c WHERE c.chargingPoint.id = :chargingPointId AND (c.isDeleted = false OR c.isDeleted IS NULL)")
+    List<Charger> findByChargingPointIdNotDeleted(Integer chargingPointId);
 }

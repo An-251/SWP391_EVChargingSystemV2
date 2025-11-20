@@ -44,22 +44,36 @@ public class ChargerService implements IChargerService {
     @Override
     @Transactional
     public void deleteCharger(Integer id) {
-        chargerRepository.deleteById(id);
+        // SOFT DELETE
+        Charger charger = chargerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Charger not found with id: " + id));
+        
+        charger.setIsDeleted(true);
+        charger.setDeletedAt(java.time.Instant.now());
+        
+        // Lấy username của người thực hiện xóa
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            charger.setDeletedBy(auth.getName());
+        }
+        
+        chargerRepository.save(charger);
     }
 
     @Override
     public Optional<Charger> findById(Integer id) {
-        return chargerRepository.findById(id);
+        return chargerRepository.findByIdNotDeleted(id);
     }
 
     @Override
     public List<Charger> findAll() {
-        return chargerRepository.findAll();
+        return chargerRepository.findAllNotDeleted();
     }
 
     @Override
     public List<Charger> findByChargingPointId(Integer chargingPointId) {
-        return chargerRepository.findByChargingPointId(chargingPointId);
+        return chargerRepository.findByChargingPointIdNotDeleted(chargingPointId);
     }
 
     @Override

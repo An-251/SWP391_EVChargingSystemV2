@@ -68,7 +68,7 @@ public class IncidentReportService implements IIncidentReportService {
     @Override
     @Transactional(readOnly = true)
     public List<IncidentReport> getAllReports() {
-        return incidentReportRepository.findAll();
+        return incidentReportRepository.findAllNotDeleted();
     }
 
     @Override
@@ -89,7 +89,7 @@ public class IncidentReportService implements IIncidentReportService {
     @Transactional(readOnly = true)
     public IncidentReport getReportById(Integer reportId) {
         // CẬP NHẬT: Dùng RuntimeException
-        return incidentReportRepository.findById(reportId)
+        return incidentReportRepository.findByIdNotDeleted(reportId)
                 .orElseThrow(() -> new RuntimeException("Report not found with id: " + reportId));
     }
 
@@ -161,11 +161,21 @@ public class IncidentReportService implements IIncidentReportService {
     @Override
     @Transactional
     public void deleteReport(Integer reportId) {
-        if (!incidentReportRepository.existsById(reportId)) {
-            // CẬP NHẬT: Dùng RuntimeException
-            throw new RuntimeException("Report not found with id: " + reportId);
+        IncidentReport report = incidentReportRepository.findById(reportId)
+                .orElseThrow(() -> new RuntimeException("Report not found with id: " + reportId));
+        
+        // SOFT DELETE
+        report.setIsDeleted(true);
+        report.setDeletedAt(java.time.Instant.now());
+        
+        // Lấy username của người thực hiện xóa
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            report.setDeletedBy(auth.getName());
         }
-        incidentReportRepository.deleteById(reportId);
+        
+        incidentReportRepository.save(report);
     }
 
     @Override

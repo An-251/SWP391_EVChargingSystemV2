@@ -41,6 +41,16 @@ public class Vehicle {
     @Column(name = "BATTERY_CAPACITY", precision = 10, scale = 2)
     private BigDecimal batteryCapacity;
 
+    @Column(name = "IS_DELETED")
+    private Boolean isDeleted = false;
+
+    @Column(name = "DELETED_AT")
+    private java.time.Instant deletedAt;
+
+    @Nationalized
+    @Column(name = "DELETED_BY", length = 255)
+    private String deletedBy;
+
     @ManyToOne
     @JoinColumn(name = "DRIVER_ID", nullable = true)
     @JsonIgnoreProperties({"vehicles", "account", "chargingSessions"})

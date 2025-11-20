@@ -46,24 +46,38 @@ public class ChargingPointService implements IChargingPointService {
     @Override
     @Transactional
     public void deleteChargingPoint(Integer id) {
-        chargingPointRepository.deleteById(id);
+        // SOFT DELETE
+        ChargingPoint point = chargingPointRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Charging point not found with id: " + id));
+        
+        point.setIsDeleted(true);
+        point.setDeletedAt(java.time.Instant.now());
+        
+        // Lấy username của người thực hiện xóa
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            point.setDeletedBy(auth.getName());
+        }
+        
+        chargingPointRepository.save(point);
     }
 
     @Override
     public Optional<ChargingPoint> findById(Integer id) {
-        return chargingPointRepository.findById(id);
+        return chargingPointRepository.findByIdNotDeleted(id);
     }
 
     @Override
     public List<ChargingPoint> findAll() {
-        return chargingPointRepository.findAll();
+        return chargingPointRepository.findAllNotDeleted();
     }
 
     /**
      * Find all charging points by station ID
      */
     public List<ChargingPoint> findByStationId(Integer stationId) {
-        return chargingPointRepository.findByStationId(stationId);
+        return chargingPointRepository.findByStationIdNotDeleted(stationId);
     }
 
     @Override
