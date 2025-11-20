@@ -5,6 +5,7 @@ import { Table, Card, Statistic, Button, Select, Tag, Empty } from 'antd';
 import { Clock, Zap, DollarSign, MapPin, Battery, CheckCircle, Eye } from 'lucide-react';
 import { fetchAllSessions, fetchTotalCost } from '../../../redux/session/sessionSlice';
 import { SESSION_STATUS } from '../../../constants/statusConstants';
+import { formatVND, formatKWh } from '../../../utils/formatNumber';
 
 const { Option } = Select;
 
@@ -105,7 +106,7 @@ const SessionHistory = () => {
       key: 'cost',
       render: (cost) => (
         <span className="font-semibold text-green-600">
-          {cost ? `${parseFloat(cost).toLocaleString()} VNĐ` : 'N/A'}
+          {cost ? `${formatVND(cost)} VNĐ` : 'N/A'}
         </span>
       ),
     },
@@ -175,7 +176,7 @@ const SessionHistory = () => {
           <Card className="shadow-lg">
             <Statistic
               title={<span className="flex items-center"><Battery className="mr-2" size={16} />Tổng điện năng</span>}
-              value={totalEnergy.toFixed(2)}
+              value={formatKWh(totalEnergy)}
               suffix="kWh"
               valueStyle={{ color: '#faad14' }}
             />
@@ -245,3 +246,4 @@ const SessionHistory = () => {
 };
 
 export default SessionHistory;
+

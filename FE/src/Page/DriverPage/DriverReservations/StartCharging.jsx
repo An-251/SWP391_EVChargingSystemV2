@@ -130,13 +130,12 @@ const StartCharging = () => {
   
   const { kwhNeeded, estimatedTimeMinutes, baseCost, discount, finalCost } = estimation;
   
-  // ⭐ FIX: Match Backend formula - Discount CHỈ áp dụng cho điện năng, không áp dụng cho start fee và overuse penalty
+  // ⭐ FIX: Match Backend formula - Discount CHỈ áp dụng cho điện năng
   const START_FEE = 5000; // VND - Must match Backend constant
-  const energyCost = baseCost; // Chi phí điện năng
-  const energyCostAfterDiscount = energyCost - ((energyCost * discountRate) / 100); // Discount chỉ cho điện năng
-  const totalFinalCost = START_FEE + energyCostAfterDiscount; // Start fee + điện năng đã giảm giá
-  const totalDiscount = energyCost - energyCostAfterDiscount; // Số tiền giảm
-  const totalBeforeDiscount = START_FEE + energyCost; // ⭐ Thêm lại cho UI hiển thị
+  const energyCostBeforeDiscount = baseCost; // Chi phí điện năng trước giảm giá
+  const discountAmount = (energyCostBeforeDiscount * discountRate) / 100; // Số tiền giảm
+  const energyCostAfterDiscount = energyCostBeforeDiscount - discountAmount; // Điện năng sau giảm giá
+  const totalFinalCost = START_FEE + energyCostAfterDiscount; // Start fee + điện năng sau giảm giá
 
   // ⭐ Calculate display time (100x faster for demo)
   const displayTimeMinutes = estimatedTimeMinutes / 100;
@@ -151,19 +150,52 @@ const StartCharging = () => {
           <p className="mt-2">Năng lượng: <strong>{formatKwh(kwhNeeded)}</strong></p>
           <p>Thời gian dự kiến: <strong>{formatDuration(displayTimeMinutes)}</strong></p>
           <p className="text-xs text-gray-500">(Demo: tăng tốc 100x - Thực tế: {formatDuration(estimatedTimeMinutes)})</p>
-          <div className="mt-3 p-2 bg-blue-50 rounded">
-            <p className="text-sm text-gray-700">Phí khởi động: <strong>{formatCurrency(START_FEE)}</strong></p>
-            <p className="text-sm text-gray-700">Phí điện năng: <strong>{formatCurrency(energyCost)}</strong></p>
-            {discountRate > 0 && (
-              <p className="text-sm text-green-600">
-                Giảm giá {discountRate}%: <strong>-{formatCurrency(totalDiscount)}</strong>
-              </p>
+          <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+            {/* Start Fee */}
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-sm text-gray-700">Phí khởi động:</p>
+              <p className="text-sm font-semibold text-gray-800">{formatCurrency(START_FEE)}</p>
+            </div>
+            
+            {/* Energy Cost (before discount) */}
+            <div className="flex justify-between items-center mb-2 pt-2 border-t border-blue-200">
+              <p className="text-sm text-gray-700">Chi phí điện năng:</p>
+              <p className="text-sm font-semibold text-gray-800">{formatCurrency(energyCostBeforeDiscount)}</p>
+            </div>
+            
+            {/* Discount */}
+            {discountRate > 0 ? (
+              <div className="flex justify-between items-center bg-green-50 px-2 py-1 rounded mt-2">
+                <p className="text-sm text-green-700">
+                  🎉 Giảm giá {discountRate}%
+                  {currentSubscription?.plan?.planName && (
+                    <span className="text-xs ml-1">({currentSubscription.plan.planName})</span>
+                  )}
+                </p>
+                <p className="text-sm font-semibold text-green-600">-{formatCurrency(discountAmount)}</p>
+              </div>
+            ) : (
+              <div className="flex justify-between items-center bg-yellow-50 px-2 py-1 rounded mt-2">
+                <p className="text-xs text-gray-600">💡 Không có gói subscription (giảm giá 0%)</p>
+                <p className="text-xs text-gray-600">0 đ</p>
+              </div>
             )}
           </div>
-          <p className="text-lg font-bold mt-2">
-            Chi phí tối đa (nếu sạc đầy): <strong>{formatCurrency(totalFinalCost)}</strong>
-          </p>
-          <p className="text-xs text-yellow-600 mt-1">
+          
+          {/* Total Cost */}
+          <div className="mt-3 p-3 bg-gradient-to-r from-green-100 to-blue-100 rounded-lg">
+            <div className="flex justify-between items-center">
+              <p className="text-base font-semibold text-gray-800">
+                Tổng chi phí {discountRate > 0 && <span className="text-green-600">(Đã giảm giá)</span>}
+              </p>
+              <p className="text-2xl font-bold text-blue-700">{formatCurrency(totalFinalCost)}</p>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              💡 Công thức: Phí khởi động ({formatCurrency(START_FEE)}) + Điện năng sau giảm giá ({formatCurrency(energyCostAfterDiscount)})
+            </p>
+          </div>
+          
+          <p className="text-xs text-yellow-600 mt-3 text-center bg-yellow-50 p-2 rounded">
             ⚠️ Chi phí thực tế tính theo % pin đã sạc. Dừng sớm = trả ít hơn!
           </p>
         </div>
