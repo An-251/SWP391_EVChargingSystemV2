@@ -197,8 +197,20 @@ const SubscriptionSelectionPage = () => {
       return true;
     }
     
-    // Hide the plan that driver currently has
-    return plan.id !== currentSubscription.plan.id;
+    // ⭐ FIXED: Compare by planName (case-insensitive) since plan.id might be undefined
+    const currentPlanName = (currentSubscription.plan.planName || '').toLowerCase().trim();
+    const checkPlanName = (plan.planName || '').toLowerCase().trim();
+    
+    // Also try to compare by ID if available
+    const currentPlanId = currentSubscription.plan.id || currentSubscription.plan.planId;
+    const checkPlanId = plan.id || plan.planId;
+    
+    // Hide if either ID matches OR planName matches
+    const isMatchById = currentPlanId && checkPlanId && checkPlanId === currentPlanId;
+    const isMatchByName = currentPlanName && checkPlanName && checkPlanName === currentPlanName;
+    
+    // Show plan only if it doesn't match current subscription
+    return !isMatchById && !isMatchByName;
   });
 
   if (loading && availablePlans.length === 0) {
@@ -247,12 +259,39 @@ const SubscriptionSelectionPage = () => {
               </span>
             </div>
             <p className="text-sm text-blue-600 mt-1 ml-6">
-              Các gói khác phù hợp để nâng cấp hoặc thay đổi sẽ hiển thị bên dưới
+              {filteredPlans.length > 0 
+                ? 'Các gói khác phù hợp để nâng cấp hoặc thay đổi sẽ hiển thị bên dưới'
+                : 'Bạn đã đăng ký gói này. Hiện tại không có gói nào khác để chọn.'}
             </p>
           </div>
         )}
 
-        <Row gutter={[24, 24]} justify='center'>
+        {/* ⭐ Show message when no plans available (already subscribed to all) */}
+        {filteredPlans.length === 0 && (
+          <div className="text-center py-20">
+            <div className="mb-4">
+              <CheckCircleOutlined style={{ fontSize: 64, color: '#52c41a' }} />
+            </div>
+            <Title level={3} className="text-gray-700">
+              Bạn đã có gói đăng ký
+            </Title>
+            <Text className="text-gray-500 block mb-6">
+              {currentSubscription?.plan?.planName 
+                ? `Bạn đang sử dụng gói ${currentSubscription.plan.planName}`
+                : 'Hiện tại bạn đã có gói đăng ký active'}
+            </Text>
+            <Button 
+              type="primary" 
+              size="large"
+              onClick={() => navigate('/driver')}
+            >
+              Quay về trang chủ
+            </Button>
+          </div>
+        )}
+
+        {filteredPlans.length > 0 && (
+          <Row gutter={[24, 24]} justify='center'>
         {filteredPlans.map((plan) => (
           <Col xs={24} sm={24} md={12} lg={8} key={plan.id}>
             <Badge.Ribbon
@@ -353,18 +392,8 @@ const SubscriptionSelectionPage = () => {
             </Badge.Ribbon>
           </Col>
         ))}
-      </Row>
-
-      {filteredPlans.length === 0 && !loading && (
-        <div className='no-plans-container'>
-          <Text type='secondary' style={{ fontSize: '16px' }}>
-            {currentSubscription && currentSubscription.plan 
-              ? `Bạn đang sử dụng gói ${currentSubscription.plan.planName}. Hiện không có gói khác phù hợp để thay đổi.`
-              : 'Hiện chưa có gói đăng ký nào. Vui lòng liên hệ quản trị viên.'
-            }
-          </Text>
-        </div>
-      )}
+          </Row>
+        )}
 
       {/* Payment Method Selection Modal */}
       <Modal
