@@ -85,7 +85,6 @@ const EmployeeChargingControl = () => {
 
     setLoading(true);
     try {
-      // Use standard charging session API (not enterprise)
       const payload = {
         vehicleId: selectedReservation.vehicle?.id,
         chargerId: selectedReservation.charger?.id || selectedReservation.chargingPoint?.chargers?.[0]?.id,

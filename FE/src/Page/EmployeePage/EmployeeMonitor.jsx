@@ -11,6 +11,7 @@ import {
 import { useSelector } from 'react-redux';
 import api from '../../configs/config-axios';
 import dayjs from 'dayjs';
+import { formatKWh } from '../../utils/formatNumber';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
 
@@ -304,7 +305,7 @@ const EmployeeMonitor = () => {
       width: 100,
       render: (_, record) => {
         const energy = record.kwhUsed || 0;
-        return <span className="font-medium">{energy.toFixed(2)} kWh</span>;
+        return <span className="font-medium">{formatKWh(energy)} kWh</span>;
       },
     },
     {
