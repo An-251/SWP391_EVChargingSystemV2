@@ -151,23 +151,25 @@ public class ReservationService implements IReservationService {
 
     @Transactional
     public Reservation cancelReservation(Long reservationId, Long driverId) {
-        log.info("[CANCEL] Attempting to cancel reservation {} by driver {}", reservationId, driverId);
+        log.info("Attempting to cancel reservation {} by driver {}", reservationId, driverId);
         
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new RuntimeException("Reservation not found"));
 
-        log.info("📋 [CANCEL] Found reservation - Status: {}, Driver: {}", 
+        log.info("Found reservation - Status: {}, Driver: {}", 
             reservation.getStatus(), reservation.getDriver().getId());
 
-        if (!reservation.getDriver().getId().equals(driverId)) {
-            log.error("[CANCEL] Authorization failed - Reservation driver: {}, Request driver: {}",
-                reservation.getDriver().getId(), driverId);
+        // Convert Integer to Long for comparison
+        Long reservationDriverId = reservation.getDriver().getId().longValue();
+        if (!reservationDriverId.equals(driverId)) {
+            log.error("Authorization failed - Reservation driver: {}, Request driver: {}",
+                reservationDriverId, driverId);
             throw new RuntimeException("You are not authorized to cancel this reservation");
         }
 
         // Chỉ có thể cancel nếu đang ở trạng thái ACTIVE
         if (!STATUS_ACTIVE.equals(reservation.getStatus())) {
-            log.error("[CANCEL] Invalid status - Expected: {}, Actual: {}", 
+            log.error("Invalid status - Expected: {}, Actual: {}", 
                 STATUS_ACTIVE, reservation.getStatus());
             throw new RuntimeException("Can only cancel active reservations. Current status: " + reservation.getStatus());
         }
@@ -176,7 +178,7 @@ public class ReservationService implements IReservationService {
         reservation.setStatus(STATUS_CANCELLED);
         Reservation savedReservation = reservationRepository.save(reservation);
         
-        // NEW: Nhả charger về ACTIVE (nếu có)
+        // Nhả charger về ACTIVE (nếu có)
         if (reservation.getCharger() != null) {
             releaseCharger(reservation.getCharger());
         }
@@ -184,7 +186,7 @@ public class ReservationService implements IReservationService {
         // Nhả charging point về ACTIVE
         releaseChargingPointOnly(reservation.getChargingPoint());
         
-        log.info("[CANCEL] Successfully cancelled reservation {}", reservationId);
+        log.info("Successfully cancelled reservation {}", reservationId);
         return savedReservation;
     }
 

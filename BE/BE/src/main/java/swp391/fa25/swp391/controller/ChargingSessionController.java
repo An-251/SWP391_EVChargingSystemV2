@@ -352,43 +352,6 @@ public class ChargingSessionController {
                     .body(ApiResponse.error("Error counting sessions: " + e.getMessage()));
         }
     }
-    //=========
-    @PostMapping("/{sessionId}/fail")
-    public ResponseEntity<?> failChargingSession(
-            @PathVariable Integer sessionId,
-            @RequestParam(required = false) String reason) {
-        try {
-            chargingSessionService.failChargingSession(sessionId, reason);
-            return ResponseEntity.ok(
-                    ApiResponse.success("Session marked as FAILED: " + (reason != null ? reason : "Unknown")));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Error marking session as failed: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * Đánh dấu session bị gián đoạn (dùng khi mất kết nối đột ngột)
-     */
-    @PostMapping("/{sessionId}/interrupt")
-    public ResponseEntity<?> interruptChargingSession(@PathVariable Integer sessionId) {
-        try {
-            chargingSessionService.interruptChargingSession(sessionId);
-            return ResponseEntity.ok(
-                    ApiResponse.success("Session marked as INTERRUPTED"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(ApiResponse.error(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Error marking session as interrupted: " + e.getMessage()));
-        }
-    }
-
-    // API timeoutChargingSession đã bị loại bỏ
 
     /**
      * Lấy thống kê sessions theo status
@@ -400,9 +363,6 @@ public class ChargingSessionController {
 
             statistics.put("charging", chargingSessionService.countByStatus("charging"));
             statistics.put("completed", chargingSessionService.countByStatus("completed"));
-            statistics.put("cancelled", chargingSessionService.countByStatus("cancelled"));
-            statistics.put("failed", chargingSessionService.countByStatus("failed"));
-            statistics.put("interrupted", chargingSessionService.countByStatus("interrupted"));
 
             return ResponseEntity.ok(ApiResponse.success("Statistics retrieved", statistics));
         } catch (Exception e) {
@@ -411,38 +371,6 @@ public class ChargingSessionController {
         }
     }
 
-    /**
-     * Lấy danh sách sessions có vấn đề (failed, interrupted)
-     */
-    @GetMapping("/problematic")
-    public ResponseEntity<?> getProblematicSessions() {
-        try {
-            List<ChargingSession> problematicSessions = new ArrayList<>();
-
-            problematicSessions.addAll(chargingSessionService.findByStatus("failed"));
-            problematicSessions.addAll(chargingSessionService.findByStatus("interrupted"));
-
-            // Sort by start time descending
-            problematicSessions.sort((s1, s2) ->
-                    s2.getStartTime().compareTo(s1.getStartTime()));
-
-            List<ChargingSessionResponse> responses = problematicSessions.stream()
-                    .map(this::mapToResponse)
-                    .collect(Collectors.toList());
-
-            ChargingSessionListResponse listResponse = ChargingSessionListResponse.builder()
-                    .sessions(responses)
-                    .totalSessions(responses.size())
-                    .build();
-
-            return ResponseEntity.ok(ApiResponse.success(
-                    "Problematic sessions retrieved", listResponse));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Error retrieving problematic sessions: " + e.getMessage()));
-        }
-    }
-    
     // ============================================
     // EMPLOYEE MONITORING APIs
     // ============================================

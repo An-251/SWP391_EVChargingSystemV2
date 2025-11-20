@@ -318,7 +318,9 @@ function DriverMap() {
         )}
 
         {/* Charging station markers */}
-        {filteredStations.map((station) => {
+        {filteredStations
+          .filter(station => station.latitude && station.longitude) // Filter out stations without coordinates
+          .map((station) => {
           const availableCount = station.chargingPoints?.filter(
             (cp) => (cp.status || '').toLowerCase() === CHARGING_POINT_STATUS.ACTIVE
           ).length || 0;

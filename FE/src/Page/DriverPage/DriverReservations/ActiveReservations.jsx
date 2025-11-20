@@ -57,13 +57,15 @@ const ActiveReservations = () => {
       
       console.log('✅ [ActiveReservations] Filtered active reservations:', activeReservations);
       
-      // ⭐ DEBUG: Log all reservation IDs
+      // ⭐ DEBUG: Log all reservation IDs and driverIds
       activeReservations.forEach(r => {
         console.log('🎫 [Reservation]', {
           id: r.id,
           reservationId: r.reservationId,
           stationName: r.stationName,
-          status: r.status
+          status: r.status,
+          driverId: r.driverId,
+          driverName: r.driverName
         });
       });
       
@@ -88,7 +90,7 @@ const ActiveReservations = () => {
 
   // Handle cancel reservation
   const handleCancel = async (reservation) => {
-    // ⭐ Get reservation ID with fallback
+    // Get reservation ID with fallback
     const reservationId = reservation.id || reservation.reservationId;
     
     if (!reservationId) {
@@ -97,7 +99,13 @@ const ActiveReservations = () => {
       return;
     }
     
-    console.log('❌ [Cancel] Attempting to cancel reservation:', reservationId);
+    console.log('🔍 [Cancel] Reservation data:', reservation);
+    console.log('🔍 [Cancel] Reservation driverId:', reservation.driverId);
+    console.log('🔍 [Cancel] Current user driverId:', user.driverId);
+    console.log('🔍 [Cancel] Attempting to cancel reservation:', reservationId);
+    
+    // Use the driverId from the reservation data, not from user
+    const driverIdToUse = reservation.driverId || user.driverId;
     
     Modal.confirm({
       title: 'Xác nhận hủy đặt chỗ',
@@ -109,8 +117,9 @@ const ActiveReservations = () => {
         try {
           setCancellingId(reservationId);
           console.log('🔄 [Cancel] Calling API DELETE /drivers/reservations/' + reservationId);
-          // ⭐ BE requires driverId as @RequestParam for validation
-          await api.delete(`/drivers/reservations/${reservationId}?driverId=${user.driverId}`);
+          console.log('🔄 [Cancel] Using driverId:', driverIdToUse);
+          // BE requires driverId as @RequestParam for validation
+          await api.delete(`/drivers/reservations/${reservationId}?driverId=${driverIdToUse}`);
           console.log('✅ [Cancel] Successfully cancelled');
           message.success('Đã hủy đặt chỗ thành công');
           fetchActiveReservations();
@@ -333,9 +342,19 @@ const ActiveReservations = () => {
                       icon={<QrCode size={18} />}
                       onClick={() => handleScanQR(reservation)}
                       disabled={expired}
-                      className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-300"
+                      className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-gray-300"
                     >
                       Quét QR Code
+                    </Button>
+                    <Button
+                      danger
+                      size="large"
+                      onClick={() => handleCancel(reservation)}
+                      disabled={expired}
+                      loading={cancellingId === (reservation.id || reservation.reservationId)}
+                      className="flex-1"
+                    >
+                      Hủy đặt chỗ
                     </Button>
                   </div>
                 </Card>

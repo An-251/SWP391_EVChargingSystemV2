@@ -2,6 +2,7 @@ package swp391.fa25.swp391.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/drivers")
 @RequiredArgsConstructor
@@ -148,26 +150,25 @@ public class DriverController {
      */
     @DeleteMapping("/reservations/{reservationId}")
     public ResponseEntity<?> cancelReservation(
-            @PathVariable Long reservationId,  // ⭐ Changed from Integer to Long (matches Entity ID type)
-            @RequestParam Integer driverId) { // ⭐ Thêm driverId để validate
+            @PathVariable Long reservationId,
+            @RequestParam Integer driverId) {
         try {
-            System.out.println("🔄 [CONTROLLER] Cancel request - ReservationId: " + reservationId + ", DriverId: " + driverId);
+            log.info("Cancel request - ReservationId: {}, DriverId: {}", reservationId, driverId);
             
-            // FIX: Gọi cancelReservation() từ service (service tự nhả charging point)
             Reservation cancelledReservation = reservationService.cancelReservation(
                     reservationId, 
                     driverId.longValue()
             );
 
-            System.out.println("✅ [CONTROLLER] Reservation cancelled successfully");
+            log.info("Reservation {} cancelled successfully", reservationId);
             return ResponseEntity.ok("Reservation cancelled successfully");
 
         } catch (RuntimeException e) {
-            System.err.println("❌ [CONTROLLER] Cancel failed: " + e.getMessage());
+            log.error("Cancel failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(e.getMessage());
         } catch (Exception e) {
-            System.err.println("❌ [CONTROLLER] Unexpected error: " + e.getMessage());
+            log.error("Unexpected error: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error cancelling reservation: " + e.getMessage());
         }
@@ -347,6 +348,8 @@ public class DriverController {
             connectorType = cp.getChargers().get(0).getConnectorType();
         }
 
+        Driver driver = reservation.getDriver();
+        
         return ReservationResponse.builder()
                 .id(reservation.getId().intValue())  // ⭐ Set id field (Integer) for FE compatibility
                 .reservationId(reservation.getId())  // ⭐ Also keep reservationId (Long) for backward compatibility
@@ -356,6 +359,8 @@ public class DriverController {
                 .connectorType(connectorType)
                 .stationName(cp.getStation() != null ? cp.getStation().getStationName() : null)
                 .status(reservation.getStatus())
+                .driverId(driver != null ? driver.getId() : null)
+                .driverName(driver != null ? driver.getAccount().getFullName() : null)
                 .vehicleId(vehicle != null ? vehicle.getId().longValue() : null)
                 .chargingPointId(cp.getId())
                 .chargerId(reservation.getCharger() != null ? reservation.getCharger().getId() : null)
